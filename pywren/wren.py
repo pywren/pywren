@@ -1,4 +1,5 @@
 import boto3
+import botocore
 import cloudpickle
 import json
 import base64
@@ -8,7 +9,7 @@ import wrenutil
 import enum
 from multiprocessing.pool import ThreadPool
 import time
-
+import s3util
 
 class JobState(enum.Enum):
     new = 1
@@ -17,23 +18,43 @@ class JobState(enum.Enum):
     success = 4
     error = 5
 
-def get_call_status(call_id):
-    sdbclient = boto3.client('sdb', region_name=wrenconfig.AWS_REGION)
+def get_call_status(callset_id, call_id):
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
+                                                                    wrenconfig.AWS_S3_PREFIX, 
+                                                                    callset_id, call_id)
+    
 
-    r = sdbclient.select(SelectExpression="select * from {} where call_id='{}'".format(wrenconfig.AWS_SDB_DOMAIN, call_id))
+    s3 = boto3.client('s3', region_name=wrenconfig.AWS_REGION)
 
-    # Fixme this might not work due to eventual consistency 
-    if 'Items' in r and len(r['Items']) > 0:
-        return wrenutil.sdb_to_dict(r['Items'][0]) 
-    else:
-        return None
-        
+    try:
+        r = s3.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
+        result_json = r['Body'].read()
+        return json.loads(result_json)
+    
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "NoSuchKey":
+            return None
+        else:
+            raise e
+
+
+
+
+def get_call_output(callset_id, call_id):
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
+                                                                    wrenconfig.AWS_S3_PREFIX, 
+                                                                    callset_id, call_id)
+    s3 = boto3.client('s3', region_name=wrenconfig.AWS_REGION)
+    r = s3.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
+    return pickle.loads(r['Body'].read())
+    
 class ResponseFuture(object):
 
     """
     """
-    def __init__(self):
-        self.call_id = wrenutil.uuid_str()
+    def __init__(self, call_id, callset_id):
+        self.call_id = call_id
+        self.callset_id = callset_id 
         self._state = JobState.new
 
     def _set_state(self, new_state):
@@ -86,13 +107,14 @@ class ResponseFuture(object):
         ## FIXME implement timeout
         if timeout is not None : raise NotImplementedError()
         
-        sdb_dict = get_call_status(self.call_id) 
-        while sdb_dict is None:
+        status = get_call_status(self.callset_id, self.call_id) 
+        while status is None:
             time.sleep(4)
-            sdb_dict = get_call_status(self.call_id) 
+            status = get_call_status(self.callset_id, self.call_id) 
 
-        s = base64.b64decode(sdb_dict['func_output'])
-        call_invoker_result = pickle.loads(s)
+        # FIXME check if it actually worked all the way through 
+
+        call_invoker_result = get_call_output(self.callset_id, self.call_id)
         call_success = call_invoker_result['success']
         
         if call_success:
@@ -103,7 +125,7 @@ class ResponseFuture(object):
             self._exception = call_invoker_result['result']
             self._state = JobState.error
 
-        self._run_dict = sdb_dict
+        self._run_status = status
         return self._return_val
             
     def exception(self, timeout = None):
@@ -120,14 +142,32 @@ def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
     callset is just a handle to refer to a bunch of calls simultaneously
     """
 
+    if callset_id is None:
+        callset_id = s3util.create_callset_id()
+    call_id = s3util.create_call_id()
+
+
+
+
     session = boto3.session.Session()
     lambclient = session.client('lambda', region_name=wrenconfig.AWS_REGION)
+    s3client = session.client('s3', region_name=wrenconfig.AWS_REGION)
 
-    func_str = cloudpickle.dumps(func)
-    data_str = cloudpickle.dumps(data)
-    arg_dict = {'func_pickle_string' : base64.b64encode(func_str), 
-                'data_pickle_string' : base64.b64encode(data_str), 
-                'callset_id': callset_id}
+    # FIXME someday we can optimize this
+    
+    
+    func_str = cloudpickle.dumps({'func' : func, 
+                                  'data' : data})
+
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
+                                                     wrenconfig.AWS_S3_PREFIX, 
+                                                     callset_id, call_id)
+
+    arg_dict = {'input_key' : s3_input_key, 
+                'output_key' : s3_output_key, 
+                'status_key' : s3_status_key, 
+                'callset_id': callset_id, 
+                'call_id' : call_id}    
     
     
 
@@ -140,13 +180,18 @@ def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
                 raise ValueError("Key {} already in dict".format(k))
             arg_dict[k] = v
 
-    fut = ResponseFuture()
-    arg_dict['call_id'] = fut.call_id
+    # put on s3 
+    s3client.put_object(Bucket = s3_input_key[0], 
+                  Key = s3_input_key[1], 
+                  Body = func_str)
+
     json_arg = json.dumps(arg_dict)
 
     res = lambclient.invoke(FunctionName=wrenconfig.FUNCTION_NAME, 
                             Payload = json.dumps(arg_dict), 
                             InvocationType='Event')
+    fut = ResponseFuture(call_id, callset_id)
+
     fut._set_state(JobState.invoked)
 
     return fut
@@ -161,7 +206,7 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
     """
     
     pool = ThreadPool(invoke_pool_threads)
-    callset_id = wrenutil.uuid_str()
+    callset_id = s3util.create_callset_id()
     
     N = len(iterdata)
     call_result_objs = []
@@ -204,9 +249,9 @@ def wait(fs, return_when=ALL_COMPLETED):
     
     Wait for the Future instances (possibly created by different Executor
     instances) given by fs to complete. Returns a named 2-tuple of
-    sets. The first set, named “done”, contains the futures that completed
+    sets. The first set, named "done", contains the futures that completed
     (finished or were cancelled) before the wait completed. The second
-    set, named “not_done”, contains uncompleted futures.
+    set, named "not_done", contains uncompleted futures.
 
 
     http://pythonhosted.org/futures/#concurrent.futures.wait

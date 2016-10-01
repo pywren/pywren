@@ -11,4 +11,5 @@ AWS_ROLE = "helloworld_exec_role"
 
 ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_ROLE)
 
-AWS_SDB_DOMAIN = "test_two"
+AWS_S3_BUCKET = "jonas-testbucket2"
+AWS_S3_PREFIX = "pywren.jobs"

@@ -8,54 +8,56 @@ import base64
 import logging
 import uuid
 import wrenutil
+import json
 
 
 def handler(event, context):
+    s3 = boto3.resource('s3')
 
-    print "invocation started"
-    print subprocess.check_output("df -h", shell=True)
     start_time = time.time()
 
-    s3 = boto3.resource('s3')
+    func_and_data_filename = "/tmp/input.pickle"
+    output_filename = "/tmp/output.pickle"
+
+
+    print "invocation started"
+    # download the input 
+    input_key = event['input_key']
+    output_key = event['output_key']
+    status_key = event['status_key']
+
+    # get the input and save to disk 
+    # FIXME here is we where we would attach the "canceled" metadata
+    s3.meta.client.download_file(input_key[0], input_key[1], func_and_data_filename)
+    input_download_time = time.time()
+
+    print "input data download complete"
+
+    ## Now get the runtime
+
     res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
     condatar = tarfile.open(mode= "r:gz", 
                             fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
                                                                     res['ContentLength']))
     condatar.extractall('/tmp/')
     print "download and untar of conda runtime complete"
-    print subprocess.check_output("df -h", shell=True)
 
     cwd = os.getcwd()
     jobrunner_path = os.path.join(cwd, "jobrunner.py")
-
-    func_filename = "/tmp/func.pickle"
-    data_filename = "/tmp/data.pickle"
-    output_filename = "/tmp/output.pickle"
     
-    func_pickle_string = base64.b64decode(event['func_pickle_string'])
-    data_pickle_string = base64.b64decode(event['data_pickle_string'])
+    print event
     extra_env = event.get('extra_env', {})
 
     call_id = event['call_id']
     callset_id = event['callset_id']
-    
-    func_fid = open(func_filename, 'w')
-    func_fid.write(func_pickle_string)
-    func_fid.close()
-
-    
-    data_fid = open(data_filename, 'w')
-    data_fid.write(data_pickle_string)
-    data_fid.close()
 
     print "state written to disk" 
 
     CONDA_PYTHON_RUNTIME = "/tmp/condaruntime/bin/python"
     
-    cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
+    cmdstr = "{} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
                                      jobrunner_path, 
-                                     func_filename, 
-                                     data_filename, 
+                                     func_and_data_filename, 
                                      output_filename)
 
     setup_time = time.time()
@@ -67,39 +69,34 @@ def handler(event, context):
     local_env.update(extra_env)
 
     print "command str=", cmdstr
-    message = subprocess.check_output(cmdstr, shell=True, env=local_env)
-    print "command executed, message=", message
+    stdout = subprocess.check_output(cmdstr, shell=True, env=local_env)
+    print "command executed, stdout=", stdout
 
-    func_output = base64.b64encode(open(output_filename, 'r').read())
+    s3.meta.client.upload_file(output_filename, output_key[0], 
+                               output_key[1])
     
     end_time = time.time()
 
     d = { 
-        'message' : message,
+        'stdout' : stdout, 
         'call_id' : call_id, 
+        'callset_id' : callset_id, 
         'start_time' : start_time, 
         'setup_time' : setup_time - start_time, 
         'exec_time' : time.time() - setup_time, 
-        'func_output' : func_output,
+        'input_key' : input_key, 
+        'output_key' : output_key, 
+        'status_key' : status_key, 
         'end_time' : end_time, 
-        'callset_id' : callset_id, 
+
         'aws_request_id' : context.aws_request_id, 
         'log_group_name' : context.log_group_name, 
         'log_stream_name' : context.log_stream_name, 
     }  
 
 
-    try:
-        uuid_str = str(uuid.uuid1())
-        
-        sdbclient = boto3.client('sdb', region_name='us-west-2')
-        
-        attributes = [{'Name' : k, 'Value' : str(v)} for k, v in d.iteritems()]
-        sdbclient.put_attributes(DomainName='test_two', 
-                                 ItemName=uuid_str, 
-                                 Attributes=attributes)
-    except Exception as e:
-        d['exception'] = str(e)
+    s3.meta.client.put_object(Bucket=status_key[0], Key=status_key[1], 
+                              Body=json.dumps(d))
     
     return d
 
