@@ -9,6 +9,8 @@ import logging
 import uuid
 import wrenutil
 import json
+import s3util
+
 
 
 def handler(event, context):
@@ -25,6 +27,10 @@ def handler(event, context):
     input_key = event['input_key']
     output_key = event['output_key']
     status_key = event['status_key']
+
+    # check to see if those three keys are there
+    for b, k in [input_key, output_key, status_key]:
+        print "key status: ", s3util.key_size(b, k), "no bytes" 
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata

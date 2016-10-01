@@ -92,10 +92,14 @@ class ResponseFuture(object):
         raise NotImplementedError()
         
     def done(self):
+        if self._state in [JobState.success, JobState.error]:
+            return True
+        if self.result(check_only = True) is None:
+            return False
+        return True
 
-        raise NotImplementedError()
 
-    def result(self, timeout=None):
+    def result(self, timeout=None, check_only=False):
         """
 
 
@@ -123,13 +127,20 @@ class ResponseFuture(object):
         if self._state == JobState.error:
             raise self._exception
 
-        ## FIXME implement timeout
-        if timeout is not None : raise NotImplementedError()
         
         status = get_call_status(self.callset_id, self.call_id, 
                                  AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
                                  AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
                                  AWS_REGION = self.AWS_REGION)  
+
+
+
+        ## FIXME implement timeout
+        if timeout is not None : raise NotImplementedError()
+
+        if check_only is True:
+            if status is None:
+                return None
 
         while status is None:
             time.sleep(4)
@@ -292,4 +303,5 @@ def wait(fs, return_when=ALL_COMPLETED):
 
     """
 
+    
 
