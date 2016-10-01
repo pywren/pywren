@@ -44,6 +44,7 @@ and get an object back that sorta looks like a list of futures.
 
 ## To Do:
 - [ ] Get errors out of cloudwatch
+- [ ] package everything into an executor that will take config info
 - [x] Time latency and throughput of 1000 invocations
 - [ ] Add more packages to conda runtime
 - [ ] thread logging through 

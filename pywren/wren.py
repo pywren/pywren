@@ -18,13 +18,27 @@ class JobState(enum.Enum):
     success = 4
     error = 5
 
-def get_call_status(callset_id, call_id):
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
-                                                                    wrenconfig.AWS_S3_PREFIX, 
+
+class Executor(object):
+    """
+    Theoretically will allow for cross-AZ invocations
+    """
+
+    def __init__(self, aws_region, s3_bucket, s3_prefix, lambconf):
+        pass
+
+
+    
+def get_call_status(callset_id, call_id, 
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
+                    AWS_REGION = wrenconfig.AWS_REGION):
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
+                                                                    AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
     
 
-    s3 = boto3.client('s3', region_name=wrenconfig.AWS_REGION)
+    s3 = boto3.client('s3', region_name = AWS_REGION)
 
     try:
         r = s3.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
@@ -37,14 +51,14 @@ def get_call_status(callset_id, call_id):
         else:
             raise e
 
-
-
-
-def get_call_output(callset_id, call_id):
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
-                                                                    wrenconfig.AWS_S3_PREFIX, 
+def get_call_output(callset_id, call_id,
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
+                    AWS_REGION = wrenconfig.AWS_REGION):
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
+                                                                    AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
-    s3 = boto3.client('s3', region_name=wrenconfig.AWS_REGION)
+    s3 = boto3.client('s3', region_name = AWS_REGION)
     r = s3.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
     return pickle.loads(r['Body'].read())
     
@@ -52,11 +66,18 @@ class ResponseFuture(object):
 
     """
     """
-    def __init__(self, call_id, callset_id):
+    def __init__(self, call_id, callset_id,                     
+                 AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
+                 AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
+                 AWS_REGION = wrenconfig.AWS_REGION):
+
         self.call_id = call_id
         self.callset_id = callset_id 
         self._state = JobState.new
-
+        self.AWS_S3_BUCKET = AWS_S3_BUCKET
+        self.AWS_S3_PREFIX = AWS_S3_PREFIX
+        self.AWS_REGION = AWS_REGION
+        
     def _set_state(self, new_state):
         ## FIXME add state machine
         self._state = new_state
@@ -71,8 +92,6 @@ class ResponseFuture(object):
         raise NotImplementedError()
         
     def done(self):
-        sdbclient = boto3.client('sdb', region_name=wrenconfig.AWS_REGION)
-        
 
         raise NotImplementedError()
 
@@ -107,14 +126,24 @@ class ResponseFuture(object):
         ## FIXME implement timeout
         if timeout is not None : raise NotImplementedError()
         
-        status = get_call_status(self.callset_id, self.call_id) 
+        status = get_call_status(self.callset_id, self.call_id, 
+                                 AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
+                                 AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
+                                 AWS_REGION = self.AWS_REGION)  
+
         while status is None:
             time.sleep(4)
-            status = get_call_status(self.callset_id, self.call_id) 
+            status = get_call_status(self.callset_id, self.call_id, 
+                                     AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
+                                     AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
+                                     AWS_REGION = self.AWS_REGION) 
 
         # FIXME check if it actually worked all the way through 
 
-        call_invoker_result = get_call_output(self.callset_id, self.call_id)
+        call_invoker_result = get_call_output(self.callset_id, self.call_id, 
+                                              AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
+                                              AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
+                                              AWS_REGION = self.AWS_REGION)
         call_success = call_invoker_result['success']
         
         if call_success:
@@ -135,7 +164,12 @@ class ResponseFuture(object):
         raise NotImplementedError()
 
     
-def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
+def call_async(func, data, callset_id=None, extra_env = None, 
+               extra_meta=None, 
+               AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
+               AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
+               AWS_REGION = wrenconfig.AWS_REGION, 
+               LAMBDA_FUNCTION_NAME = wrenconfig.FUNCTION_NAME):
     """
     Returns a future
 
@@ -150,8 +184,8 @@ def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
 
 
     session = boto3.session.Session()
-    lambclient = session.client('lambda', region_name=wrenconfig.AWS_REGION)
-    s3client = session.client('s3', region_name=wrenconfig.AWS_REGION)
+    lambclient = session.client('lambda', region_name = AWS_REGION)
+    s3client = session.client('s3', region_name = AWS_REGION)
 
     # FIXME someday we can optimize this
     
@@ -159,8 +193,8 @@ def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
     func_str = cloudpickle.dumps({'func' : func, 
                                   'data' : data})
 
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(wrenconfig.AWS_S3_BUCKET, 
-                                                     wrenconfig.AWS_S3_PREFIX, 
+    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
+                                                                    AWS_S3_PREFIX, 
                                                      callset_id, call_id)
 
     arg_dict = {'input_key' : s3_input_key, 
@@ -182,15 +216,15 @@ def call_async(func, data, callset_id=None, extra_env = None, extra_meta=None):
 
     # put on s3 
     s3client.put_object(Bucket = s3_input_key[0], 
-                  Key = s3_input_key[1], 
-                  Body = func_str)
-
+                        Key = s3_input_key[1], 
+                        Body = func_str)
+    
     json_arg = json.dumps(arg_dict)
 
-    res = lambclient.invoke(FunctionName=wrenconfig.FUNCTION_NAME, 
+    res = lambclient.invoke(FunctionName=LAMBDA_FUNCTION_NAME, 
                             Payload = json.dumps(arg_dict), 
                             InvocationType='Event')
-    fut = ResponseFuture(call_id, callset_id)
+    fut = ResponseFuture(call_id, callset_id, AWS_REGION=AWS_REGION)
 
     fut._set_state(JobState.invoked)
 
