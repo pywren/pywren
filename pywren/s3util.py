@@ -28,3 +28,28 @@ def key_size(bucket, key):
             return None
         else:
             raise e
+
+
+def get_callset_done(bucket, prefix, callset_id):
+    key_prefix = os.path.join(prefix, callset_id)
+
+    s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
+                                           MaxKeys=1000)
+    
+    while True:
+        for k in s3res['Contents']:
+            if "status.json" in k['Key']:
+                status_keys.append(k['Key'])
+
+        if 'NextContinuationToken' in s3res:
+            continuation_token = s3res['NextContinuationToken']
+            s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
+                                                   MaxKeys=1000, 
+                                                   ContinuationToken = continuation_token)
+        else:
+            break
+
+    call_ids = [k[len(prefix)+1:].split("/")[0] for k in status_keys]
+    return call_ids
+        
+        

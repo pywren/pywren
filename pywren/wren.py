@@ -304,12 +304,6 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
     for i in range(N):
         call_id = "{:05d}".format(i)
 
-        # def f():
-        #     return call_async(func, iterdata[i], callset_id = callset_id,
-        #                       call_id = call_id, 
-        #                       extra_env=extra_env)
-        #logger.info("map {} {} apply async".format(callset_id, call_id))
-
         cb = pool.apply_async(call_async, (func, iterdata[i]), 
                               dict(callset_id = callset_id,
                                    call_id = call_id, 
@@ -318,16 +312,7 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
         logger.info("map {} {} apply async".format(callset_id, call_id))
 
         call_result_objs.append(cb)
-    # invocation_done = False
-    # while not invocation_done:
-    #     invocation_done = True
-    #     for result_obj in call_result_objs:
-    #         if not result_obj.ready() :
-    #             invocation_done = False
-    #             time.sleep(1)
 
-    # for result_obj in call_result_objs:
-    #     print "was successful?", result_obj.successful()
     res =  [c.get() for c in call_result_objs]
     pool.close()
     pool.join()
@@ -361,5 +346,32 @@ def wait(fs, return_when=ALL_COMPLETED):
 
     """
 
-    
+    # get all the futures that are not yet done
+    not_done_futures =  [f for f in fs if f._state not in [JobState.success, 
+                                                       JobState.error]]
 
+    # check if the not-done ones have the same callset_id
+    present_callsets = set([f.callset_id for f in not_done_futures])
+    if len(present_callsets) > 1:
+        raise NotImplementedError()
+
+    # get the list of all objects in this callset
+    callset_id = present_callsets[0] # FIXME assume only one
+    callids_done = s3util.get_callset_done(wrenconfig.AWS_S3_BUCKET, 
+                                           wrenconfig.AWS_S3_PREFIX, 
+                                           callset_id)
+    callids_done = set(callids_done)
+
+    fs_dones = []
+    fs_notdones = []
+    for f in fs:
+        if f._state in [JobState.success, JobState.error]:
+            # done, don't need to do anything
+            fs_dones.append(f)
+        else:
+            if f.call_id in callids_done:
+                f.result(throw_except=False) # get the result -- serial right now
+                fs_dones.append(f)
+            else:
+                fs_notdones.append(f)
+    return fs_dones, fs_notdones
