@@ -11,6 +11,7 @@ from multiprocessing.pool import ThreadPool
 import time
 import s3util
 import logging
+import botocore
 
 logger = logging.getLogger('pywren')
 logger.setLevel(logging.DEBUG)
@@ -200,6 +201,13 @@ class ResponseFuture(object):
     def add_done_callback(self, fn):
         raise NotImplementedError()
 
+
+## FIXME supposedly this is not thread safe
+## but the create_client operation takes FOREVER for some
+## reason I don't understand
+session = botocore.session.get_session()
+lambclient = session.create_client('lambda', region_name = wrenconfig.AWS_REGION)
+s3client = session.create_client('s3', region_name = wrenconfig.AWS_REGION)
     
 def call_async(func, data, callset_id=None, extra_env = None, 
                extra_meta=None, call_id = None, 
@@ -221,15 +229,19 @@ def call_async(func, data, callset_id=None, extra_env = None,
     logger.info("call_async {} {} ".format(callset_id, call_id))
 
 
-    session = boto3.session.Session()
-    lambclient = session.client('lambda', region_name = AWS_REGION)
-    s3client = session.client('s3', region_name = AWS_REGION)
+    # session = botocore.session.get_session()
+    # logger.info("call_async {} {} session created ".format(callset_id, call_id))
+    # lambclient = session.create_client('lambda', region_name = AWS_REGION)
+    # logger.info("call_async {} {} lambclient created ".format(callset_id, call_id))
+    # s3client = session.create_client('s3', region_name = AWS_REGION)
+    # logger.info("call_async {} {} s3client created ".format(callset_id, call_id))
 
     # FIXME someday we can optimize this
     
     
     func_str = cloudpickle.dumps({'func' : func, 
                                   'data' : data})
+    logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
 
     s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
@@ -253,16 +265,17 @@ def call_async(func, data, callset_id=None, extra_env = None,
             arg_dict[k] = v
 
     # put on s3 
+    logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
     s3client.put_object(Bucket = s3_input_key[0], 
                         Key = s3_input_key[1], 
                         Body = func_str)
-    print "PUT", s3_input_key
     logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
 
     arg_dict['host_submit_time'] =  time.time()
 
     json_arg = json.dumps(arg_dict)
 
+    logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
     res = lambclient.invoke(FunctionName=LAMBDA_FUNCTION_NAME, 
                             Payload = json.dumps(arg_dict), 
                             InvocationType='Event')

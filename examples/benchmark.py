@@ -32,7 +32,7 @@ if __name__ == "__main__":
     t1 = time.time()
 
     LOOPCOUNT = 4
-    N = 100
+    N = 1000
     MAT_N = 4096
 
     iters = np.arange(N)
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             break
 
         time.sleep(1)
-    print [f.done() for f in futures]
+
     all_done = time.time()
     total_time = all_done - t1
     print "total time", total_time
