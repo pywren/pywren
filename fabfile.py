@@ -1,4 +1,6 @@
-from fabric.api import task, local, lcd
+
+from fabric.api import local, env, run, put, cd, task, sudo, settings, warn_only, lcd
+from fabric.contrib import project
 import boto3
 import cloudpickle
 import json
@@ -15,6 +17,8 @@ be sure to call conda clean --all before compressing
 
 
 """
+
+env.roledefs['m'] = ['jonas@c65']
 
 
 @task
@@ -55,4 +59,14 @@ def update_function():
 
     response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
                                                ZipFile=open(PACKAGE_FILE, 'r').read())
+
+
+
+@task
+def deploy():
+        local('git ls-tree --full-tree --name-only -r HEAD > .git-files-list')
+    
+        project.rsync_project("/data/jonas/pywren/", local_dir="./",
+                              exclude=['*.npy', "*.ipynb", 'data', "*.mp4"],
+                              extra_opts='--files-from=.git-files-list')
 

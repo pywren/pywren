@@ -23,9 +23,8 @@ def key_size(bucket, key):
         s3 = boto3.resource('s3')
         a = s3.meta.client.head_object(Bucket=bucket, Key=key)
         return a['ContentLength']
-
     except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "NoSuchKey":
+        if e.response['Error']['Code'] == "404":
             return None
         else:
             raise e

@@ -3,11 +3,11 @@ import time
 import sys
 sys.path.append("../")
 import pywren
+import logging
 
 
-MAT_N = 4096
 
-def compute_flops(loopcount):
+def compute_flops(loopcount, MAT_N):
     
     A = np.arange(MAT_N**2, dtype=np.float64).reshape(MAT_N, MAT_N)
     B = np.arange(MAT_N**2, dtype=np.float64).reshape(MAT_N, MAT_N)
@@ -22,25 +22,35 @@ def compute_flops(loopcount):
 
 
 if __name__ == "__main__":
+
+    fh = logging.FileHandler('benchmark.log')
+    fh.setLevel(logging.DEBUG)
+    fh.setFormatter(pywren.wren.formatter)
+    pywren.wren.logger.addHandler(fh)
+
+
     t1 = time.time()
 
-    LOOPCOUNT = 20
-    N = 400
+    LOOPCOUNT = 4
+    N = 100
+    MAT_N = 4096
+
     iters = np.arange(N)
     
     def f(x):
-        return compute_flops(LOOPCOUNT)
+        return compute_flops(LOOPCOUNT, MAT_N)
 
     futures = pywren.map(f, iters)
 
     print "invocation done, dur=", time.time() - t1
+    print futures[0].callset_id
 
     result_count = 0
     while result_count < N:
         
         isdone = [f.done() for f in futures]
         result_count = np.sum(isdone)
-
+        
         est_flop = 2 * result_count * LOOPCOUNT * MAT_N**3
         
         est_gflops = est_flop / 1e9/(time.time() - t1)
@@ -52,7 +62,7 @@ if __name__ == "__main__":
             break
 
         time.sleep(1)
-
+    print [f.done() for f in futures]
     all_done = time.time()
     total_time = all_done - t1
     print "total time", total_time

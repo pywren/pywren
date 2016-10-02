@@ -21,6 +21,12 @@ def handler(event, context):
     func_and_data_filename = "/tmp/input.pickle"
     output_filename = "/tmp/output.pickle"
 
+    server_info = {'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
+                   '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
+                   '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
+                   '/proc/cgroups': open("/proc/cgroups", 'r').read() }
+                   
+                 
 
     print "invocation started"
     # download the input 
@@ -28,9 +34,13 @@ def handler(event, context):
     output_key = event['output_key']
     status_key = event['status_key']
 
-    # check to see if those three keys are there
-    for b, k in [input_key, output_key, status_key]:
-        print "key status: ", s3util.key_size(b, k), "no bytes" 
+    b, k = input_key
+    KS =  s3util.key_size(b, k)
+    print "bucket=", b, "key=", k,  "status: ", KS, "bytes" 
+    while KS is None:
+        print "WARNING COULD NOT GET FIRST KEY" 
+
+        KS =  s3util.key_size(b, k)
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata
@@ -94,10 +104,11 @@ def handler(event, context):
         'output_key' : output_key, 
         'status_key' : status_key, 
         'end_time' : end_time, 
-
+        'host_submit_time' : event['host_submit_time'],  
         'aws_request_id' : context.aws_request_id, 
         'log_group_name' : context.log_group_name, 
         'log_stream_name' : context.log_stream_name, 
+        'server_info' : server_info, 
     }  
 
 

@@ -10,6 +10,24 @@ import enum
 from multiprocessing.pool import ThreadPool
 import time
 import s3util
+import logging
+
+logger = logging.getLogger('pywren')
+logger.setLevel(logging.DEBUG)
+
+# create console handler and set level to debug
+ch = logging.StreamHandler()
+ch.setLevel(logging.WARN)
+
+# create formatter
+formatter = logging.Formatter('%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s', 
+                              "%Y-%m-%d %H:%M:%S")
+
+# add formatter to ch
+ch.setFormatter(formatter)
+
+# add ch to logger
+logger.addHandler(ch)
 
 class JobState(enum.Enum):
     new = 1
@@ -99,7 +117,7 @@ class ResponseFuture(object):
         return True
 
 
-    def result(self, timeout=None, check_only=False):
+    def result(self, timeout=None, check_only=False, throw_except=True):
         """
 
 
@@ -156,6 +174,11 @@ class ResponseFuture(object):
                                               AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
                                               AWS_REGION = self.AWS_REGION)
         call_success = call_invoker_result['success']
+        logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id, 
+                                                                           self.call_id, 
+                                                                           call_success))
+
+        self._run_status = status
         
         if call_success:
             
@@ -165,8 +188,11 @@ class ResponseFuture(object):
             self._exception = call_invoker_result['result']
             self._state = JobState.error
 
-        self._run_status = status
-        return self._return_val
+        if call_success:
+            return self._return_val
+        elif call_success == False and throw_except:
+            raise self._exception
+        return None
             
     def exception(self, timeout = None):
         raise NotImplementedError()
@@ -176,7 +202,7 @@ class ResponseFuture(object):
 
     
 def call_async(func, data, callset_id=None, extra_env = None, 
-               extra_meta=None, 
+               extra_meta=None, call_id = None, 
                AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
                AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
                AWS_REGION = wrenconfig.AWS_REGION, 
@@ -189,9 +215,10 @@ def call_async(func, data, callset_id=None, extra_env = None,
 
     if callset_id is None:
         callset_id = s3util.create_callset_id()
-    call_id = s3util.create_call_id()
+    if call_id is None:
+        call_id = s3util.create_call_id()
 
-
+    logger.info("call_async {} {} ".format(callset_id, call_id))
 
 
     session = boto3.session.Session()
@@ -229,12 +256,18 @@ def call_async(func, data, callset_id=None, extra_env = None,
     s3client.put_object(Bucket = s3_input_key[0], 
                         Key = s3_input_key[1], 
                         Body = func_str)
-    
+    print "PUT", s3_input_key
+    logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
+
+    arg_dict['host_submit_time'] =  time.time()
+
     json_arg = json.dumps(arg_dict)
 
     res = lambclient.invoke(FunctionName=LAMBDA_FUNCTION_NAME, 
                             Payload = json.dumps(arg_dict), 
                             InvocationType='Event')
+    logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
+
     fut = ResponseFuture(call_id, callset_id, AWS_REGION=AWS_REGION)
 
     fut._set_state(JobState.invoked)
@@ -256,10 +289,21 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
     N = len(iterdata)
     call_result_objs = []
     for i in range(N):
-        def f():
-            return call_async(func, iterdata[i], callset_id = callset_id,
-                              extra_env=extra_env)
-        cb = pool.apply_async(f)
+        call_id = "{:05d}".format(i)
+
+        # def f():
+        #     return call_async(func, iterdata[i], callset_id = callset_id,
+        #                       call_id = call_id, 
+        #                       extra_env=extra_env)
+        #logger.info("map {} {} apply async".format(callset_id, call_id))
+
+        cb = pool.apply_async(call_async, (func, iterdata[i]), 
+                              dict(callset_id = callset_id,
+                                   call_id = call_id, 
+                                   extra_env=extra_env))
+
+        logger.info("map {} {} apply async".format(callset_id, call_id))
+
         call_result_objs.append(cb)
     # invocation_done = False
     # while not invocation_done:
@@ -274,6 +318,7 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
     res =  [c.get() for c in call_result_objs]
     pool.close()
     pool.join()
+    logger.info("map invoked {} {} pool join".format(callset_id, call_id))
 
     # FIXME take advantage of the callset to return a lot of these 
 
