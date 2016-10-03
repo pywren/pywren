@@ -31,8 +31,8 @@ if __name__ == "__main__":
 
     t1 = time.time()
 
-    LOOPCOUNT = 4
-    N = 1000
+    LOOPCOUNT = 6
+    N = 1500
     MAT_N = 4096
 
     iters = np.arange(N)
@@ -47,10 +47,9 @@ if __name__ == "__main__":
 
     result_count = 0
     while result_count < N:
-        
-        isdone = [f.done() for f in futures]
-        result_count = np.sum(isdone)
-        
+        fs_dones, fs_notdones = pywren.wait(futures)
+        result_count = len(fs_dones)
+
         est_flop = 2 * result_count * LOOPCOUNT * MAT_N**3
         
         est_gflops = est_flop / 1e9/(time.time() - t1)

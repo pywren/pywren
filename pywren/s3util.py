@@ -32,10 +32,12 @@ def key_size(bucket, key):
 
 def get_callset_done(bucket, prefix, callset_id):
     key_prefix = os.path.join(prefix, callset_id)
-
+    s3 = boto3.resource('s3', region_name=wrenconfig.AWS_REGION)
     s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
                                            MaxKeys=1000)
     
+    status_keys = []
+
     while True:
         for k in s3res['Contents']:
             if "status.json" in k['Key']:
@@ -49,7 +51,7 @@ def get_callset_done(bucket, prefix, callset_id):
         else:
             break
 
-    call_ids = [k[len(prefix)+1:].split("/")[0] for k in status_keys]
+    call_ids = [k[len(key_prefix)+1:].split("/")[0] for k in status_keys]
     return call_ids
         
         

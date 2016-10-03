@@ -46,7 +46,7 @@ class Executor(object):
     def __init__(self, aws_region, s3_bucket, s3_prefix, lambconf):
         pass
 
-
+global_s3_client =  boto3.client('s3', region_name = wrenconfig.AWS_REGION)
     
 def get_call_status(callset_id, call_id, 
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
@@ -55,9 +55,7 @@ def get_call_status(callset_id, call_id,
     s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
-    
-
-    s3 = boto3.client('s3', region_name = AWS_REGION)
+    s3 = global_s3_client
 
     try:
         r = s3.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
@@ -77,7 +75,7 @@ def get_call_output(callset_id, call_id,
     s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
-    s3 = boto3.client('s3', region_name = AWS_REGION)
+    s3 = global_s3_client # boto3.client('s3', region_name = AWS_REGION)
     r = s3.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
     return pickle.loads(r['Body'].read())
     
@@ -325,9 +323,10 @@ def map(func, iterdata, extra_meta = None, extra_env = None,
     return res
     
 ALL_COMPLETED = 1
+ANY_COMPLETED = 2
+ALWAYS = 3
 
-
-def wait(fs, return_when=ALL_COMPLETED):
+def wait(fs, return_when=ALWAYS):
     """
     this will eventually provide an optimization for checking if a large
     number of futures have completed without too much network traffic
@@ -356,7 +355,7 @@ def wait(fs, return_when=ALL_COMPLETED):
         raise NotImplementedError()
 
     # get the list of all objects in this callset
-    callset_id = present_callsets[0] # FIXME assume only one
+    callset_id = present_callsets.pop() # FIXME assume only one
     callids_done = s3util.get_callset_done(wrenconfig.AWS_S3_BUCKET, 
                                            wrenconfig.AWS_S3_PREFIX, 
                                            callset_id)
@@ -364,14 +363,22 @@ def wait(fs, return_when=ALL_COMPLETED):
 
     fs_dones = []
     fs_notdones = []
+
+    pool = ThreadPool(64)
+
     for f in fs:
         if f._state in [JobState.success, JobState.error]:
             # done, don't need to do anything
             fs_dones.append(f)
         else:
             if f.call_id in callids_done:
-                f.result(throw_except=False) # get the result -- serial right now
+                pool.apply_async(f.result, None, dict(throw_except=False))
+
                 fs_dones.append(f)
             else:
                 fs_notdones.append(f)
+    pool.close()
+    pool.join()
     return fs_dones, fs_notdones
+
+    
