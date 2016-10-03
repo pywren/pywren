@@ -8,7 +8,18 @@ Goal: Dispatch of small efficient tasks with as close to zero user overhead
 as possible. In particular, entirely serverless -- use as many AWS services
 as necessary. 
 
-## Key technologies leveridged
+```python
+def foo(b):
+    x = np.random.normal(0, b, 1024)
+    A = np.random.normal(0, b, (1024, 124))
+    return np.dot(A, x)
+
+res = pywren.map(foo, np.linspace(0.1, 100, 1000)
+```
+
+
+
+## Key technologies leveraged
 - AWS Lambda for containerized, stateless compute 
 - s3 for event coordination 
 - Conda for up-to-date python packages
@@ -23,10 +34,9 @@ NOTE: The interfaces are close but not identical, because DISTRIBUTED
 COMPUTATION IS HARD. The cloud is stormy! In particular, `submit` for python
 futures takes other crap. 
 
-
 res = pywren.map(func, list)
 
-and get an object back that sorta looks like a list of futures. 
+
 
 ### Limitations [known ahead of time]:
 
@@ -35,11 +45,6 @@ and get an object back that sorta looks like a list of futures.
 - possibly slow deploy process
 - high latency if cold process
 - challenges in supporting entire python / anaconda stack
-
-
-783175685819
-
---role arn:aws:iam::783175685819:role/lambda_basic_execution  \
 
 
 ## To Do:
