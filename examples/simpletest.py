@@ -1,3 +1,8 @@
+#from gevent import monkey
+
+#monkey.patch_socket()
+#monkey.patch_ssl()
+
 import time
 import boto3 
 import uuid
