@@ -73,7 +73,7 @@ def create_role():
                                  AssumeRolePolicyDocument=json_policy)
     more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
-    iamclient.RolePolicy(role_name, 'more-permissions').put(
+    iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)
 
 @cli.command()    
@@ -127,6 +127,34 @@ def deploy_lambda(update_if_exists = True):
                                    Role = ROLE, 
                                    Code = {'ZipFile' : file_like_object.getvalue()})
         
+@cli.command()    
+def delete_lambda():
+    config = pywren.wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    FUNCTION_NAME = config['lambda']['function_name']
+
+    lambclient = boto3.client('lambda', region_name=AWS_REGION)
+
+    b = lambclient.list_functions()
+
+    if FUNCTION_NAME not in [f['FunctionName'] for f in b['Functions']]:
+        raise Exception()
+    lambclient.delete_function(FunctionName = FUNCTION_NAME)
+
+@cli.command()
+def delete_role():
+    """
+    
+    """
+
+    config = pywren.wrenconfig.default()
+    iamclient = boto3.client('iam')
+    role_name = config['account']['aws_lambda_role']
+    
+    iamclient.delete_role_policy(RoleName = role_name, 
+                                 PolicyName = '{}-more-permissions'.format(role_name))
+    iamclient.delete_role(RoleName = role_name)
+    
 
 def test_lambda():
     """
