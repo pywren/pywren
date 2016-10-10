@@ -1,5 +1,4 @@
 import uuid
-import wrenutil
 
 def uuid_str():
     return str(uuid.uuid4())

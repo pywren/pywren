@@ -11,8 +11,6 @@ import wrenutil
 import json
 import s3util
 
-
-
 def handler(event, context):
     s3 = boto3.resource('s3')
 

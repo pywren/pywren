@@ -37,26 +37,149 @@ class JobState(enum.Enum):
     success = 4
     error = 5
 
+def default_executor():
+    config = wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    FUNCTION_NAME = config['lambda']['function_name']
+    S3_BUCKET = config['s3']['bucket']
+    S3_PREFIX = config['s3']['pywren_prefix']
+
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME)
 
 class Executor(object):
     """
     Theoretically will allow for cross-AZ invocations
     """
 
-    def __init__(self, aws_region, s3_bucket, s3_prefix, lambconf):
-        pass
+    def __init__(self, aws_region, s3_bucket, s3_prefix, function_name):
+        self.aws_region = aws_region
+        self.s3_bucket = s3_bucket
+        self.s3_prefix = s3_prefix
+        self.lambda_function_name = function_name
 
-global_s3_client =  boto3.client('s3', region_name = wrenconfig.AWS_REGION)
+        self.session = botocore.session.get_session()
+        self.lambclient = self.session.create_client('lambda', 
+                                                     region_name = aws_region)
+        self.s3client = self.session.create_client('s3', region_name = aws_region)
+        
+    
+    def call_async(self, func, data, callset_id=None, extra_env = None, 
+                   extra_meta=None, call_id = None):
+        """
+        Returns a future
+
+        callset is just a handle to refer to a bunch of calls simultaneously
+        """
+
+        if callset_id is None:
+            callset_id = s3util.create_callset_id()
+        if call_id is None:
+            call_id = s3util.create_call_id()
+
+        logger.info("call_async {} {} ".format(callset_id, call_id))
+
+        # FIXME someday we can optimize this
+
+
+        func_str = cloudpickle.dumps({'func' : func, 
+                                      'data' : data})
+        logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
+
+        s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(self.s3_bucket,
+                                                                        self.s3_prefix, 
+                                                                        callset_id, call_id)
+
+        arg_dict = {'input_key' : s3_input_key, 
+                    'output_key' : s3_output_key, 
+                    'status_key' : s3_status_key, 
+                    'callset_id': callset_id, 
+                    'call_id' : call_id}    
+
+
+
+        if extra_env is not None:
+            arg_dict['extra_env'] = extra_env
+        if extra_meta is not None:
+            # sanity 
+            for k, v in extra_meta.iteritems():
+                if k in arg_dict:
+                    raise ValueError("Key {} already in dict".format(k))
+                arg_dict[k] = v
+
+        # put on s3 
+        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
+        self.s3client.put_object(Bucket = s3_input_key[0], 
+                            Key = s3_input_key[1], 
+                            Body = func_str)
+        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
+
+        arg_dict['host_submit_time'] =  time.time()
+
+        json_arg = json.dumps(arg_dict)
+
+        logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
+        res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
+                                     Payload = json.dumps(arg_dict), 
+                                     InvocationType='Event')
+        print "res=", res
+        logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
+
+        fut = ResponseFuture(call_id, callset_id, self)
+
+        fut._set_state(JobState.invoked)
+
+        return fut
+
+
+
+    def map(self, func, iterdata, extra_meta = None, extra_env = None, 
+            invoke_pool_threads=64):
+        """
+        Optionally use threadpool for faster invocation
+
+        # FIXME work with an actual iterable instead of just a list
+
+        """
+
+        pool = ThreadPool(invoke_pool_threads)
+        callset_id = s3util.create_callset_id()
+
+        N = len(iterdata)
+        call_result_objs = []
+        for i in range(N):
+            call_id = "{:05d}".format(i)
+
+            cb = pool.apply_async(self.call_async, (func, iterdata[i]), 
+                                  dict(callset_id = callset_id,
+                                       call_id = call_id, 
+                                       extra_env=extra_env))
+
+            logger.info("map {} {} apply async".format(callset_id, call_id))
+
+            call_result_objs.append(cb)
+
+        res =  [c.get() for c in call_result_objs]
+        pool.close()
+        pool.join()
+        logger.info("map invoked {} {} pool join".format(callset_id, call_id))
+
+        # FIXME take advantage of the callset to return a lot of these 
+
+        # note these are just the invocation futures
+
+        return res
+    
     
 def get_call_status(callset_id, call_id, 
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
                     AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-                    AWS_REGION = wrenconfig.AWS_REGION):
+                    AWS_REGION = wrenconfig.AWS_REGION, s3=None):
     s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
-    s3 = global_s3_client
-
+    if s3 is None:
+        s3 = global_s3_client
+    
     try:
         r = s3.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
         result_json = r['Body'].read()
@@ -68,32 +191,32 @@ def get_call_status(callset_id, call_id,
         else:
             raise e
 
+
 def get_call_output(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
                     AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-                    AWS_REGION = wrenconfig.AWS_REGION):
+                    AWS_REGION = wrenconfig.AWS_REGION, s3=None):
     s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
-    s3 = global_s3_client # boto3.client('s3', region_name = AWS_REGION)
+    
+    if s3 is None:
+        s3 = global_s3_client # boto3.client('s3', region_name = AWS_REGION)
+
     r = s3.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
     return pickle.loads(r['Body'].read())
     
+
 class ResponseFuture(object):
 
     """
     """
-    def __init__(self, call_id, callset_id,                     
-                 AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
-                 AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-                 AWS_REGION = wrenconfig.AWS_REGION):
+    def __init__(self, call_id, callset_id, executor):
 
         self.call_id = call_id
         self.callset_id = callset_id 
         self._state = JobState.new
-        self.AWS_S3_BUCKET = AWS_S3_BUCKET
-        self.AWS_S3_PREFIX = AWS_S3_PREFIX
-        self.AWS_REGION = AWS_REGION
+        self.executor = executor
         
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -146,10 +269,10 @@ class ResponseFuture(object):
 
         
         status = get_call_status(self.callset_id, self.call_id, 
-                                 AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
-                                 AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
-                                 AWS_REGION = self.AWS_REGION)  
-
+                                 AWS_S3_BUCKET = self.executor.s3_bucket, 
+                                 AWS_S3_PREFIX = self.executor.s3_prefix, 
+                                 AWS_REGION = self.executor.aws_region, 
+                                 s3 = self.executor.s3client)
 
 
         ## FIXME implement timeout
@@ -162,16 +285,18 @@ class ResponseFuture(object):
         while status is None:
             time.sleep(4)
             status = get_call_status(self.callset_id, self.call_id, 
-                                     AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
-                                     AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
-                                     AWS_REGION = self.AWS_REGION) 
-
+                                     AWS_S3_BUCKET = self.executor.s3_bucket, 
+                                     AWS_S3_PREFIX = self.executor.s3_prefix, 
+                                     AWS_REGION = self.executor.aws_region, 
+                                     s3 = self.executor.s3client)
+            
         # FIXME check if it actually worked all the way through 
 
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
-                                              AWS_S3_BUCKET = self.AWS_S3_BUCKET, 
-                                              AWS_S3_PREFIX = self.AWS_S3_PREFIX, 
-                                              AWS_REGION = self.AWS_REGION)
+                                              AWS_S3_BUCKET = self.executor.s3_bucket, 
+                                              AWS_S3_PREFIX = self.executor.s3_prefix,
+                                              AWS_REGION = self.executor.aws_region, 
+                                              s3 = self.executor.s3client)
         call_success = call_invoker_result['success']
         logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id, 
                                                                            self.call_id, 
@@ -199,129 +324,10 @@ class ResponseFuture(object):
     def add_done_callback(self, fn):
         raise NotImplementedError()
 
-
-## FIXME supposedly this is not thread safe
-## but the create_client operation takes FOREVER for some
-## reason I don't understand
-session = botocore.session.get_session()
-lambclient = session.create_client('lambda', region_name = wrenconfig.AWS_REGION)
-s3client = session.create_client('s3', region_name = wrenconfig.AWS_REGION)
-    
-def call_async(func, data, callset_id=None, extra_env = None, 
-               extra_meta=None, call_id = None, 
-               AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
-               AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-               AWS_REGION = wrenconfig.AWS_REGION, 
-               LAMBDA_FUNCTION_NAME = wrenconfig.FUNCTION_NAME):
-    """
-    Returns a future
-
-    callset is just a handle to refer to a bunch of calls simultaneously
-    """
-
-    if callset_id is None:
-        callset_id = s3util.create_callset_id()
-    if call_id is None:
-        call_id = s3util.create_call_id()
-
-    logger.info("call_async {} {} ".format(callset_id, call_id))
-
-
-    # session = botocore.session.get_session()
-    # logger.info("call_async {} {} session created ".format(callset_id, call_id))
-    # lambclient = session.create_client('lambda', region_name = AWS_REGION)
-    # logger.info("call_async {} {} lambclient created ".format(callset_id, call_id))
-    # s3client = session.create_client('s3', region_name = AWS_REGION)
-    # logger.info("call_async {} {} s3client created ".format(callset_id, call_id))
-
-    # FIXME someday we can optimize this
-    
-    
-    func_str = cloudpickle.dumps({'func' : func, 
-                                  'data' : data})
-    logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
-
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
-                                                                    AWS_S3_PREFIX, 
-                                                     callset_id, call_id)
-
-    arg_dict = {'input_key' : s3_input_key, 
-                'output_key' : s3_output_key, 
-                'status_key' : s3_status_key, 
-                'callset_id': callset_id, 
-                'call_id' : call_id}    
-    
     
 
-    if extra_env is not None:
-        arg_dict['extra_env'] = extra_env
-    if extra_meta is not None:
-        # sanity 
-        for k, v in extra_meta.iteritems():
-            if k in arg_dict:
-                raise ValueError("Key {} already in dict".format(k))
-            arg_dict[k] = v
 
-    # put on s3 
-    logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
-    s3client.put_object(Bucket = s3_input_key[0], 
-                        Key = s3_input_key[1], 
-                        Body = func_str)
-    logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
 
-    arg_dict['host_submit_time'] =  time.time()
-
-    json_arg = json.dumps(arg_dict)
-
-    logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
-    res = lambclient.invoke(FunctionName=LAMBDA_FUNCTION_NAME, 
-                            Payload = json.dumps(arg_dict), 
-                            InvocationType='Event')
-    logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
-
-    fut = ResponseFuture(call_id, callset_id, AWS_REGION=AWS_REGION)
-
-    fut._set_state(JobState.invoked)
-
-    return fut
-
-def map(func, iterdata, extra_meta = None, extra_env = None, 
-        invoke_pool_threads=64):
-    """
-    Optionally use threadpool for faster invocation
-    
-    # FIXME work with an actual iterable instead of just a list
-
-    """
-    
-    pool = ThreadPool(invoke_pool_threads)
-    callset_id = s3util.create_callset_id()
-    
-    N = len(iterdata)
-    call_result_objs = []
-    for i in range(N):
-        call_id = "{:05d}".format(i)
-
-        cb = pool.apply_async(call_async, (func, iterdata[i]), 
-                              dict(callset_id = callset_id,
-                                   call_id = call_id, 
-                                   extra_env=extra_env))
-
-        logger.info("map {} {} apply async".format(callset_id, call_id))
-
-        call_result_objs.append(cb)
-
-    res =  [c.get() for c in call_result_objs]
-    pool.close()
-    pool.join()
-    logger.info("map invoked {} {} pool join".format(callset_id, call_id))
-
-    # FIXME take advantage of the callset to return a lot of these 
-
-    # note these are just the invocation futures
-
-    return res
-    
 ALL_COMPLETED = 1
 ANY_COMPLETED = 2
 ALWAYS = 3

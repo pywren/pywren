@@ -1,0 +1,35 @@
+language: python
+sudo: required
+# https://docs.travis-ci.com/user/ci-environment/ to get a modern gcc etc
+dist: trusty
+
+
+# notes from http://conda.pydata.org/docs/travis.html
+python:
+  # We don't actually use the Travis Python, but this keeps it organized.
+  - "2.7"
+install:
+  # We do this conditionally because it saves us some downloading if the
+  # version is the same. 
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
+    else
+      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # Replace dep1 dep2 ... with your dependencies
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numba pytest cython nose boto3
+  - source activate test-environment
+  - DISTUTILS_DEBUG=1 python setup.py install
+
+
+script:
+  # Your test script goes here
+  cd tests && nosetests

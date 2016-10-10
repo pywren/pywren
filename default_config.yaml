@@ -1,0 +1,13 @@
+account:
+    aws_account_id: AWS_ACCOUNT_ID
+    aws_lambda_role: pywren_exec_role
+    aws_region: us-west-2
+
+lambda:
+    memory : 1536
+    timeout : 300
+    function_name : pywren1
+    
+s3:
+    bucket: BUCKET_NAME
+    pywren_prefix: pywren.jobs

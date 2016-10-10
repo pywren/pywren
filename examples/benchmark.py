@@ -31,16 +31,16 @@ if __name__ == "__main__":
 
     t1 = time.time()
 
-    LOOPCOUNT = 6
-    N = 1500
-    MAT_N = 4096
+    LOOPCOUNT = 2 # 6
+    N = 15  # 1500
+    MAT_N = 1024  # 4096
 
     iters = np.arange(N)
     
     def f(x):
         return compute_flops(LOOPCOUNT, MAT_N)
-
-    futures = pywren.map(f, iters)
+    pwex = pywren.default_executor()
+    futures = pwex.map(f, iters)
 
     print "invocation done, dur=", time.time() - t1
     print futures[0].callset_id

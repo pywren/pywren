@@ -89,7 +89,8 @@ if __name__ == "__main__":
 
     t1 = time.time()
 
-    fut = pywren.call_async(proc_cpu, None)
+    wrenexec = pywren.default_executor()
+    fut = wrenexec.call_async(proc_cpu, None)
     print fut.callset_id
 
     res = fut.result() 
