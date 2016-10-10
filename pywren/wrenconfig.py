@@ -61,3 +61,16 @@ basic_role_policy = {
         "Action": "sts:AssumeRole"}
     ]
 }
+
+more_permissions_policy = {
+    'Statement': [
+        {
+            'Effect':'Allow',
+            'Action': [
+                's3:ListBucket',
+                's3:Put*',
+                's3:Get*',
+                's3:*MultipartUpload*'
+            ],
+                'Resource': '*'
+        }]}

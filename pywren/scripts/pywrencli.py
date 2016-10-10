@@ -66,10 +66,15 @@ def create_role():
 
     config = pywren.wrenconfig.default()
     print "config=", config
-    iamclient = boto3.client('iam')
+    iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
-    role = iamclient.create_role(RoleName=config['account']['aws_lambda_role'], 
+    role_name = config['account']['aws_lambda_role']
+    role = iamclient.create_role(RoleName=role_name, 
                                  AssumeRolePolicyDocument=json_policy)
+    more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
+
+    iamclient.RolePolicy(role_name, 'more-permissions').put(
+        PolicyDocument=more_json_policy)
 
 @cli.command()    
 def deploy_lambda(update_if_exists = True):
