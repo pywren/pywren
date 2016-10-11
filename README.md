@@ -1,5 +1,7 @@
 # PyWren
 
+[![Build Status](https://travis-ci.org/ericmjonas/pywren.svg?branch=master)](https://travis-ci.org/ericmjonas/pywren)
+
 > The wrens are mostly small, brownish passerine birds in the mainly New World family Troglodytidae. ... Most wrens are small and rather inconspicuous, except for their loud and often complex songs. - Wikipedia
 
 PyWren -- it's like a mini condor, in the cloud, for often-complex calls. 
