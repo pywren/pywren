@@ -23,13 +23,11 @@ from setuptools import setup, find_packages
 setup(
     name='pywren',
     version='1.0',
-    py_modules=['pywren'],
+    packages=['pywren', 'pywren.scripts'],
     install_requires=[
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 'enum34' 
     ],
-    entry_points='''
-        [console_scripts]
-        pywren=pywren.scripts.pywrencli:cli
-    ''',
+    entry_points = 
+    { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli']}, 
     include_package_data=True
 )
