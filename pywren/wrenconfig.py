@@ -23,7 +23,7 @@ def load(config_filename):
     res =  yaml.safe_load(open(config_filename, 'r'))    
     # sanity check
     if res['s3']['bucket'] == 'BUCKET_NAME':
-        raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket'])
+        raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket']))
     return res
 
 def get_default_home_filename():
