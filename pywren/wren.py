@@ -351,6 +351,7 @@ def wait(fs, return_when=ALWAYS):
 
     """
 
+
     # get all the futures that are not yet done
     not_done_futures =  [f for f in fs if f._state not in [JobState.success, 
                                                        JobState.error]]
@@ -362,8 +363,10 @@ def wait(fs, return_when=ALWAYS):
 
     # get the list of all objects in this callset
     callset_id = present_callsets.pop() # FIXME assume only one
-    callids_done = s3util.get_callset_done(wrenconfig.AWS_S3_BUCKET, 
-                                           wrenconfig.AWS_S3_PREFIX, 
+    f0 = not_done_futures[0] # This is a hack too 
+
+    callids_done = s3util.get_callset_done(future.executor.s3_bucket, 
+                                           future.executor.s3_prefix,
                                            callset_id)
     callids_done = set(callids_done)
 
