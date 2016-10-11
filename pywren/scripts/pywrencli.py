@@ -22,9 +22,11 @@ SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
               help='name of the IAM role we are creating')
 @click.option('--function_name', default='pywren1', 
               help='lambda function name')
+@click.option('--bucket_name', default='BUCKET_NAME', 
+              help='s3 bucket name for intermediates')
 @click.option('--force', is_flag=True, default=False, 
               help='force overwrite an existing file')
-def create_config(filename, force, lambda_role, function_name):
+def create_config(filename, force, lambda_role, function_name, bucket_name):
     """
     Create a config file initialized with the defaults, and
     put it in your ~/.pywren_config
@@ -43,6 +45,7 @@ def create_config(filename, force, lambda_role, function_name):
     default_yaml = default_yaml.replace('AWS_ACCOUNT_ID', account_id)
     default_yaml = default_yaml.replace('pywren_exec_role', lambda_role)
     default_yaml = default_yaml.replace('pywren1', function_name)
+    default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
     
     # print out message about the stuff you need to do 
     if os.path.exists(filename) and not force:

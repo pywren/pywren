@@ -24,7 +24,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
 
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest
   - source activate test-environment
   - python setup.py install
 
@@ -32,10 +32,11 @@ install:
 script:
   # Your test script goes here
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test_$TRAVIS_BUILD_NUMBER --function_name=pywren_travis_$TRAVIS_BUILD_NUMBER
+  - pywren create_config --lambda_role=pywren_travis_test_$TRAVIS_BUILD_NUMBER --function_name=pywren_travis_$TRAVIS_BUILD_NUMBER --bucket_name=jonas-testbucket2
   - pywren create_role
   - sleep 10
   - pywren deploy_lambda
+  - pytest tests
   - pywren delete_lambda
   - pywren delete_role
   #   cd tests && nosetests

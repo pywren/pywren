@@ -20,7 +20,11 @@ FUNCTION_NAME = "pywren1"
 
 def load(config_filename):
     import yaml
-    return yaml.safe_load(open(config_filename, 'r'))    
+    res =  yaml.safe_load(open(config_filename, 'r'))    
+    # sanity check
+    if res['s3']['bucket'] == 'BUCKET_NAME':
+        raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket'])
+    return res
 
 def get_default_home_filename():
     default_home_filename = os.path.join(os.path.expanduser("~/.pywren_config"))
