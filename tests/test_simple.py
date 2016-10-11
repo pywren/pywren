@@ -1,4 +1,4 @@
-from nose.tools import * 
+import pytest
 import time
 import boto3 
 import uuid
@@ -26,8 +26,6 @@ def compute_flops(loopcount):
 def subprocess_invoke(x):
     return subprocess.check_output("uname -a", shell=True)
 
-def throwexcept(x):
-    raise Exception("Throw me out!")
 
 
 def test_simple():
@@ -41,3 +39,16 @@ def test_simple():
 
     res = fut.result() 
     assert_equal(res, np.sum(x))
+
+def test_exception():
+
+    def throwexcept(x):
+        raise Exception("Throw me out!")
+
+    wrenexec = pywren.default_executor()
+    fut = wrenexec.call_async(throwexcept, None)
+    print fut.callset_id
+    with pytest.raises(Exception) as execinfo:
+        res = fut.result() 
+    assert 'Throw me out!' in str(execinfo.value)
+
