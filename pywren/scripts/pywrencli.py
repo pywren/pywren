@@ -54,11 +54,11 @@ def test_config():
     readable and writable (also by your indicated role), etc. 
     """
 
-    config = pywren.wrenconfig.default()
     client = boto3.client("sts")
     account_id = client.get_caller_identity()["Account"]
     print "The accountID is ", account_id
     # make sure the bucket exists
+    #config = pywren.wrenconfig.default()
 
 @cli.command()
 def create_role():
