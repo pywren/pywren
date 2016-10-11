@@ -50,6 +50,7 @@ def create_config(filename, force, lambda_role, function_name):
         
     open(filename, 'w').write(default_yaml)
     click.echo("new default file created in {}".format(filename))
+    click.echo("lambda role is {}".format(lambda_role))
     click.echo("remember to set your s3 bucket and preferred AWS region")
 
 @cli.command()
