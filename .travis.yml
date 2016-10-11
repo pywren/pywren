@@ -31,4 +31,5 @@ install:
 
 script:
   # Your test script goes here
+  ls 
   #   cd tests && nosetests
