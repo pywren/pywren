@@ -31,6 +31,8 @@ def handler(event, context):
     input_key = event['input_key']
     output_key = event['output_key']
     status_key = event['status_key']
+    runtime_s3_bucket = event['runtime_s3_bucket']
+    runtime_s3_key = event['runtime_s3_key']
 
     b, k = input_key
     KS =  s3util.key_size(b, k)
@@ -49,7 +51,9 @@ def handler(event, context):
 
     ## Now get the runtime
 
-    res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
+    res = s3.meta.client.get_object(Bucket=runtime_s3_bucket, 
+                                    Key=runtime_s3_key)
+
     condatar = tarfile.open(mode= "r:gz", 
                             fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
                                                                     res['ContentLength']))

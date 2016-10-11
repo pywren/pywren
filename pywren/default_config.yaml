@@ -11,3 +11,7 @@ lambda:
 s3:
     bucket: BUCKET_NAME
     pywren_prefix: pywren.jobs
+
+runtime:
+    s3_bucket: ericmjonas-public
+    s3_key: condaruntime.tar.gz

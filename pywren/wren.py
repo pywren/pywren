@@ -43,25 +43,26 @@ def default_executor():
     FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
-
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME, config)
 
 class Executor(object):
     """
     Theoretically will allow for cross-AZ invocations
     """
 
-    def __init__(self, aws_region, s3_bucket, s3_prefix, function_name):
+    def __init__(self, aws_region, s3_bucket, s3_prefix, function_name, 
+                 config):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
+        self.config = config
         self.lambda_function_name = function_name
 
         self.session = botocore.session.get_session()
         self.lambclient = self.session.create_client('lambda', 
                                                      region_name = aws_region)
         self.s3client = self.session.create_client('s3', region_name = aws_region)
-        
+
     
     def call_async(self, func, data, callset_id=None, extra_env = None, 
                    extra_meta=None, call_id = None):
@@ -93,7 +94,9 @@ class Executor(object):
                     'output_key' : s3_output_key, 
                     'status_key' : s3_status_key, 
                     'callset_id': callset_id, 
-                    'call_id' : call_id}    
+                    'call_id' : call_id, 
+                    'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
+                    'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
 
 
@@ -114,7 +117,7 @@ class Executor(object):
         logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
 
         arg_dict['host_submit_time'] =  time.time()
-
+        
         json_arg = json.dumps(arg_dict)
 
         logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))

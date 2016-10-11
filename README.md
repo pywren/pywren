@@ -56,6 +56,7 @@ by this remote process
 
 First, make sure you have boto set up to use your AWS credentials and
 have a sane python installation (I recommend [Anaconda](https://www.continuum.io/downloads ). Clone the repo from git and invoke:
+
 ```
 python setup.py install
 ```
@@ -65,6 +66,7 @@ properly for use via Boto. You also need a s3 bucket that you can write to
 to save data and retrieve results. 
 
 Run the following from the prompt:
+
 ```
 pywren create_config --bucket_name YOUR_S3_BUCKET_NAME
 pywren create_role
@@ -80,6 +82,7 @@ pywren deploy_lambda
 ### Testing
 
 You should now be able to run `examples/simpletest.py`. You should see the following:
+
 ```
 # python examples/simpletest.py
 # Linux ip-10-13-24-185 4.4.19-29.55.amzn1.x86_64 #1 SMP Mon Aug 29 23:29:40 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
