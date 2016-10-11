@@ -29,5 +29,6 @@ setup(
     ],
     entry_points = 
     { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli']}, 
+    package_data={'pywren': ['default_config.yaml']},
     include_package_data=True
 )

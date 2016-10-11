@@ -33,7 +33,7 @@ def create_config(filename, force, lambda_role, function_name):
     
     # copy default config file
 
-    default_yaml = open(os.path.join(SOURCE_DIR, "../../default_config.yaml")).read()
+    default_yaml = open(os.path.join(SOURCE_DIR, "../default_config.yaml")).read()
     
     client = boto3.client("sts")
     account_id = client.get_caller_identity()["Account"]
