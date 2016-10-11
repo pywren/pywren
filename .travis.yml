@@ -32,6 +32,15 @@ install:
 script:
   # Your test script goes here
   pywren test_config
+  sed 's/pywren_exec_role/pywren_exec_role_test/g' ~/.pywren_config > ~/.pywren_config
+  sed 's/pywren1/pywren1_test/g' ~/.pywren_config > ~/.pywren_config
+  # add bucket name
+  sed 's/BUCKET_NAME/jonas_testbucket2/g' ~/.pywren_config > ~/.pywren_config
+  pywren create_config
+  pywren create_role
+  pywren deploy_lambda
+  pywren delete_lambda
+  pywren delete_role
   #   cd tests && nosetests
 
 env:
