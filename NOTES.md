@@ -14,3 +14,10 @@
 
 
 Attach full policy
+
+
+create_config
+test_config
+create_role()
+deploy_lambda
+delete_lambda
