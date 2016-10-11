@@ -55,25 +55,27 @@ by this remote process
 ## Getting started
 
 First, make sure you have boto set up to use your AWS credentials and
-have a sane python installation. Then I recommend using the `pywren`
-command-line client which should have been installed on your path by
-setuptools. Note I am new to setuptools so this might not deploy
-correctly for whatever reason.
+have a sane python installation (I recommend [Anaconda](https://www.continuum.io/downloads ). Clone the repo from git and invoke:
+```
+python setup.py install
+```
+
+Before you get started, make sure you have your AWS credentials set up 
+properly for use via Boto. You also need a s3 bucket that you can write to 
+to save data and retrieve results. 
 
 Run the following from the prompt:
 ```
-pywren create_config
+pywren create_config --bucket_name YOUR_S3_BUCKET_NAME
 pywren create_role
 pywren deploy_lambda
 ```
 
 1. This will create a default configuration file and place it in `~/.pywren_config`. 
-2. Create the default IAM role to run the lambda process as
-3. Deploy the lambda function to AWS using your account. 
+2. Create the default IAM role to run the lambda process as `pywren_exec_role`
+3. Deploy the lambda function to AWS using your account as `pywren1`. 
+4. Place all intermediate data in `$YOUR_S3_BUCKET_NAME/pywren.jobs`. 
 
-Now open the config file, `~/.pywren_config` and add a bucket where pywren will
-be able to read and write from for storage of temporary data, as well
-as the key prefix it will use. 
 
 ### Testing
 
