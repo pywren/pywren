@@ -21,3 +21,7 @@ test_config
 create_role()
 deploy_lambda
 delete_lambda
+
+encrypting variables
+https://docs.travis-ci.com/user/environment-variables#Defining-encrypted-variables-in-.travis.yml
+
