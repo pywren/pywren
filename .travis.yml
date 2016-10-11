@@ -31,7 +31,7 @@ install:
 
 script:
   # Your test script goes here
-  ls 
+  pywren test_config
   #   cd tests && nosetests
 
 env:

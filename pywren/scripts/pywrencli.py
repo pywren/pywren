@@ -55,7 +55,9 @@ def test_config():
     """
 
     config = pywren.wrenconfig.default()
-
+    client = boto3.client("sts")
+    account_id = client.get_caller_identity()["Account"]
+    print "The accountID is ", account_id
     # make sure the bucket exists
 
 @cli.command()
