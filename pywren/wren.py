@@ -365,8 +365,8 @@ def wait(fs, return_when=ALWAYS):
     callset_id = present_callsets.pop() # FIXME assume only one
     f0 = not_done_futures[0] # This is a hack too 
 
-    callids_done = s3util.get_callset_done(future.executor.s3_bucket, 
-                                           future.executor.s3_prefix,
+    callids_done = s3util.get_callset_done(f0.executor.s3_bucket, 
+                                           f0.executor.s3_prefix,
                                            callset_id)
     callids_done = set(callids_done)
 
