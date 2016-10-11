@@ -16,7 +16,8 @@ def foo(b):
     A = np.random.normal(0, b, (1024, 124))
     return np.dot(A, x)
 
-res = pywren.map(foo, np.linspace(0.1, 100, 1000)
+pwex = pywren.default_executor()
+res = pwex.map(foo, np.linspace(0.1, 100, 1000)
 ```
 
 
@@ -56,7 +57,8 @@ by this remote process
 First, make sure you have boto set up to use your AWS credentials and
 have a sane python installation. Then I recommend using the `pywren`
 command-line client which should have been installed on your path by
-setuptools. 
+setuptools. Note I am new to setuptools so this might not deploy
+correctly for whatever reason.
 
 Run the following from the prompt:
 ```
