@@ -32,7 +32,7 @@ install:
 script:
   # Your test script goes here
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test --function_name=pywren_travis
+  - pywren create_config --lambda_role=pywren_travis_test_$TRAVIS_BUILD_NUMBER --function_name=pywren_travis_$TRAVIS_BUILD_NUMBER
   - pywren create_role
   - sleep 5 
   - pywren deploy_lambda
