@@ -59,4 +59,31 @@ power management:
 
 ```
 
-The existance of AVX is a good sign
+The existance of AVX is a good sign. 
+
+Example script:
+```
+import numpy as np
+import time
+print np.__version__
+
+N = 2048
+A = np.random.normal(0, 1, (N, N))
+B = np.random.normal(0, 1, (N, N))
+t1 = time.time()
+ITERS = 10
+for i in range(ITERS):
+    c = np.dot(A, B)
+t2 = time.time()
+print t2-t1
+
+```
+
+### Neutering MKL
+MKL is way too large, because it includes a lot of `.so`s you don't need for this
+build arch
+
+```
+rm libmkl_*avx512*.so
+rm libmkl_*mc*.so
+```

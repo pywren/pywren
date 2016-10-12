@@ -28,19 +28,6 @@ def compute_flops(loopcount):
     t2 = time.time()
     return FLOPS / (t2-t1)
 
-def uname_a(x):
-    return subprocess.check_output("uname -a", shell=True)
-
-def proc_cpu(x):
-    return subprocess.check_output("cat /proc/cpuinfo", shell=True)
-
-def instance_metadata(x):
-    return subprocess.check_output("ls ", shell=True)
-
-
-def throwexcept(x):
-    raise Exception("Throw me out!")
-
 if __name__ == "__main__":
 
     fh = logging.FileHandler('simpletest.log')
@@ -56,5 +43,4 @@ if __name__ == "__main__":
 
     res = fut.result() 
     print res/1e9, "GFLOPS"
-
 
