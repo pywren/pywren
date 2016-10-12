@@ -31,9 +31,9 @@ if __name__ == "__main__":
 
     t1 = time.time()
 
-    LOOPCOUNT = 2 # 6
-    N = 15  # 1500
-    MAT_N = 1024  # 4096
+    LOOPCOUNT = 6
+    N = 1000
+    MAT_N = 4096
 
     iters = np.arange(N)
     

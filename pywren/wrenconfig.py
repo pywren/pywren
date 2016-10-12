@@ -62,11 +62,14 @@ basic_role_policy = {
         "Principal": {
             "Service": "lambda.amazonaws.com"
         },
-        "Action": "sts:AssumeRole"}
+        "Action": "sts:AssumeRole"}, 
+
+
     ]
 }
 
 more_permissions_policy = {
+    "Version": "2012-10-17",
     'Statement': [
         {
             'Effect':'Allow',
@@ -77,4 +80,22 @@ more_permissions_policy = {
                 's3:*MultipartUpload*'
             ],
                 'Resource': '*'
-        }]}
+        }, 
+        {
+            "Effect": "Allow",
+            "Action": "logs:CreateLogGroup",
+            "Resource": "arn:aws:logs:us-west-2:783175685819:*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:us-west-2:783175685819:log-group:/aws/lambda/*:*"
+            ]
+        }
+
+
+]}

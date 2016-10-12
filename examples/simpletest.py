@@ -8,8 +8,6 @@ import boto3
 import uuid
 import numpy as np
 import time
-import sys
-sys.path.append("../")
 import pywren
 import subprocess
 import logging
@@ -30,55 +28,18 @@ def compute_flops(loopcount):
     t2 = time.time()
     return FLOPS / (t2-t1)
 
-def proc_cpu(x):
+def uname_a(x):
     return subprocess.check_output("uname -a", shell=True)
-    #return subprocess.check_output("cat /proc/self/cgroup", shell=True)
-    """
-    9:perf_event:/
-    8:memory:/sandbox-cdf823
-    7:hugetlb:/
-    6:freezer:/sandbox-684456
-    5:devices:/
-    4:cpuset:/
-    3:cpuacct:/sandbox-9330f9
-    2:cpu:/sandbox-root-8ZJPiN/sandbox-16222b
-    1:blkio:/
 
+def proc_cpu(x):
+    return subprocess.check_output("cat /proc/cpuinfo", shell=True)
 
-    """
-    return subprocess.check_output("", shell=True)
+def instance_metadata(x):
+    return subprocess.check_output("ls ", shell=True)
 
 
 def throwexcept(x):
     raise Exception("Throw me out!")
-
-
-# if __name__ == "__main__":
-#     t1 = time.time()
-
-#     LOOPCOUNT = 5
-
-#     fut = pywren.call_async(compute_flops, LOOPCOUNT)
-#     res = fut.result() 
-#     print "Ran at", res/1e9, "GLFOPS"
-
-
-# if __name__ == "__main__":
-#     t1 = time.time()
-
-#     LOOPCOUNT = 5
-#     iters = np.arange(10)
-    
-#     def f(x):
-#         return compute_flops(LOOPCOUNT)
-#     futures = pywren.map(f, iters)
-#     for f in futures:
-#         print f.result()/1e9
-
-#     # res = fut.result() 
-#     # print "Ran at", res/1e9, "GLFOPS"
-
-
 
 if __name__ == "__main__":
 
@@ -90,7 +51,7 @@ if __name__ == "__main__":
     t1 = time.time()
 
     wrenexec = pywren.default_executor()
-    fut = wrenexec.call_async(proc_cpu, None)
+    fut = wrenexec.call_async(instance_metadata, None)
     print fut.callset_id
 
     res = fut.result() 

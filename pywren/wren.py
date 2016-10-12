@@ -124,7 +124,6 @@ class Executor(object):
         res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
                                      Payload = json.dumps(arg_dict), 
                                      InvocationType='Event')
-        print "res=", res
         logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
 
         fut = ResponseFuture(call_id, callset_id, self)

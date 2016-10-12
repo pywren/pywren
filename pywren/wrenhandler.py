@@ -18,6 +18,9 @@ def handler(event, context):
 
     func_and_data_filename = "/tmp/input.pickle"
     output_filename = "/tmp/output.pickle"
+    # cleanup previous invocations
+    subprocess.check_output("rm -Rf /tmp/*", shell=True)
+
 
     server_info = {'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
                    '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
@@ -27,6 +30,7 @@ def handler(event, context):
                  
 
     print "invocation started"
+
     # download the input 
     input_key = event['input_key']
     output_key = event['output_key']

@@ -88,3 +88,6 @@ You should now be able to run `examples/simpletest.py`. You should see the follo
 # Linux ip-10-13-24-185 4.4.19-29.55.amzn1.x86_64 #1 SMP Mon Aug 29 23:29:40 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
+### Local pip install
+
+`pip install --editable ./`
