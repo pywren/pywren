@@ -87,3 +87,6 @@ build arch
 rm libmkl_*avx512*.so
 rm libmkl_*mc*.so
 ```
+
+
+pip install --editable
