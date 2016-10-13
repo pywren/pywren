@@ -57,7 +57,7 @@ class Serialize(object):
             
             mod_paths = self._modulemgr.get_and_clear_paths()
             print "mod_paths=", mod_paths
-        return cp, mod_paths
+        return cp, strbuffer, mod_paths
         #     vol_name = self._get_auto_module_volume_name()
         # if self._modulemgr.has_module_dependencies:
         #         v = self.multyvac.volume.get(vol_name)

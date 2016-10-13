@@ -62,8 +62,9 @@ class Executor(object):
         self.lambclient = self.session.create_client('lambda', 
                                                      region_name = aws_region)
         self.s3client = self.session.create_client('s3', region_name = aws_region)
+        
+        self.serializer = cloudpickle.serialize.Serialize()
 
-    
     def call_async(self, func, data, callset_id=None, extra_env = None, 
                    extra_meta=None, call_id = None):
         """
@@ -81,9 +82,18 @@ class Executor(object):
 
         # FIXME someday we can optimize this
 
+        cp, strbuffer, mod_paths = self.serializer(func, data)
+        module_data = {}
+        # load mod paths
+        for m in mod_paths:
+            module_data[m] = open(m, 'r').read()
+        
 
-        func_str = cloudpickle.dumps({'func' : func, 
-                                      'data' : data})
+        # FIXME this is going to result in 2x the data in there
+        # we shoudn't serialzie twice
+        func_str = pickle.dumps({'func_and_data' : strbuffer.getvalue(), 
+                                 'module_data' : module_data}, -1)
+
         logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
 
         s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(self.s3_bucket,

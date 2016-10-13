@@ -10,6 +10,9 @@ try:
     
 
     d = pickle.load(open(func_and_data_filename, 'r'))
+    func_and_data = d['func_and_data']
+    module_data = d['module_data']
+    d = pickle.loads(func_and_data)
     func = d['func']
     data = d['data']
     
