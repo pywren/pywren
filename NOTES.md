@@ -90,3 +90,9 @@ rm libmkl_*mc*.so
 
 
 pip install --editable
+
+
+
+###
+get the installed modules by running a tiny lambda
+
