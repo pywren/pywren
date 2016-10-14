@@ -1,6 +1,6 @@
 import boto3
 import botocore
-import cloudpickle
+
 import json
 import base64
 import cPickle as pickle
@@ -14,6 +14,7 @@ import logging
 import botocore
 import glob2
 import os
+from cloudpickle import serialize
 
 logger = logging.getLogger('pywren')
 logger.setLevel(logging.DEBUG)
@@ -65,7 +66,7 @@ class Executor(object):
                                                      region_name = aws_region)
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         
-        self.serializer = cloudpickle.serialize.Serialize()
+        self.serializer = serialize.Serialize()
 
     def call_async(self, func, data, callset_id=None, extra_env = None, 
                    extra_meta=None, call_id = None):
@@ -89,11 +90,15 @@ class Executor(object):
         # load mod paths
         for m in mod_paths:
             if os.path.isdir(m):
-                files = glob2.glob(os.path.join(m, "**.py"))
+                files = glob2.glob(os.path.join(m, "**/*.py"))
+                pkg_root = os.path.dirname(m)
             else:
+                pkg_root = os.path.dirname(m)
                 files = [m]
             for f in files:
-                module_data[f] = open(f, 'r').read()
+                dest_filename = f[len(pkg_root)+1:]
+
+                module_data[f[len(pkg_root)+1:]] = open(f, 'r').read()
         
 
         # FIXME this is going to result in 2x the data in there
@@ -320,7 +325,6 @@ class ResponseFuture(object):
         logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id, 
                                                                            self.call_id, 
                                                                            call_success))
-
         self._run_status = status
         
         if call_success:

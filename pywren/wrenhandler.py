@@ -62,10 +62,11 @@ def handler(event, context):
     fdfid.write(d['func_and_data'])
     fdfid.close()
     
-    # get modules
+    # get modules and save
     for m_filename, m_text in d['module_data'].iteritems():
         m_path = os.path.dirname(m_filename)
-        if m_path[0] == "/":
+        
+        if len(m_path) > 0 and m_path[0] == "/":
             m_path = m_path[1:]
         to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
         print "to_make=", to_make, "m_path=", m_path
@@ -81,6 +82,8 @@ def handler(event, context):
         fid = open(full_filename, 'w')
         fid.write(m_text)
         fid.close()
+    print subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True)
+    print subprocess.check_output("find {}".format(os.getcwd()), shell=True)
         
 
     ## Now get the runtime
@@ -99,7 +102,7 @@ def handler(event, context):
     
     print event
     extra_env = event.get('extra_env', {})
-    extra_env['PYTHONPATH'] = PYTHON_MODULE_PATH
+    extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
 
     call_id = event['call_id']
     callset_id = event['callset_id']

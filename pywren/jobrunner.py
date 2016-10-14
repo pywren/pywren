@@ -1,31 +1,28 @@
 import cPickle as pickle
 import sys
+import traceback
 import boto3
 
 try:
     func_and_data_filename = sys.argv[1]
     out_filename = sys.argv[2]
-    
-    print "THIS IS WHERE WE ARE" 
-    
 
-    d = pickle.load(open(func_and_data_filename, 'r'))
-    func = d['func']
-    data = d['data']
-    y = func(data)
+    func, args, kwargs = pickle.load(open(func_and_data_filename, 'r'))
+
+    y = func(*args, **kwargs)
     
     pickle.dump({'result' : y, 
-                 'success' : True} , 
+                 'success' : True, 
+                 'sys.path' : sys.path} , 
                 open(out_filename, 'w'), -1)
     
 
 except Exception as e:
     exc_type, exc_value, exc_traceback = sys.exc_info()
-
+    traceback.print_tb(exc_traceback)
     pickle.dump({'result' : e, 
                  'exc_type' : exc_type, 
-                 'exc_value' : exc_value, 
-                 'exc_traceback' : exc_traceback, 
+                 'sys.path' : sys.path, 
                  'success' : False}, 
                 open(out_filename, 'w'), -1)
     

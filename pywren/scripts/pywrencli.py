@@ -7,7 +7,7 @@ import shutil
 import os
 import json
 import zipfile
-import glob
+import glob2
 import io
 
 @click.group()
@@ -106,9 +106,11 @@ def deploy_lambda(update_if_exists = True):
     file_like_object = io.BytesIO()
     zipfile_obj = zipfile.ZipFile(file_like_object, mode='w')
 
-    files = glob.glob(os.path.join(SOURCE_DIR, "../*.py"))
+    files = glob2.glob(os.path.join(SOURCE_DIR, "../**/*.py"))
     for f in files:
-        zipfile_obj.write(f, arcname=os.path.basename(f))
+        a = os.path.relpath(f, SOURCE_DIR + "/..") 
+                            
+        zipfile_obj.write(f, arcname=a)
     zipfile_obj.close()
     #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
         

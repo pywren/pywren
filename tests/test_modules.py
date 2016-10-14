@@ -14,6 +14,7 @@ import subprocess
 import logging
 import unittest
 import numpy as np
+import extmodule
 
 class SimpleAsync(unittest.TestCase):
 

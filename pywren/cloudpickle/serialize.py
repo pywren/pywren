@@ -54,10 +54,18 @@ class Serialize(object):
         if not ignore_modulemgr:
             # Add modules
             for module in cp.modules:
+                print "adding module", module, module.__name__
                 self._modulemgr.add(module.__name__)
+                
+            print 'inspected modules', self._modulemgr._inspected_modules
+            print 'modules to inspect', self._modulemgr._modules_to_inspect
+            print 'paths to trans', self._modulemgr._paths_to_transmit
             
             mod_paths = self._modulemgr.get_and_clear_paths()
             print "mod_paths=", mod_paths
+
+            
+
         return cp, s.getvalue(), mod_paths
         #     vol_name = self._get_auto_module_volume_name()
         # if self._modulemgr.has_module_dependencies:
