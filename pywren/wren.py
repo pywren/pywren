@@ -12,6 +12,8 @@ import time
 import s3util
 import logging
 import botocore
+import glob2
+import os
 
 logger = logging.getLogger('pywren')
 logger.setLevel(logging.DEBUG)
@@ -82,16 +84,21 @@ class Executor(object):
 
         # FIXME someday we can optimize this
 
-        cp, strbuffer, mod_paths = self.serializer(func, data)
+        cp, str_pickle, mod_paths = self.serializer(func, data)
         module_data = {}
         # load mod paths
         for m in mod_paths:
-            module_data[m] = open(m, 'r').read()
+            if os.path.isdir(m):
+                files = glob2.glob(os.path.join(m, "**.py"))
+            else:
+                files = [m]
+            for f in files:
+                module_data[f] = open(f, 'r').read()
         
 
         # FIXME this is going to result in 2x the data in there
         # we shoudn't serialzie twice
-        func_str = pickle.dumps({'func_and_data' : strbuffer.getvalue(), 
+        func_str = pickle.dumps({'func_and_data' : str_pickle, 
                                  'module_data' : module_data}, -1)
 
         logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))

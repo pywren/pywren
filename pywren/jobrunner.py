@@ -10,12 +10,8 @@ try:
     
 
     d = pickle.load(open(func_and_data_filename, 'r'))
-    func_and_data = d['func_and_data']
-    module_data = d['module_data']
-    d = pickle.loads(func_and_data)
     func = d['func']
     data = d['data']
-    
     y = func(data)
     
     pickle.dump({'result' : y, 
@@ -24,7 +20,12 @@ try:
     
 
 except Exception as e:
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+
     pickle.dump({'result' : e, 
+                 'exc_type' : exc_type, 
+                 'exc_value' : exc_value, 
+                 'exc_traceback' : exc_traceback, 
                  'success' : False}, 
                 open(out_filename, 'w'), -1)
     

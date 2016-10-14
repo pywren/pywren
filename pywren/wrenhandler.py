@@ -11,11 +11,14 @@ import wrenutil
 import json
 import s3util
 
+PYTHON_MODULE_PATH = "/tmp/pymodules"
+
 def handler(event, context):
     s3 = boto3.resource('s3')
 
     start_time = time.time()
 
+    all_input_filename = "/tmp/all_input.pickle"
     func_and_data_filename = "/tmp/input.pickle"
     output_filename = "/tmp/output.pickle"
     # cleanup previous invocations
@@ -48,10 +51,37 @@ def handler(event, context):
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata
-    s3.meta.client.download_file(input_key[0], input_key[1], func_and_data_filename)
+    s3.meta.client.download_file(input_key[0], input_key[1], all_input_filename)
     input_download_time = time.time()
 
     print "input data download complete"
+    
+    # now split
+    d = pickle.load(open(all_input_filename, 'r'))
+    fdfid = open(func_and_data_filename, 'w')
+    fdfid.write(d['func_and_data'])
+    fdfid.close()
+    
+    # get modules
+    for m_filename, m_text in d['module_data'].iteritems():
+        m_path = os.path.dirname(m_filename)
+        if m_path[0] == "/":
+            m_path = m_path[1:]
+        to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
+        print "to_make=", to_make, "m_path=", m_path
+        try:
+            os.makedirs(to_make)
+        except OSError as e:
+            if e.errno == 17:
+                pass
+            else:
+                raise e
+        full_filename = os.path.join(to_make, os.path.basename(m_filename))
+        print "creating", full_filename
+        fid = open(full_filename, 'w')
+        fid.write(m_text)
+        fid.close()
+        
 
     ## Now get the runtime
 
@@ -69,6 +99,7 @@ def handler(event, context):
     
     print event
     extra_env = event.get('extra_env', {})
+    extra_env['PYTHONPATH'] = PYTHON_MODULE_PATH
 
     call_id = event['call_id']
     callset_id = event['callset_id']

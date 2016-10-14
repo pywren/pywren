@@ -22,7 +22,7 @@ from setuptools import setup, find_packages
 setup(
     name='pywren',
     version='1.0',
-    packages=['pywren', 'pywren.scripts'],
+    packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
     install_requires=[
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 'enum34' 
     ],

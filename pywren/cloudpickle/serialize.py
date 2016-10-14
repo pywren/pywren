@@ -16,6 +16,7 @@ import socket
 import subprocess
 import time
 import logging
+import numpy as np
 
 from cloudpickle import CloudPickler
 from module_dependency import ModuleDependencyAnalyzer
@@ -57,7 +58,7 @@ class Serialize(object):
             
             mod_paths = self._modulemgr.get_and_clear_paths()
             print "mod_paths=", mod_paths
-        return cp, strbuffer, mod_paths
+        return cp, s.getvalue(), mod_paths
         #     vol_name = self._get_auto_module_volume_name()
         # if self._modulemgr.has_module_dependencies:
         #         v = self.multyvac.volume.get(vol_name)
@@ -95,8 +96,8 @@ class Serialize(object):
         #     **kwargs
         # )
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.DEBUG)
-    mda = ModuleDependencyAnalyzer()
+    #logging.basicConfig(level=logging.DEBUG)
+    #mda = ModuleDependencyAnalyzer()
 
 
     import testmod
@@ -104,8 +105,9 @@ if __name__ == "__main__":
     serialize = Serialize()
 
     def foo(x):
-        y = testmod.bar_square(x)
+        y = testmod.bar_square(x) + np.arange(3)
         return y + 1
 
-    p =  serialize(foo, 7)
-    print p.modules
+    cp , sb, paths =  serialize(foo, 7)
+    print cp.modules
+    print "paths=", paths
