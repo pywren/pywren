@@ -62,6 +62,7 @@ def handler(event, context):
     fdfid.write(d['func_and_data'])
     fdfid.close()
     
+    os.mkdir("/tmp/pymodules")
     # get modules and save
     for m_filename, m_text in d['module_data'].iteritems():
         m_path = os.path.dirname(m_filename)
@@ -97,10 +98,6 @@ def handler(event, context):
     condatar.extractall('/tmp/')
     print "download and untar of conda runtime complete"
 
-
-    e = os.environ.copy()
-    e['PATH'] = "/tmp/condaruntime/bin/:{}".format(e['PATH'])
-    print subprocess.check_output("/tmp/condaruntime/bin/python /tmp/condaruntime/bin/conda install -y scikit-learn", shell=True, env = e)
 
     cwd = os.getcwd()
     jobrunner_path = os.path.join(cwd, "jobrunner.py")
