@@ -309,4 +309,9 @@ modules = [
 ('colorama', False),
 ('pkg_resources', False), 
 ('click', False), 
+('numpy', False), 
+('matplotlib', False), 
+('OpenGL', False), 
+('scipy', False), 
+('sklearn', False), 
 ]

@@ -25,16 +25,17 @@ import preinstalls
 class Serialize(object):
     def __init__(self):
         
-        self._modulemgr = ModuleDependencyAnalyzer()
-        preinstalled_modules = [name for name, _ in preinstalls.modules]
-        self._modulemgr.ignore(preinstalled_modules)
-
+        pass
 
     def __call__(self, f, *args, **kwargs):
         """
         Serialize 
         """
         
+        self._modulemgr = ModuleDependencyAnalyzer()
+        preinstalled_modules = [name for name, _ in preinstalls.modules]
+        self._modulemgr.ignore(preinstalled_modules)
+
         f_kwargs = {}
         for k, v in kwargs.items():
             if not k.startswith('_'):

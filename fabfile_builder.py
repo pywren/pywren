@@ -12,7 +12,7 @@ from pywren.wrenconfig import *
 tgt_ami = 'ami-7172b611'
 region = 'us-west-2'
 unique_instance_name = 'pywren_builder'
-s3url = "s3://ericmjonas-public/condaruntime.mkl_avx.tar.gz"
+s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -72,7 +72,7 @@ def openblas():
                     run('make install PREFIX=/tmp/conda/condaruntime/openblas-install')
 
 @task
-def conda_setup():
+def conda_setup_mkl():
     run("rm -Rf /tmp/conda")
     run("mkdir -p /tmp/conda")
     with cd("/tmp/conda"):
@@ -86,6 +86,19 @@ def conda_setup():
             run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
             with cd("/tmp/conda/condaruntime/lib"):
                 run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx2*")
+            
+@task
+def conda_setup():
+    run("rm -Rf /tmp/conda")
+    run("mkdir -p /tmp/conda")
+    with cd("/tmp/conda"):
+        run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
+        run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
+        with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
+            run("conda install -q -y nomkl numpy enum34 pytest Click numba boto3 PyYAML cython")
+            run("conda list")
+            run("conda clean -y -i -t -p")
+            run("pip install --upgrade cloudpickle")
             
 
 @task

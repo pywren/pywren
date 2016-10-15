@@ -97,6 +97,11 @@ def handler(event, context):
     condatar.extractall('/tmp/')
     print "download and untar of conda runtime complete"
 
+
+    e = os.environ.copy()
+    e['PATH'] = "/tmp/condaruntime/bin/:{}".format(e['PATH'])
+    print subprocess.check_output("/tmp/condaruntime/bin/python /tmp/condaruntime/bin/conda install -y scikit-learn", shell=True, env = e)
+
     cwd = os.getcwd()
     jobrunner_path = os.path.join(cwd, "jobrunner.py")
     
