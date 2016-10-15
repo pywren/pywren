@@ -66,7 +66,7 @@ class Executor(object):
                                                      region_name = aws_region)
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         
-        self.serializer = serialize.Serialize()
+
 
     def call_async(self, func, data, callset_id=None, extra_env = None, 
                    extra_meta=None, call_id = None):
@@ -85,7 +85,8 @@ class Executor(object):
 
         # FIXME someday we can optimize this
 
-        cp, str_pickle, mod_paths = self.serializer(func, data)
+        serializer = serialize.Serialize()
+        cp, str_pickle, mod_paths = serializer(func, data)
         module_data = {}
         # load mod paths
         for m in mod_paths:
@@ -326,7 +327,8 @@ class ResponseFuture(object):
                                                                            self.call_id, 
                                                                            call_success))
         self._run_status = status
-        
+        self._call_invoker_result = call_invoker_result
+
         if call_success:
             
             self._return_val = call_invoker_result['result']
