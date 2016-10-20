@@ -11,10 +11,14 @@ def create_call_id():
     return wrenutil.uuid_str()
 
 def create_keys(bucket, prefix, callset_id, call_id):
-    input_key = (bucket, os.path.join(prefix, callset_id, call_id, "input.pickle"))
+    data_key = (bucket, os.path.join(prefix, callset_id, call_id, "data.pickle"))
     output_key = (bucket, os.path.join(prefix, callset_id, call_id, "output.pickle"))
     status_key = (bucket, os.path.join(prefix, callset_id, call_id, "status.json"))
-    return input_key, output_key, status_key
+    return data_key, output_key, status_key
+
+def create_func_key(bucket, prefix, callset_id):
+    func_key = (bucket, os.path.join(prefix, callset_id, "lambda.pickle"))
+    return func_key
 
 
 def key_size(bucket, key):

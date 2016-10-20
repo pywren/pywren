@@ -107,13 +107,21 @@ class Executor(object):
         func_str = pickle.dumps({'func_and_data' : str_pickle, 
                                  'module_data' : module_data}, -1)
 
+        data_str = str_pickle
+
         logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
 
-        s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(self.s3_bucket,
-                                                                        self.s3_prefix, 
-                                                                        callset_id, call_id)
+        s3_data_key, s3_output_key, s3_status_key \
+            = s3util.create_keys(self.s3_bucket,
+                                 self.s3_prefix, 
+                                 callset_id, call_id)
 
-        arg_dict = {'input_key' : s3_input_key, 
+        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
+                                             callset_id)
+        
+
+        arg_dict = {'func_key' : s3_func_key, 
+                    'data_key' : s3_data_key, 
                     'output_key' : s3_output_key, 
                     'status_key' : s3_status_key, 
                     'callset_id': callset_id, 
@@ -121,6 +129,21 @@ class Executor(object):
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                     'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
+
+
+        # put on s3 -- FIXME right now this takes 2x as long 
+        
+        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
+        self.s3client.put_object(Bucket = s3_func_key[0], 
+                                 Key = s3_func_key[1], 
+                                 Body = func_str)
+        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_func_key))
+
+        self.s3client.put_object(Bucket = s3_data_key[0], 
+                                 Key = s3_data_key[1], 
+                                 Body = data_str)
+
+        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_data_key))
 
 
         if extra_env is not None:
@@ -132,12 +155,7 @@ class Executor(object):
                     raise ValueError("Key {} already in dict".format(k))
                 arg_dict[k] = v
 
-        # put on s3 
-        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
-        self.s3client.put_object(Bucket = s3_input_key[0], 
-                            Key = s3_input_key[1], 
-                            Body = func_str)
-        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_input_key))
+
 
         arg_dict['host_submit_time'] =  time.time()
         
@@ -160,8 +178,6 @@ class Executor(object):
     def map(self, func, iterdata, extra_meta = None, extra_env = None, 
             invoke_pool_threads=64):
         """
-        Optionally use threadpool for faster invocation
-
         # FIXME work with an actual iterable instead of just a list
 
         """
@@ -199,7 +215,7 @@ def get_call_status(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
                     AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
                     AWS_REGION = wrenconfig.AWS_REGION, s3=None):
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
+    s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
     if s3 is None:
@@ -221,7 +237,7 @@ def get_call_output(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
                     AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
                     AWS_REGION = wrenconfig.AWS_REGION, s3=None):
-    s3_input_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
+    s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
     

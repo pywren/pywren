@@ -6,9 +6,11 @@ import boto3
 try:
     func_and_data_filename = sys.argv[1]
     out_filename = sys.argv[2]
-
-    func, args, kwargs = pickle.load(open(func_and_data_filename, 'r'))
-
+    print "loading", func_and_data_filename, out_filename
+    loaded_data = pickle.load(open(func_and_data_filename, 'r'))
+    print len(loaded_data)
+    func, args, kwargs = loaded_data
+    print "loaded" 
     y = func(*args, **kwargs)
     
     pickle.dump({'result' : y, 

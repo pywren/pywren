@@ -18,8 +18,8 @@ def handler(event, context):
 
     start_time = time.time()
 
-    all_input_filename = "/tmp/all_input.pickle"
-    func_and_data_filename = "/tmp/input.pickle"
+    func_filename = "/tmp/func.pickle"
+    data_filename = "/tmp/data.pickle"
     output_filename = "/tmp/output.pickle"
     # cleanup previous invocations
     subprocess.check_output("rm -Rf /tmp/*", shell=True)
@@ -35,13 +35,14 @@ def handler(event, context):
     print "invocation started"
 
     # download the input 
-    input_key = event['input_key']
+    func_key = event['func_key']
+    data_key = event['data_key']
     output_key = event['output_key']
     status_key = event['status_key']
     runtime_s3_bucket = event['runtime_s3_bucket']
     runtime_s3_key = event['runtime_s3_key']
 
-    b, k = input_key
+    b, k = data_key
     KS =  s3util.key_size(b, k)
     print "bucket=", b, "key=", k,  "status: ", KS, "bytes" 
     while KS is None:
@@ -51,16 +52,17 @@ def handler(event, context):
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata
-    s3.meta.client.download_file(input_key[0], input_key[1], all_input_filename)
+    s3.meta.client.download_file(func_key[0], func_key[1], func_filename)
+    func_download_time = time.time()
+    print "func download complete"
+
+    s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
     input_download_time = time.time()
 
     print "input data download complete"
     
     # now split
-    d = pickle.load(open(all_input_filename, 'r'))
-    fdfid = open(func_and_data_filename, 'w')
-    fdfid.write(d['func_and_data'])
-    fdfid.close()
+    d = pickle.load(open(func_filename, 'r'))
     
     os.mkdir("/tmp/pymodules")
     # get modules and save
@@ -86,7 +88,6 @@ def handler(event, context):
     print subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True)
     print subprocess.check_output("find {}".format(os.getcwd()), shell=True)
         
-
     ## Now get the runtime
 
     res = s3.meta.client.get_object(Bucket=runtime_s3_bucket, 
@@ -115,7 +116,7 @@ def handler(event, context):
     
     cmdstr = "{} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
                                      jobrunner_path, 
-                                     func_and_data_filename, 
+                                     data_filename, 
                                      output_filename)
 
     setup_time = time.time()
@@ -142,7 +143,8 @@ def handler(event, context):
         'start_time' : start_time, 
         'setup_time' : setup_time - start_time, 
         'exec_time' : time.time() - setup_time, 
-        'input_key' : input_key, 
+        'func_key' : func_key, 
+        'data_key' : data_key, 
         'output_key' : output_key, 
         'status_key' : status_key, 
         'end_time' : end_time, 
