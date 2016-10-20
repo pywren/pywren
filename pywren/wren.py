@@ -3,7 +3,7 @@ import botocore
 import cloudpickle
 import json
 import base64
-from six.moves from six.moves import cPickle as pickle
+from six.moves import cPickle as pickle
 import wrenconfig
 import wrenutil
 import enum
