@@ -9,6 +9,8 @@ import json
 import zipfile
 import glob2
 import io
+import time 
+import botocore
 
 @click.group()
 def cli():
@@ -124,23 +126,42 @@ def deploy_lambda(update_if_exists = True):
     if FUNCTION_NAME in [f['FunctionName'] for f in b['Functions']]:
         function_exists = True
 
-    if function_exists:
-        if update_if_exists:
+    retries = 0
+    while retries < 4:
+        try:
+            if function_exists:
+                if update_if_exists:
 
-            response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
-                                                       ZipFile=file_like_object.getvalue())
-        else:
-            raise Exception()
-    else:
+                    response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
+                                                               ZipFile=file_like_object.getvalue())
+                else:
+                    raise Exception() # FIXME will this work? 
+            else:
+
+                lambclient.create_function(FunctionName = FUNCTION_NAME, 
+                                           Handler = pywren.wrenconfig.HANDLER_NAME, 
+                                           Runtime = "python2.7", 
+                                           MemorySize = MEMORY, 
+                                           Timeout = TIMEOUT, 
+                                           Role = ROLE, 
+                                           Code = {'ZipFile' : file_like_object.getvalue()})
+                print "Create successful" 
+                break
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "InvalidParameterValueException":
+
+                print "attempt", retries
+                retries += 1
+
+                # FIXME actually check for "botocore.exceptions.ClientError: An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda."
+                print "sleeping for 5"
+                time.sleep(5)
+                print "done"
+                continue
+            else:
+                raise e
         
-        lambclient.create_function(FunctionName = FUNCTION_NAME, 
-                                   Handler = pywren.wrenconfig.HANDLER_NAME, 
-                                   Runtime = "python2.7", 
-                                   MemorySize = MEMORY, 
-                                   Timeout = TIMEOUT, 
-                                   Role = ROLE, 
-                                   Code = {'ZipFile' : file_like_object.getvalue()})
-        
+                
 @cli.command()    
 def delete_lambda():
     config = pywren.wrenconfig.default()
