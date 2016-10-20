@@ -5,8 +5,8 @@ import boto3
 import cloudpickle
 import json
 import base64
-import cPickle as pickle
-from pywren.wrenconfig import * 
+from six.moves import cPickle as pickle
+from pywren.wrenconfig import *
 
 
 """

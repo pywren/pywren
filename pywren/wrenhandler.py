@@ -1,4 +1,4 @@
-import cPickle as pickle
+from six.moves import cPickle as pickle
 import boto3
 import tarfile
 import subprocess
