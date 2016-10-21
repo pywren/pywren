@@ -68,6 +68,24 @@ class Executor(object):
         
 
 
+    def create_mod_data(self, mod_paths):
+
+        module_data = {}
+        # load mod paths
+        for m in mod_paths:
+            if os.path.isdir(m):
+                files = glob2.glob(os.path.join(m, "**/*.py"))
+                pkg_root = os.path.dirname(m)
+            else:
+                pkg_root = os.path.dirname(m)
+                files = [m]
+            for f in files:
+                dest_filename = f[len(pkg_root)+1:]
+
+                module_data[f[len(pkg_root)+1:]] = open(f, 'r').read()
+
+        return module_data
+
     def call_async(self, func, data, callset_id=None, extra_env = None, 
                    extra_meta=None, call_id = None):
         """
@@ -83,41 +101,47 @@ class Executor(object):
 
         logger.info("call_async {} {} ".format(callset_id, call_id))
 
-        # FIXME someday we can optimize this
-
+        ### PICKLE EVERYTHING
         serializer = serialize.SerializeIndependent()
-        (func_str, data_str), mod_paths = serializer([func, data])
-
-        module_data = {}
-        # load mod paths
-        for m in mod_paths:
-            if os.path.isdir(m):
-                files = glob2.glob(os.path.join(m, "**/*.py"))
-                pkg_root = os.path.dirname(m)
-            else:
-                pkg_root = os.path.dirname(m)
-                files = [m]
-            for f in files:
-                dest_filename = f[len(pkg_root)+1:]
-
-                module_data[f[len(pkg_root)+1:]] = open(f, 'r').read()
+        func_and_data_ser, mod_paths = serializer([func, data])
+        func_str = func_and_data_ser[0]
+        data_str = func_and_data_ser[1]
         
+        module_data = self.create_mod_data(mod_paths)
 
-        # FIXME this is going to result in 2x the data in there
-        # we shoudn't serialzie twice
+        ### Create func and upload 
         func_module_str = pickle.dumps({'func' : func_str, 
                                         'module_data' : module_data}, -1)
 
         logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_module_str)))
 
+        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
+                                             callset_id)
+
+        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
+        self.s3client.put_object(Bucket = s3_func_key[0], 
+                                 Key = s3_func_key[1], 
+                                 Body = func_module_str)
+        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_func_key))
+
+
+        ### Upload data object 
         s3_data_key, s3_output_key, s3_status_key \
             = s3util.create_keys(self.s3_bucket,
                                  self.s3_prefix, 
                                  callset_id, call_id)
 
-        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
-                                             callset_id)
+
+        # put on s3 -- FIXME right now this takes 2x as long 
         
+        self.s3client.put_object(Bucket = s3_data_key[0], 
+                                 Key = s3_data_key[1], 
+                                 Body = data_str)
+
+        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_data_key))
+
+
+        # create metadata dictionary
 
         arg_dict = {'func_key' : s3_func_key, 
                     'data_key' : s3_data_key, 
@@ -128,23 +152,6 @@ class Executor(object):
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                     'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
-
-
-        # put on s3 -- FIXME right now this takes 2x as long 
-        
-        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
-        self.s3client.put_object(Bucket = s3_func_key[0], 
-                                 Key = s3_func_key[1], 
-                                 Body = func_module_str)
-        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_func_key))
-
-        self.s3client.put_object(Bucket = s3_data_key[0], 
-                                 Key = s3_data_key[1], 
-                                 Body = data_str)
-
-        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_data_key))
-
-
         if extra_env is not None:
             arg_dict['extra_env'] = extra_env
         if extra_meta is not None:
@@ -153,8 +160,6 @@ class Executor(object):
                 if k in arg_dict:
                     raise ValueError("Key {} already in dict".format(k))
                 arg_dict[k] = v
-
-
 
         arg_dict['host_submit_time'] =  time.time()
         
