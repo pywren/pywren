@@ -150,10 +150,11 @@ class Executor(object):
 
         pool = ThreadPool(invoke_pool_threads)
         callset_id = s3util.create_callset_id()
+        data = list(iterdata)
 
         ### pickle func and all data (to capture module dependencies
         serializer = serialize.SerializeIndependent()
-        func_and_data_ser, mod_paths = serializer([func] + iterdata)
+        func_and_data_ser, mod_paths = serializer([func] + data)
         
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
@@ -188,7 +189,7 @@ class Executor(object):
 
 
 
-        N = len(iterdata)
+        N = len(data)
         call_result_objs = []
         for i in range(N):
             call_id = "{:05d}".format(i)
