@@ -86,51 +86,8 @@ class Executor(object):
 
         return module_data
 
-    def call_async(self, func, data, callset_id=None, extra_env = None, 
-                   extra_meta=None, call_id = None):
-        """
-        Returns a future
-
-        callset is just a handle to refer to a bunch of calls simultaneously
-        """
-
-        if callset_id is None:
-            callset_id = s3util.create_callset_id()
-        if call_id is None:
-            call_id = s3util.create_call_id()
-
-        logger.info("call_async {} {} ".format(callset_id, call_id))
-
-        ### PICKLE EVERYTHING
-        serializer = serialize.SerializeIndependent()
-        func_and_data_ser, mod_paths = serializer([func, data])
-        func_str = func_and_data_ser[0]
-        data_str = func_and_data_ser[1]
-        
-        module_data = self.create_mod_data(mod_paths)
-
-        ### Create func and upload 
-        func_module_str = pickle.dumps({'func' : func_str, 
-                                        'module_data' : module_data}, -1)
-
-        logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_module_str)))
-
-        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
-                                             callset_id)
-
-        logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
-        self.s3client.put_object(Bucket = s3_func_key[0], 
-                                 Key = s3_func_key[1], 
-                                 Body = func_module_str)
-        logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_func_key))
-
-
-        ### Upload data object 
-        s3_data_key, s3_output_key, s3_status_key \
-            = s3util.create_keys(self.s3_bucket,
-                                 self.s3_prefix, 
-                                 callset_id, call_id)
-
+    def put_data(self, s3_data_key, data_str, 
+                 callset_id, call_id):
 
         # put on s3 -- FIXME right now this takes 2x as long 
         
@@ -141,45 +98,50 @@ class Executor(object):
         logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_data_key))
 
 
-        # create metadata dictionary
+    def invoke_with_keys(self, s3_func_key, s3_data_key, s3_output_key, 
+                         s3_status_key, 
+                         callset_id, call_id, extra_env, 
+                         extra_meta):
 
-        arg_dict = {'func_key' : s3_func_key, 
-                    'data_key' : s3_data_key, 
-                    'output_key' : s3_output_key, 
-                    'status_key' : s3_status_key, 
-                    'callset_id': callset_id, 
-                    'call_id' : call_id, 
-                    'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
-                    'runtime_s3_key' : self.config['runtime']['s3_key']}    
+            arg_dict = {'func_key' : s3_func_key, 
+                        'data_key' : s3_data_key, 
+                        'output_key' : s3_output_key, 
+                        'status_key' : s3_status_key, 
+                        'callset_id': callset_id, 
+                        'call_id' : call_id, 
+                        'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
+                        'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
-        if extra_env is not None:
-            arg_dict['extra_env'] = extra_env
-        if extra_meta is not None:
-            # sanity 
-            for k, v in extra_meta.iteritems():
-                if k in arg_dict:
-                    raise ValueError("Key {} already in dict".format(k))
-                arg_dict[k] = v
+            if extra_env is not None:
+                arg_dict['extra_env'] = extra_env
+            if extra_meta is not None:
+                # sanity 
+                for k, v in extra_meta.iteritems():
+                    if k in arg_dict:
+                        raise ValueError("Key {} already in dict".format(k))
+                    arg_dict[k] = v
 
-        arg_dict['host_submit_time'] =  time.time()
+            arg_dict['host_submit_time'] =  time.time()
+
+            json_arg = json.dumps(arg_dict)
+
+            logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
+            res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
+                                         Payload = json.dumps(arg_dict), 
+                                         InvocationType='Event')
+            logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
+
+            fut = ResponseFuture(call_id, callset_id, self)
+
+            fut._set_state(JobState.invoked)
+
+            return fut
         
-        json_arg = json.dumps(arg_dict)
+    def call_async(self, func, data, extra_env = None, 
+                    extra_meta=None):
+        return self.map(func, [data], extra_meta, extra_env)[0]
 
-        logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
-        res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
-                                     Payload = json.dumps(arg_dict), 
-                                     InvocationType='Event')
-        logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
-
-        fut = ResponseFuture(call_id, callset_id, self)
-
-        fut._set_state(JobState.invoked)
-
-        return fut
-
-
-
-    def map(self, func, iterdata, extra_meta = None, extra_env = None, 
+    def map(self, func, iterdata, extra_env = None, extra_meta = None, 
             invoke_pool_threads=64):
         """
         # FIXME work with an actual iterable instead of just a list
@@ -189,15 +151,51 @@ class Executor(object):
         pool = ThreadPool(invoke_pool_threads)
         callset_id = s3util.create_callset_id()
 
+        ### pickle func and all data (to capture module dependencies
+        serializer = serialize.SerializeIndependent()
+        func_and_data_ser, mod_paths = serializer([func] + iterdata)
+        
+        func_str = func_and_data_ser[0]
+        data_strs = func_and_data_ser[1:]
+        
+        module_data = self.create_mod_data(mod_paths)
+
+        ### Create func and upload 
+        func_module_str = pickle.dumps({'func' : func_str, 
+                                        'module_data' : module_data}, -1)
+
+        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
+                                             callset_id)
+        self.s3client.put_object(Bucket = s3_func_key[0], 
+                                 Key = s3_func_key[1], 
+                                 Body = func_module_str)
+
+        def invoke(data_str, callset_id, call_id, s3_func_key):
+            s3_data_key, s3_output_key, s3_status_key \
+                = s3util.create_keys(self.s3_bucket,
+                                     self.s3_prefix, 
+                                     callset_id, call_id)
+
+            self.put_data(s3_data_key, data_str, 
+                          callset_id, call_id)
+
+
+            return self.invoke_with_keys(s3_func_key, s3_data_key, 
+                                         s3_output_key, 
+                                         s3_status_key, 
+                                         callset_id, call_id, extra_env, 
+                                         extra_meta)
+
+
+
         N = len(iterdata)
         call_result_objs = []
         for i in range(N):
             call_id = "{:05d}".format(i)
 
-            cb = pool.apply_async(self.call_async, (func, iterdata[i]), 
-                                  dict(callset_id = callset_id,
-                                       call_id = call_id, 
-                                       extra_env=extra_env))
+
+            cb = pool.apply_async(invoke, (data_strs[i], callset_id, 
+                                           call_id, s3_func_key))
 
             logger.info("map {} {} apply async".format(callset_id, call_id))
 
@@ -213,6 +211,7 @@ class Executor(object):
         # note these are just the invocation futures
 
         return res
+    
     
     
 def get_call_status(callset_id, call_id, 
