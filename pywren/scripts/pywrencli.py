@@ -108,6 +108,7 @@ def deploy_lambda(update_if_exists = True):
     file_like_object = io.BytesIO()
     zipfile_obj = zipfile.ZipFile(file_like_object, mode='w')
 
+    # FIXME see if role exists
     files = glob2.glob(os.path.join(SOURCE_DIR, "../**/*.py"))
     for f in files:
         a = os.path.relpath(f, SOURCE_DIR + "/..") 
@@ -130,10 +131,12 @@ def deploy_lambda(update_if_exists = True):
     while retries < 4:
         try:
             if function_exists:
+                print "function exists, updating"
                 if update_if_exists:
 
                     response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
                                                                ZipFile=file_like_object.getvalue())
+                    break
                 else:
                     raise Exception() # FIXME will this work? 
             else:
