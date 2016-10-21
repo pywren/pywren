@@ -144,7 +144,6 @@ class SerializeIndependent(object):
             # Add modules
             for cp in cps:
                 for module in cp.modules:
-                    print "adding module", module, module.__name__
                     self._modulemgr.add(module.__name__)
             # FIXME add logging
             #print 'inspected modules', self._modulemgr._inspected_modules

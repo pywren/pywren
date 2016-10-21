@@ -1,3 +1,10 @@
+"""
+examples:
+
+fab -f fabfile_builer.py -R builder conda_setup_mkl conda_clean package_all
+
+
+"""
 from fabric.api import local, env, run, put, cd, task, sudo, settings, warn_only, lcd, path, get
 from fabric.contrib import project
 import boto3
@@ -12,7 +19,10 @@ from pywren.wrenconfig import *
 tgt_ami = 'ami-7172b611'
 region = 'us-west-2'
 unique_instance_name = 'pywren_builder'
-s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
+#s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
+#s3url = "s3://ericmjonas-public/condaruntime.mkl.avx.tar.gz"
+#s3url = "s3://ericmjonas-public/condaruntime.nomkl.tar.gz"
+s3url = "s3://ericmjonas-public/condaruntime.mkl.avx2.tar.gz"
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -88,7 +98,23 @@ def conda_setup_mkl():
                 run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx2*")
             
 @task
-def conda_setup():
+def conda_setup_mkl_avx2():
+    run("rm -Rf /tmp/conda")
+    run("mkdir -p /tmp/conda")
+    with cd("/tmp/conda"):
+        run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
+        run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
+        with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
+            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython")
+            run("conda list")
+            run("conda clean -y -i -t -p")
+            run("pip install --upgrade cloudpickle")
+            run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
+            with cd("/tmp/conda/condaruntime/lib"):
+                run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx.*")
+            
+@task
+def conda_setup_nomkl():
     run("rm -Rf /tmp/conda")
     run("mkdir -p /tmp/conda")
     with cd("/tmp/conda"):
