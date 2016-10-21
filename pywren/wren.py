@@ -85,8 +85,9 @@ class Executor(object):
 
         # FIXME someday we can optimize this
 
-        serializer = serialize.Serialize()
-        cp, str_pickle, mod_paths = serializer(func, data)
+        serializer = serialize.SerializeIndependent()
+        (func_str, data_str), mod_paths = serializer([func, data])
+
         module_data = {}
         # load mod paths
         for m in mod_paths:
@@ -104,12 +105,10 @@ class Executor(object):
 
         # FIXME this is going to result in 2x the data in there
         # we shoudn't serialzie twice
-        func_str = pickle.dumps({'func_and_data' : str_pickle, 
-                                 'module_data' : module_data}, -1)
+        func_module_str = pickle.dumps({'func' : func_str, 
+                                        'module_data' : module_data}, -1)
 
-        data_str = str_pickle
-
-        logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_str)))
+        logger.info("call_async {} {} dumps complete size={} ".format(callset_id, call_id, len(func_module_str)))
 
         s3_data_key, s3_output_key, s3_status_key \
             = s3util.create_keys(self.s3_bucket,
@@ -136,7 +135,7 @@ class Executor(object):
         logger.info("call_async {} {} s3 upload".format(callset_id, call_id))
         self.s3client.put_object(Bucket = s3_func_key[0], 
                                  Key = s3_func_key[1], 
-                                 Body = func_str)
+                                 Body = func_module_str)
         logger.info("call_async {} {} s3 upload complete {}".format(callset_id, call_id, s3_func_key))
 
         self.s3client.put_object(Bucket = s3_data_key[0], 

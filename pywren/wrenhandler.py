@@ -114,8 +114,9 @@ def handler(event, context):
 
     CONDA_PYTHON_RUNTIME = "/tmp/condaruntime/bin/python"
     
-    cmdstr = "{} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
+    cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
                                      jobrunner_path, 
+                                     func_filename, 
                                      data_filename, 
                                      output_filename)
 

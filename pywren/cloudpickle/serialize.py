@@ -22,52 +22,52 @@ from cloudpickle import CloudPickler
 from module_dependency import ModuleDependencyAnalyzer
 import preinstalls
 
-class Serialize(object):
-    def __init__(self):
+# class Serialize(object):
+#     def __init__(self):
         
-        pass
+#         pass
 
-    def __call__(self, f, *args, **kwargs):
-        """
-        Serialize 
-        """
+#     def __call__(self, f, *args, **kwargs):
+#         """
+#         Serialize 
+#         """
         
-        self._modulemgr = ModuleDependencyAnalyzer()
-        preinstalled_modules = [name for name, _ in preinstalls.modules]
-        self._modulemgr.ignore(preinstalled_modules)
+#         self._modulemgr = ModuleDependencyAnalyzer()
+#         preinstalled_modules = [name for name, _ in preinstalls.modules]
+#         self._modulemgr.ignore(preinstalled_modules)
 
-        f_kwargs = {}
-        for k, v in kwargs.items():
-            if not k.startswith('_'):
-                f_kwargs[k] = v
-                del kwargs[k]
+#         f_kwargs = {}
+#         for k, v in kwargs.items():
+#             if not k.startswith('_'):
+#                 f_kwargs[k] = v
+#                 del kwargs[k]
         
-        s = StringIO()
-        cp = CloudPickler(s, 2)
-        cp.dump((f, args, f_kwargs))
+#         s = StringIO()
+#         cp = CloudPickler(s, 2)
+#         cp.dump((f, args, f_kwargs))
         
-        if '_ignore_module_dependencies' in kwargs:
-            ignore_modulemgr = kwargs['_ignore_module_dependencies']
-            del kwargs['_ignore_module_dependencies']
-        else:
-            ignore_modulemgr = False
+#         if '_ignore_module_dependencies' in kwargs:
+#             ignore_modulemgr = kwargs['_ignore_module_dependencies']
+#             del kwargs['_ignore_module_dependencies']
+#         else:
+#             ignore_modulemgr = False
             
-        if not ignore_modulemgr:
-            # Add modules
-            for module in cp.modules:
-                print "adding module", module, module.__name__
-                self._modulemgr.add(module.__name__)
+#         if not ignore_modulemgr:
+#             # Add modules
+#             for module in cp.modules:
+#                 print "adding module", module, module.__name__
+#                 self._modulemgr.add(module.__name__)
                 
-            print 'inspected modules', self._modulemgr._inspected_modules
-            print 'modules to inspect', self._modulemgr._modules_to_inspect
-            print 'paths to trans', self._modulemgr._paths_to_transmit
+#             print 'inspected modules', self._modulemgr._inspected_modules
+#             print 'modules to inspect', self._modulemgr._modules_to_inspect
+#             print 'paths to trans', self._modulemgr._paths_to_transmit
             
-            mod_paths = self._modulemgr.get_and_clear_paths()
-            print "mod_paths=", mod_paths
+#             mod_paths = self._modulemgr.get_and_clear_paths()
+#             print "mod_paths=", mod_paths
 
             
 
-        return cp, s.getvalue(), mod_paths
+#         return cp, s.getvalue(), mod_paths
         #     vol_name = self._get_auto_module_volume_name()
         # if self._modulemgr.has_module_dependencies:
         #         v = self.multyvac.volume.get(vol_name)
@@ -104,6 +104,58 @@ class Serialize(object):
         #     'python -m multyvacinit.pybootstrap',
         #     **kwargs
         # )
+
+class SerializeIndependent(object):
+    def __init__(self):
+        
+        pass
+
+    def __call__(self, list_of_objs, **kwargs):
+        """
+        Serialize f, args, kwargs independently
+        """
+        
+        self._modulemgr = ModuleDependencyAnalyzer()
+        preinstalled_modules = [name for name, _ in preinstalls.modules]
+        self._modulemgr.ignore(preinstalled_modules)
+
+        # f_kwargs = {}
+        # for k, v in kwargs.items():
+        #     if not k.startswith('_'):
+        #         f_kwargs[k] = v
+        #         del kwargs[k]
+        
+        cps = []
+        strs = []
+        for obj in list_of_objs:
+            s = StringIO()
+            cp = CloudPickler(s, 2)
+            cp.dump(obj)
+            cps.append(cp)
+            strs.append(s)
+
+        if '_ignore_module_dependencies' in kwargs:
+            ignore_modulemgr = kwargs['_ignore_module_dependencies']
+            del kwargs['_ignore_module_dependencies']
+        else:
+            ignore_modulemgr = False
+            
+        if not ignore_modulemgr:
+            # Add modules
+            for cp in cps:
+                for module in cp.modules:
+                    print "adding module", module, module.__name__
+                    self._modulemgr.add(module.__name__)
+            # FIXME add logging
+            #print 'inspected modules', self._modulemgr._inspected_modules
+            #print 'modules to inspect', self._modulemgr._modules_to_inspect
+            #print 'paths to trans', self._modulemgr._paths_to_transmit
+            
+            mod_paths = self._modulemgr.get_and_clear_paths()
+            #print "mod_paths=", mod_paths
+
+        return [s.getvalue() for s in strs], mod_paths
+
 if __name__ == "__main__":
     #logging.basicConfig(level=logging.DEBUG)
     #mda = ModuleDependencyAnalyzer()

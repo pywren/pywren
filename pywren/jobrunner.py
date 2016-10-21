@@ -4,15 +4,15 @@ import traceback
 import boto3
 
 try:
-    func_and_data_filename = sys.argv[1]
-    out_filename = sys.argv[2]
-    print "loading", func_and_data_filename, out_filename
-    loaded_data = pickle.load(open(func_and_data_filename, 'r'))
-    print len(loaded_data)
-    func, args, kwargs = loaded_data
-    print "loaded" 
-    y = func(*args, **kwargs)
-    
+    func_filename = sys.argv[1]
+    data_filename = sys.argv[2]
+    out_filename = sys.argv[3]
+    print "loading", func_filename, data_filename, out_filename
+    loaded_func = pickle.loads(pickle.load(open(func_filename, 'r'))['func'])
+    loaded_data = pickle.load(open(data_filename, 'r'))
+    print "loaded"
+    y = loaded_func(loaded_data)
+    print "success"
     pickle.dump({'result' : y, 
                  'success' : True, 
                  'sys.path' : sys.path} , 
