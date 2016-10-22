@@ -409,7 +409,8 @@ ALL_COMPLETED = 1
 ANY_COMPLETED = 2
 ALWAYS = 3
 
-def wait(fs, return_when=ALWAYS):
+def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64, 
+         WAIT_DUR_SEC=5):
     """
     this will eventually provide an optimization for checking if a large
     number of futures have completed without too much network traffic
@@ -426,6 +427,32 @@ def wait(fs, return_when=ALWAYS):
 
     http://pythonhosted.org/futures/#concurrent.futures.wait
 
+    """
+    N = len(fs)
+
+    if return_when==ALL_COMPLETED:
+        result_count = 0
+        while result_count < N:
+
+            fs_dones, fs_notdones = _wait(fs, THREADPOOL_SIZE)
+            result_count = len(fs_dones)
+
+            if result_count == N:
+                return fs_dones, fs_notdones
+            else:
+                time.sleep(WAIT_DUR_SEC)
+
+    elif return_when == ANY_COMPLETED:
+        raise NotImplementedError()
+    elif return_when == ALWAYS:
+        return _wait(fs, THREADPOOL_SIZE)
+    else:
+        raise ValueError()
+
+def _wait(fs, THREADPOOL_SIZE):
+    """
+    internal function that performs the majority of the WAIT task
+    work. 
     """
 
 
@@ -450,7 +477,7 @@ def wait(fs, return_when=ALWAYS):
     fs_dones = []
     fs_notdones = []
 
-    pool = ThreadPool(64)
+    pool = ThreadPool(THREADPOOL_SIZE)
 
     for f in fs:
         if f._state in [JobState.success, JobState.error]:
