@@ -37,6 +37,7 @@ def handler(event, context):
     # download the input 
     func_key = event['func_key']
     data_key = event['data_key']
+    data_byte_range = event['data_byte_range']
     output_key = event['output_key']
     status_key = event['status_key']
     runtime_s3_bucket = event['runtime_s3_bucket']
@@ -56,7 +57,16 @@ def handler(event, context):
     func_download_time = time.time()
     print "func download complete"
 
-    s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
+    if data_byte_range is None:
+        s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
+    else:
+        range_str = 'bytes={}-{}'.format(*data_byte_range)
+        dres = s3.meta.client.get_object(Bucket=data_key[0], Key=data_key[1], 
+                                         Range=range_str)
+        data_fid = open(data_filename, 'w')
+        data_fid.write(dres['Body'].read())
+        data_fid.close()
+
     input_download_time = time.time()
 
     print "input data download complete"

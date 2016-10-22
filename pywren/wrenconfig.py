@@ -18,6 +18,8 @@ AWS_S3_BUCKET = "jonas-testbucket2"
 AWS_S3_PREFIX = "pywren.jobs"
 FUNCTION_NAME = "pywren1"
 
+MAX_AGG_DATA_SIZE = 4e6
+
 def load(config_filename):
     import yaml
     res =  yaml.safe_load(open(config_filename, 'r'))    

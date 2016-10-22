@@ -20,6 +20,10 @@ def create_func_key(bucket, prefix, callset_id):
     func_key = (bucket, os.path.join(prefix, callset_id, "lambda.pickle"))
     return func_key
 
+def create_agg_data_key(bucket, prefix, callset_id):
+    func_key = (bucket, os.path.join(prefix, callset_id, "aggdata.pickle"))
+    return func_key
+
 
 def key_size(bucket, key):
     try:

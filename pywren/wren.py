@@ -14,6 +14,7 @@ import logging
 import botocore
 import glob2
 import os
+import numpy as np
 from cloudpickle import serialize
 
 logger = logging.getLogger('pywren')
@@ -32,6 +33,7 @@ ch.setFormatter(formatter)
 
 # add ch to logger
 logger.addHandler(ch)
+
 
 class JobState(enum.Enum):
     new = 1
@@ -101,13 +103,14 @@ class Executor(object):
     def invoke_with_keys(self, s3_func_key, s3_data_key, s3_output_key, 
                          s3_status_key, 
                          callset_id, call_id, extra_env, 
-                         extra_meta):
+                         extra_meta, data_byte_range):
 
             arg_dict = {'func_key' : s3_func_key, 
                         'data_key' : s3_data_key, 
                         'output_key' : s3_output_key, 
                         'status_key' : s3_status_key, 
                         'callset_id': callset_id, 
+                        'data_byte_range' : data_byte_range, 
                         'call_id' : call_id, 
                         'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                         'runtime_s3_key' : self.config['runtime']['s3_key']}    
@@ -141,10 +144,22 @@ class Executor(object):
                     extra_meta=None):
         return self.map(func, [data], extra_meta, extra_env)[0]
 
+    def agg_data(self, data_strs):
+        ranges = []
+        pos = 0
+        for datum in data_strs:
+            l = len(datum)
+            ranges.append((pos, pos + l -1))
+            pos += l
+        return "".join(data_strs), ranges
+
     def map(self, func, iterdata, extra_env = None, extra_meta = None, 
-            invoke_pool_threads=64):
+            invoke_pool_threads=64, data_all_as_one=False):
         """
         # FIXME work with an actual iterable instead of just a list
+
+        data_all_as_one : upload the data as a single s3 object; fewer
+        tcp transactions (good) but potentially higher latency for workers (bad)
 
         """
 
@@ -158,7 +173,17 @@ class Executor(object):
         
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
-        
+        data_size_bytes = np.sum(len(x) for x in data_strs)
+        s3_agg_data_key = None
+        if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE:
+            s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket, 
+                                                      self.s3_prefix, callset_id)
+            agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
+            self.s3client.put_object(Bucket = s3_agg_data_key[0], 
+                                     Key = s3_agg_data_key[1], 
+                                     Body = agg_data_bytes)
+            
+
         module_data = self.create_mod_data(mod_paths)
 
         ### Create func and upload 
@@ -171,32 +196,39 @@ class Executor(object):
                                  Key = s3_func_key[1], 
                                  Body = func_module_str)
 
-        def invoke(data_str, callset_id, call_id, s3_func_key):
+        def invoke(data_str, callset_id, call_id, s3_func_key, 
+                   s3_agg_data_key = None, data_byte_range=None ):
             s3_data_key, s3_output_key, s3_status_key \
                 = s3util.create_keys(self.s3_bucket,
                                      self.s3_prefix, 
                                      callset_id, call_id)
 
-            self.put_data(s3_data_key, data_str, 
-                          callset_id, call_id)
+            if s3_agg_data_key is None:
+                self.put_data(s3_data_key, data_str, 
+                              callset_id, call_id)
+                data_key = s3_data_key
+            else:
+                data_key = s3_agg_data_key
 
-
-            return self.invoke_with_keys(s3_func_key, s3_data_key, 
+            return self.invoke_with_keys(s3_func_key, data_key, 
                                          s3_output_key, 
                                          s3_status_key, 
                                          callset_id, call_id, extra_env, 
-                                         extra_meta)
-
-
+                                         extra_meta, data_byte_range)
 
         N = len(data)
         call_result_objs = []
         for i in range(N):
             call_id = "{:05d}".format(i)
 
+            data_byte_range = None
+            if s3_agg_data_key is not None:
+                data_byte_range = agg_data_ranges[i]
 
             cb = pool.apply_async(invoke, (data_strs[i], callset_id, 
-                                           call_id, s3_func_key))
+                                           call_id, s3_func_key, 
+                                           s3_agg_data_key, 
+                                           data_byte_range))
 
             logger.info("map {} {} apply async".format(callset_id, call_id))
 
