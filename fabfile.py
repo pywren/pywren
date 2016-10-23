@@ -1,5 +1,5 @@
 
-from fabric.api import local, env, run, put, cd, task, sudo, settings, warn_only, lcd
+from fabric.api import local, env, run, put, cd, task, sudo, get, settings, warn_only, lcd
 from fabric.contrib import project
 import boto3
 import cloudpickle
@@ -70,3 +70,7 @@ def deploy():
                               exclude=['*.npy', "*.ipynb", 'data', "*.mp4"],
                               extra_opts='--files-from=.git-files-list')
 
+
+@task
+def get_pywren_images():
+    get("/data/jonas/psfoptics/psfoptics/notebooks/pywren.*.png")
