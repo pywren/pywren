@@ -128,7 +128,7 @@ def deploy_lambda(update_if_exists = True):
         function_exists = True
 
     retries = 0
-    while retries < 4:
+    while retries < 10:
         try:
             if function_exists:
                 print "function exists, updating"
@@ -136,7 +136,7 @@ def deploy_lambda(update_if_exists = True):
 
                     response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
                                                                ZipFile=file_like_object.getvalue())
-                    break
+                    return True
                 else:
                     raise Exception() # FIXME will this work? 
             else:
@@ -163,6 +163,8 @@ def deploy_lambda(update_if_exists = True):
                 continue
             else:
                 raise e
+    if retries == 10:
+        raise ValueError("could not register funciton after 10 tries")
         
                 
 @cli.command()    
