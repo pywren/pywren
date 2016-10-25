@@ -4,7 +4,11 @@
 
 > The wrens are mostly small, brownish passerine birds in the mainly New World family Troglodytidae. ... Most wrens are small and rather inconspicuous, except for their loud and often complex songs. - Wikipedia
 
-PyWren -- it's like a mini condor, in the cloud, for often-complex calls. 
+PyWren -- it's like a mini condor, in the cloud, for often-complex calls. You can get up to 25 TFLOPS peak from AWS Lambda:
+
+![Benchmark](https://raw.githubusercontent.com/ericmjonas/pywren/master/pywren.gflops.png)
+
+For more information see this blog post, [Microservices and teraflops](http://ericjonas.com/pywren.html)
 
 Goal: Dispatch of small efficient tasks with as close to zero user overhead
 as possible. In particular, entirely serverless -- use as many AWS services
