@@ -59,4 +59,4 @@ if __name__ == "__main__":
     fut = wrenexec.map(run_command, range(N))
 
     res = [f.result() for f in fut]
-    pickle.dump(res, open('s3_benchmark.output.pickle', 'w'))
+    pickle.dump(res, open('s3_benchmark_read.output.pickle', 'w'))
