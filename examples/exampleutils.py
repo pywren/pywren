@@ -20,7 +20,10 @@ class RandomDataGenerator(object):
         self.current_block_id = None
         self.current_block_data = ""
         self.BLOCK_SIZE_BYTES = 1024*1024
-    
+
+        self.block_random = np.random.randint(0, 256, dtype=np.uint8, 
+                                              size=self.BLOCK_SIZE_BYTES)
+
     def tell(self):
         print "tell", self.pos
         return self.pos
@@ -38,15 +41,15 @@ class RandomDataGenerator(object):
         if block_id == self.current_block_id:
             return self.current_block_data
 
-        np.random.seed(block_id)
         self.current_block_id = block_id
-        self.current_block_data = np.random.bytes(self.BLOCK_SIZE_BYTES)
+        self.current_block_data = (block_id + self.block_random).tostring()
         return self.current_block_data
     
     def get_block_coords(self, abs_pos):
         block_id = abs_pos // self.BLOCK_SIZE_BYTES
         within_block_pos = abs_pos - block_id * self.BLOCK_SIZE_BYTES
         return block_id, within_block_pos
+    
 
     def read(self, bytes_requested):
         remaining_bytes = self.bytes_total - self.pos
