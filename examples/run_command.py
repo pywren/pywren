@@ -1,16 +1,5 @@
-#from gevent import monkey
-
-#monkey.patch_socket()
-#monkey.patch_ssl()
-
-import time
-import boto3 
-import uuid
-import numpy as np
-import time
 import pywren
 import subprocess
-import logging
 import sys
 
 def run_command(x):
