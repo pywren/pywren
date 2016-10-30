@@ -9,6 +9,7 @@ import subprocess
 import logging
 import unittest
 import numpy as np
+from flaky import flaky
 
 class SimpleAsync(unittest.TestCase):
 
@@ -46,6 +47,7 @@ class SimpleAsync(unittest.TestCase):
 
         res = fut.result() 
 
+
 class SimpleMap(unittest.TestCase):
 
     def setUp(self):
@@ -70,3 +72,39 @@ class SimpleMap(unittest.TestCase):
         np.testing.assert_array_equal(res, x + 1)
 
 
+class RuntimeCaching(unittest.TestCase):
+
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    @flaky(max_runs=3)
+    def test_cached_runtime(self):
+        """
+        Test the runtime caching by manually running with it off
+        and then running with it on and comparing invocation times. 
+        Note that due to aws lambda internals this might not 
+        do the right thing so we mark it as flaky
+        """
+
+        def test_add(x):
+            return x + 7
+
+        t1 = time.time()
+        fut = self.wrenexec.map(test_add, [10], use_cached_runtime=False)[0]
+        res = fut.result() 
+        t2 = time.time()
+        non_cached_latency = t2-t1
+
+        assert fut._run_status['runtime_cached'] == False
+        assert res == 17
+
+        t1 = time.time()
+        fut = self.wrenexec.map(test_add, [10], use_cached_runtime=True)[0]
+        res = fut.result() 
+        t2 = time.time()
+        cached_latency = t2-t1
+
+        assert res == 17
+        assert fut._run_status['runtime_cached'] == True
+
+        assert cached_latency < non_cached_latency
