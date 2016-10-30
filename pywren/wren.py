@@ -103,7 +103,7 @@ class Executor(object):
     def invoke_with_keys(self, s3_func_key, s3_data_key, s3_output_key, 
                          s3_status_key, 
                          callset_id, call_id, extra_env, 
-                         extra_meta, data_byte_range):
+                         extra_meta, data_byte_range, use_cached_runtime):
 
             arg_dict = {'func_key' : s3_func_key, 
                         'data_key' : s3_data_key, 
@@ -112,6 +112,7 @@ class Executor(object):
                         'callset_id': callset_id, 
                         'data_byte_range' : data_byte_range, 
                         'call_id' : call_id, 
+                        'use_cached_runtime' : use_cached_runtime, 
                         'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                         'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
@@ -154,13 +155,16 @@ class Executor(object):
         return "".join(data_strs), ranges
 
     def map(self, func, iterdata, extra_env = None, extra_meta = None, 
-            invoke_pool_threads=64, data_all_as_one=False):
+            invoke_pool_threads=64, data_all_as_one=True, 
+            use_cached_runtime=True):
         """
         # FIXME work with an actual iterable instead of just a list
 
         data_all_as_one : upload the data as a single s3 object; fewer
         tcp transactions (good) but potentially higher latency for workers (bad)
 
+        use_cached_runtime : if runtime has been cached, use that. When set
+        to False, redownloads runtime.
         """
 
         pool = ThreadPool(invoke_pool_threads)
@@ -175,7 +179,7 @@ class Executor(object):
         data_strs = func_and_data_ser[1:]
         data_size_bytes = np.sum(len(x) for x in data_strs)
         s3_agg_data_key = None
-        if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE:
+        if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE and data_all_as_one:
             s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket, 
                                                       self.s3_prefix, callset_id)
             agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
@@ -214,7 +218,8 @@ class Executor(object):
                                          s3_output_key, 
                                          s3_status_key, 
                                          callset_id, call_id, extra_env, 
-                                         extra_meta, data_byte_range)
+                                         extra_meta, data_byte_range, 
+                                         use_cached_runtime)
 
         N = len(data)
         call_result_objs = []

@@ -9,9 +9,62 @@ import logging
 import uuid
 import wrenutil
 import json
+import shutil
 import s3util
 
+
 PYTHON_MODULE_PATH = "/tmp/pymodules"
+CONDA_RUNTIME_DIR = "/tmp/condaruntime"
+RUNTIME_LOC = "/tmp/runtimes"
+
+def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
+    """
+    Download the runtime if necessary
+
+    return True if cached, False if not (download occured)
+
+    """
+
+    # get runtime etag
+    runtime_meta = s3conn.meta.client.head_object(Bucket=runtime_s3_bucket, 
+                                                  Key=runtime_s3_key)
+    ETag = runtime_meta['ETag']
+    print "The etag is ={}".format(ETag)
+    runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
+    print "Runtime etag dir={}".format(runtime_etag_dir)
+    expected_target = os.path.join(runtime_etag_dir, 'condaruntime')    
+    print "Expected target={}".format(expected_target)
+    # check if dir is linked to correct runtime
+    if os.path.exists(RUNTIME_LOC):
+        if os.path.exists(CONDA_RUNTIME_DIR):
+            existing_link = os.readlink(CONDA_RUNTIME_DIR)
+            if existing_link == expected_target:
+                print "found existing {}, not re-downloading".format(ETag)
+                return True
+
+    print "{} not cached, downloading".format(ETag)
+    # didn't cache, so we start over
+    shutil.rmtree(CONDA_RUNTIME_DIR, True)
+    shutil.rmtree(RUNTIME_LOC, True)
+    
+    os.makedirs(runtime_etag_dir)
+    
+    res = s3conn.meta.client.get_object(Bucket=runtime_s3_bucket, 
+                                    Key=runtime_s3_key)
+
+    condatar = tarfile.open(mode= "r:gz", 
+                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
+                                                                    res['ContentLength']))
+
+
+    condatar.extractall(runtime_etag_dir)
+
+    # final operation 
+    os.symlink(expected_target, CONDA_RUNTIME_DIR)
+    print subprocess.check_output("ls -la /tmp", shell=True)
+    print subprocess.check_output("ls -la /tmp/condaruntime/", shell=True)
+    return False
+
 
 def handler(event, context):
     s3 = boto3.resource('s3')
@@ -21,17 +74,13 @@ def handler(event, context):
     func_filename = "/tmp/func.pickle"
     data_filename = "/tmp/data.pickle"
     output_filename = "/tmp/output.pickle"
-    # cleanup previous invocations
-    subprocess.check_output("rm -Rf /tmp/*", shell=True)
 
 
     server_info = {'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
                    '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
                    '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
-                   '/proc/cgroups': open("/proc/cgroups", 'r').read() }
-                   
-                 
-
+                   '/proc/cgroups': open("/proc/cgroups", 'r').read() } 
+        
     print "invocation started"
 
     # download the input 
@@ -50,6 +99,8 @@ def handler(event, context):
         print "WARNING COULD NOT GET FIRST KEY" 
 
         KS =  s3util.key_size(b, k)
+    if not event['use_cached_runtime'] :
+        subprocess.check_output("rm -Rf /tmp/*", shell=True)
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata
@@ -73,7 +124,7 @@ def handler(event, context):
     
     # now split
     d = pickle.load(open(func_filename, 'r'))
-    
+    shutil.rmtree("/tmp/pymodules", True) # delete old modules
     os.mkdir("/tmp/pymodules")
     # get modules and save
     for m_filename, m_text in d['module_data'].iteritems():
@@ -100,14 +151,18 @@ def handler(event, context):
         
     ## Now get the runtime
 
-    res = s3.meta.client.get_object(Bucket=runtime_s3_bucket, 
-                                    Key=runtime_s3_key)
+    # res = s3.meta.client.get_object(Bucket=runtime_s3_bucket, 
+    #                                 Key=runtime_s3_key)
 
-    condatar = tarfile.open(mode= "r:gz", 
-                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
-                                                                    res['ContentLength']))
-    condatar.extractall('/tmp/')
-    print "download and untar of conda runtime complete"
+    # condatar = tarfile.open(mode= "r:gz", 
+    #                         fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
+    #                                                                 res['ContentLength']))
+    # condatar.extractall('/tmp/')
+    # print "download and untar of conda runtime complete"
+    
+    runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket, 
+                                                   runtime_s3_key)
+
 
 
     cwd = os.getcwd()
@@ -159,6 +214,7 @@ def handler(event, context):
         'output_key' : output_key, 
         'status_key' : status_key, 
         'end_time' : end_time, 
+        'runtime_cached' : runtime_cached, 
         'host_submit_time' : event['host_submit_time'],  
         'aws_request_id' : context.aws_request_id, 
         'log_group_name' : context.log_group_name, 
