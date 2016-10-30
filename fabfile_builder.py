@@ -169,3 +169,15 @@ def conda_clean():
     with cd("/tmp/conda/condaruntime/"):
         run("rm -Rf pkgs/gcc-* pkgs/cython*/")
             
+
+@task
+def terminate():
+    ec2 = boto3.resource('ec2', region_name=AWS_REGION)
+
+    insts = []
+    for i in ec2.instances.all():
+        if i.state['Name'] == 'running':
+            d = tags_to_dict(i.tags)
+            if d['Name'] == instance_name:
+                i.terminate()
+                insts.append(i)
