@@ -24,10 +24,10 @@ setup(
     version='1.0',
     packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
     install_requires=[
-        'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 'enum34', 'flaky'
+        'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 'enum34', 'flaky', 'glob2',
     ],
-    entry_points = 
-    { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli']}, 
+    entry_points =
+    { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli']},
     package_data={'pywren': ['default_config.yaml']},
     include_package_data=True
 )
