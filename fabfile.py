@@ -70,7 +70,9 @@ def deploy():
                               exclude=['*.npy', "*.ipynb", 'data', "*.mp4"],
                               extra_opts='--files-from=.git-files-list')
 
+        # copy the notebooks from remote to local
 
-@task
-def get_pywren_images():
-    get("/data/jonas/psfoptics/psfoptics/notebooks/pywren.*.png")
+        project.rsync_project("/data/jonas/pywren/", local_dir="./",
+                              extra_opts="--include '*.ipynb' --include '*.pdf' --include '*.png'  --include='*/' --exclude='*' ", 
+                              upload=False)
+        
