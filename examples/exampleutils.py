@@ -1,5 +1,8 @@
 import numpy as np
 import time
+import ntplib
+import re
+import subprocess
 
 class RandomDataGenerator(object):
     """
@@ -78,6 +81,53 @@ class RandomDataGenerator(object):
         self.pos += bytes_out
 
         return byte_data
+
+
+
+NTP_SERVERS = ['time.mit.edu', 
+               'ntp1.net.berkeley.edu', 
+               'ntp2.net.berkeley.edu']
+
+def get_time_offset(server, attempts=1):
+    """
+    Returns a list of offsets for a particular server
+    """
+
+    c = ntplib.NTPClient()
+
+    res = []
+    for i in range(attempts):
+        try:
+            r = c.request(server, version=3)
+            offset = r.offset
+            delay = r.delay
+            res.append(offset)
+        except ntplib.NTPException:
+            pass
+    return res
+
+def parse_ifconfig_hwaddr(s):
+
+    a = re.search(r'.+?(HWaddr\s+(?P<hardware_address>\S+))', s, re.MULTILINE).groupdict('')
+    return a['hardware_address']
+
+def get_hwaddr():
+    ifconfig_data = subprocess.check_output("/sbin/ifconfig")
+    hwaddr = parse_ifconfig_hwaddr(ifconfig_data)
+    return hwaddr
+
+def dict_to_sdb_attr(d, replace=False):
+    """
+    create an attributes list from a dictionar
+    """
+    return [{'Name' : str(k), 
+             'Value' : str(v), 
+             'Replace' : replace} for k, v in d.iteritems()]
+
+def sdb_attr_to_dict(attrs):
+    
+    return {a['Name'] : a['Value'] for a in attrs}
+    
 
 
 if __name__ == "__main__":
