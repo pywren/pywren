@@ -25,11 +25,14 @@ import pandas as pd
 import struct
 import ntplib
 import exampleutils
+import base64
 
 
 NTP_SERVER = 'ntp1.net.berkeley.edu'
 
 OBJ_METADATA_KEY = "benchmark_metadata"
+DOMAIN_NAME = "test-domain" 
+
 @click.group()
 def cli():
     pass
@@ -71,7 +74,8 @@ def head_read_write_txn(s3client, bucket_name, key, id, iter,
     if not skip_read:
         obj = s3client.head_object(Bucket=bucket_name, Key=key)
         metadata_dict = obj['Metadata']
-        old_id, old_iter = struct.unpack('qq', read_data)
+        read_data = metadata_dict[OBJ_METADATA_KEY]
+        old_id, old_iter = struct.unpack('qq', base64.b64decode(read_data))
     else:
         old_id = -1
         old_iter = -1
@@ -82,26 +86,57 @@ def head_read_write_txn(s3client, bucket_name, key, id, iter,
         'Bucket': bucket_name, 
         'Key': key, 
     }
-    s3.copy(
+    s3client.copy(
         copy_source, bucket_name, key, 
         ExtraArgs={
             "Metadata": {
-                "my-new-key": "my-new-value"
+                OBJ_METADATA_KEY: base64.b64encode(write_data)
             },
             "MetadataDirective": "REPLACE"
         }
     )
 
-    obj = s3client.put_object(Bucket=bucket_name, 
-                              Key = key, 
-                              Body=write_data)
     t3 = time.time()
     return old_id, old_iter, t2-t1, t3-t2, 
 
+
+def sdb_read_write_txn(sdb_client, domain_name, 
+                       item_name, 
+                       id, iter, 
+                       skip_read=False):
+    """
+    simpledb 
+    """
     
+    t1 = time.time()
+    if not skip_read:
+        resp = sdb_client.get_attributes(
+            DomainName=domain_name,
+            ItemName=item_name,
+            AttributeNames=['writer_id', 'iter'],
+            ConsistentRead=False)
+
+        a = exampleutils.sdb_attr_to_dict(resp['Attributes'])        
+        old_id = int(a['writer_id'])
+        old_iter = int(a['iter'] )
+    else:
+        old_id = -1
+        old_iter = -1
+    t2 = time.time()
+    write_dict = {'writer_id' : str(id), 
+                  'iter' : str(iter)}
+    
+    write_attr = exampleutils.dict_to_sdb_attr(write_dict, True)
+    r = sdb_client.put_attributes(DomainName = domain_name, 
+                                  ItemName = item_name, 
+                                  Attributes = write_attr)
+    t3 = time.time()
+    return old_id, old_iter, t2-t1, t3-t2, 
+
+        
 
 @cli.command()
-@click.option('--bucket_name', help='bucket to save files in')
+@click.option('--bucket_name', default=None,  help='bucket to save files in')
 @click.option('--keyspace_size', help='how many keys in the space', type=int)
 @click.option('--key_prefix', default='', help='S3 key prefix')
 @click.option('--workers', default=10, help='how many workers', type=int)
@@ -120,14 +155,44 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
     keylist = [ key_prefix + str(uuid.uuid4().get_hex().upper()) for _ in range(keyspace_size)]
 
     print "writing key initial values"
-    # write all keys
-    local_s3_conn = boto3.client('s3', region)
-    [obj_read_write_txn(local_s3_conn, bucket_name, 
-                        key, -1, -1, True) for key in keylist]
+
+    mode = 'sdb'
+    if mode == 's3obj' or mode == 's3head':
+
+        local_s3_conn = boto3.client('s3', region)
+        [obj_read_write_txn(local_s3_conn, bucket_name, 
+                            key, -1, -1, True) for key in keylist]
+        if mode =='s3head':
+            #also write metadata header
+            [head_read_write_txn(local_s3_conn, bucket_name, 
+                                 key, -1, -1, True) for key in keylist]
+    elif mode == 'sdb':
+        local_sdb_conn =  boto3.client('sdb', region)
+        # create item list: 
+        for ks in np.array_split(keylist, keyspace_size // 20):
+            items = []
+        
+            for k in ks:
+                items.append({'Name' : k, 
+                              'Attributes' : [
+                                  {'Name' : 'writer_id', 
+                                   'Value' : '-1', 
+                                   'Replace' : True}, 
+                                  {'Name' : 'iter', 
+                                   'Value' : '-1', 
+                                   'Replace' : True}]
+                              })
+            response = local_sdb_conn.batch_put_attributes(
+                DomainName=bucket_name,
+                Items=items)
+    else:
+        raise ValueError("unknown mode {}".format(mode))
+
     print "writing key initial values took {:3.2f} sec".format(time.time() - start_time)
     host_start_time = time.time()
     wait_until = host_start_time + begin_delay
 
+    txn_func = sdb_read_write_txn  # obj_read_write_txn
     def run_command(job_id):
         # get timing offset
         timing_offsets = exampleutils.get_time_offset(NTP_SERVER, 4)
@@ -139,16 +204,22 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
 
         # start the job
         job_start = time.time()
-        client = boto3.client('s3', region)
+        if mode == 's3obj' or mode == 's3head':
+            
+            client = boto3.client('s3', region)
+        elif mode == 'sdb':
+            client = boto3.client('sdb', region)
+
         np.random.seed(job_id)
 
         runlog = []
         for txn_i in range(txn_per_worker):
             t1 = time.time()
-            key = np.random.choice(keylist)
-            read_id, read_iter, read_dur, write_dur = obj_read_write_txn(client, bucket_name, 
-                                                                           key, job_id, 
-                                                                           txn_i)
+            key_i = np.random.randint(keyspace_size)
+            key = keylist[key_i]
+            read_id, read_iter, read_dur, write_dur = txn_func(client, bucket_name, 
+                                                               key, job_id, 
+                                                               txn_i)
             t2 = time.time()
             log = {'txn_duration' : t2-t1, 
                    'sleep_duration' : sleep_duration,
@@ -164,7 +235,7 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
         job_end = time.time()
         return {'runlog' : runlog, 
                 'job_start' : job_start, 
-                'timeing_offsets' : timing_offsets, 
+                'timing_offsets' : timing_offsets, 
                 'job_end' : job_end}
 
 
@@ -180,6 +251,7 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
                  'host_start_time' : host_start_time, 
                  'begin_delay' : begin_delay, 
                  'keyspace_size' : keyspace_size, 
+                 'keylist' : keylist, 
                  'workers' : workers, 
                  'txn_per_worker' : txn_per_worker,}, 
                 open(outfile, 'w'))
