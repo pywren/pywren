@@ -67,7 +67,8 @@ def deploy():
         local('git ls-tree --full-tree --name-only -r HEAD > .git-files-list')
     
         project.rsync_project("/data/jonas/pywren/", local_dir="./",
-                              exclude=['*.npy', "*.ipynb", 'data', "*.mp4"],
+                              exclude=['*.npy', "*.ipynb", 'data', "*.mp4", 
+                                       "*.pdf", "*.png"],
                               extra_opts='--files-from=.git-files-list')
 
         # copy the notebooks from remote to local

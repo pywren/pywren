@@ -32,7 +32,7 @@ if __name__ == "__main__":
     t1 = time.time()
 
     LOOPCOUNT = 6
-    N = 1600
+    N = 10 # 1600
     MAT_N = 4096
 
     iters = np.arange(N)
