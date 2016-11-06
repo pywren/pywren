@@ -1,6 +1,5 @@
 import numpy as np
 import time
-import ntplib
 import re
 import subprocess
 
@@ -92,6 +91,7 @@ def get_time_offset(server, attempts=1):
     """
     Returns a list of offsets for a particular server
     """
+    import ntplib
 
     c = ntplib.NTPClient()
 
@@ -115,6 +115,12 @@ def get_hwaddr():
     ifconfig_data = subprocess.check_output("/sbin/ifconfig")
     hwaddr = parse_ifconfig_hwaddr(ifconfig_data)
     return hwaddr
+
+def get_uptime():
+    uptime_str = open("/proc/uptime").read().strip()
+    up_str, idle_str = uptime_str.split()
+
+    return float(up_str), float(idle_str)
 
 def dict_to_sdb_attr(d, replace=False):
     """
