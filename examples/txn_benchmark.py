@@ -234,7 +234,6 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
         return {'runlog' : runlog, 
                 'job_start' : job_start, 
                 'timing_offsets' : timing_offsets, 
-                'mode' : mode, 
                 'job_end' : job_end}
 
 
@@ -250,7 +249,8 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
                  'host_start_time' : host_start_time, 
                  'begin_delay' : begin_delay, 
                  'keyspace_size' : keyspace_size, 
-                 'keylist' : keylist, 
+                 'keylist' : keylist,                 
+                 'mode' : mode, 
                  'workers' : workers, 
                  'txn_per_worker' : txn_per_worker,}, 
                 open(outfile, 'w'))
