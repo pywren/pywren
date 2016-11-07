@@ -339,7 +339,6 @@ class ResponseFuture(object):
         If the call raised then this method will raise the same exception.
 
         """
-
         if self._state == JobState.new:
             raise ValueError("job not yet invoked")
         
@@ -482,21 +481,25 @@ def _wait(fs, THREADPOOL_SIZE):
     fs_dones = []
     fs_notdones = []
 
-    pool = ThreadPool(THREADPOOL_SIZE)
-
+    f_to_wait_on = []
     for f in fs:
         if f._state in [JobState.success, JobState.error]:
             # done, don't need to do anything
             fs_dones.append(f)
         else:
             if f.call_id in callids_done:
-                pool.apply_async(f.result, None, dict(throw_except=False))
-
+                f_to_wait_on.append(f)
                 fs_dones.append(f)
             else:
                 fs_notdones.append(f)
+    def test(f):
+        f.result(throw_except=False)
+    pool = ThreadPool(THREADPOOL_SIZE)
+    pool.map(test, f_to_wait_on)
+
     pool.close()
     pool.join()
+
     return fs_dones, fs_notdones
 
     

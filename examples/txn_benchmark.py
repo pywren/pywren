@@ -145,8 +145,9 @@ def sdb_read_write_txn(sdb_client, domain_name,
               help='filename to save results in')
 @click.option('--region', default='us-west-2', help="AWS Region")
 @click.option('--begin_delay', default=0, help="start delay ")
+@click.option('--mode', default='s3obj', help='what resource [s3obj, s3head, sdb]')
 def benchmark(bucket_name, keyspace_size, key_prefix, workers, 
-              txn_per_worker, outfile, region, begin_delay):
+              txn_per_worker, outfile, region, begin_delay, mode):
 
     start_time = time.time()
     print "bucket_name =", bucket_name
@@ -156,16 +157,19 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
 
     print "writing key initial values"
 
-    mode = 'sdb'
+
     if mode == 's3obj' or mode == 's3head':
 
         local_s3_conn = boto3.client('s3', region)
         [obj_read_write_txn(local_s3_conn, bucket_name, 
                             key, -1, -1, True) for key in keylist]
-        if mode =='s3head':
+        if mode == 's3obj' : 
+            txn_func = obj_read_write_txn
+        else:
             #also write metadata header
             [head_read_write_txn(local_s3_conn, bucket_name, 
                                  key, -1, -1, True) for key in keylist]
+            txn_func = head_read_write_txn
     elif mode == 'sdb':
         local_sdb_conn =  boto3.client('sdb', region)
         # create item list: 
@@ -185,6 +189,7 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
             response = local_sdb_conn.batch_put_attributes(
                 DomainName=bucket_name,
                 Items=items)
+        txn_func = sdb_read_write_txn  
     else:
         raise ValueError("unknown mode {}".format(mode))
 
@@ -192,7 +197,7 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
     host_start_time = time.time()
     wait_until = host_start_time + begin_delay
 
-    txn_func = sdb_read_write_txn  # obj_read_write_txn
+
     def run_command(job_id):
         # get timing offset
         timing_offsets = exampleutils.get_time_offset(NTP_SERVER, 4)
@@ -236,6 +241,7 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
         return {'runlog' : runlog, 
                 'job_start' : job_start, 
                 'timing_offsets' : timing_offsets, 
+                'mode' : mode, 
                 'job_end' : job_end}
 
 
