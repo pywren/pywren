@@ -2,8 +2,6 @@
 Benchmark microtransactions for s3 -- each thread tries to read and write
 a ton of little objects and logging what values are read. 
 
-time python s3_transaction_benchmark.py benchmark  --bucket_name=jonas-pywren-benchmark --keyspace_size=1000 --workers=800 --txn_per_worker=1000
-
 """
 
 import time
@@ -32,11 +30,6 @@ NTP_SERVER = 'ntp1.net.berkeley.edu'
 
 OBJ_METADATA_KEY = "benchmark_metadata"
 DOMAIN_NAME = "test-domain" 
-
-@click.group()
-def cli():
-    pass
-
 
 def obj_read_write_txn(s3client, bucket_name, key, id, iter, 
                        skip_read=False):
@@ -135,8 +128,9 @@ def sdb_read_write_txn(sdb_client, domain_name,
 
         
 
-@cli.command()
+@click.command()
 @click.option('--bucket_name', default=None,  help='bucket to save files in')
+@click.option('--mode', default='s3obj', help='what resource [s3obj, s3head, sdb]')
 @click.option('--keyspace_size', help='how many keys in the space', type=int)
 @click.option('--key_prefix', default='', help='S3 key prefix')
 @click.option('--workers', default=10, help='how many workers', type=int)
@@ -145,7 +139,6 @@ def sdb_read_write_txn(sdb_client, domain_name,
               help='filename to save results in')
 @click.option('--region', default='us-west-2', help="AWS Region")
 @click.option('--begin_delay', default=0, help="start delay ")
-@click.option('--mode', default='s3obj', help='what resource [s3obj, s3head, sdb]')
 def benchmark(bucket_name, keyspace_size, key_prefix, workers, 
               txn_per_worker, outfile, region, begin_delay, mode):
 
@@ -263,4 +256,4 @@ def benchmark(bucket_name, keyspace_size, key_prefix, workers,
                 open(outfile, 'w'))
 
 if __name__ == '__main__':
-    cli()
+    benchmark()
