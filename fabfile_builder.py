@@ -22,7 +22,7 @@ unique_instance_name = 'pywren_builder'
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.mkl.avx.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl.tar.gz"
-s3url = "s3://ericmjonas-public/condaruntime.mkl.avx2.tar.gz"
+s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy.mkl_avx2.tar.gz"
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -105,13 +105,10 @@ def conda_setup_mkl_avx2():
         run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
         run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
-            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto")
+            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto scipy")
             run("conda list")
             run("conda clean -y -i -t -p")
             run("pip install --upgrade cloudpickle")
-            # run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
-            # with cd("/tmp/conda/condaruntime/lib"):
-            #     run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx.*")
             
 @task
 def conda_setup_nomkl():
@@ -162,15 +159,6 @@ def numpy():
                 run("pip install .")
 
 @task
-def conda_clean():    
-    # for some reason gcc leaves detritus around in pkg that is 200 MB
-    run("conda remove gcc cython clog gmp isl mpc")
-    run("conda clean --all")
-    with cd("/tmp/conda/condaruntime/"):
-        run("rm -Rf pkgs/gcc-* pkgs/cython*/")
-            
-
-@task
 def terminate():
     ec2 = boto3.resource('ec2', region_name=AWS_REGION)
 
@@ -192,3 +180,4 @@ def deploy():
                               exclude=['*.npy', "*.ipynb", 'data', "*.mp4", 
                                        "*.pdf", "*.png"],
                               extra_opts='--files-from=.git-files-list')
+        
