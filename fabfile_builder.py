@@ -105,13 +105,13 @@ def conda_setup_mkl_avx2():
         run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
         run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
-            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython")
+            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto")
             run("conda list")
             run("conda clean -y -i -t -p")
             run("pip install --upgrade cloudpickle")
-            run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
-            with cd("/tmp/conda/condaruntime/lib"):
-                run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx.*")
+            # run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
+            # with cd("/tmp/conda/condaruntime/lib"):
+            #     run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx.*")
             
 @task
 def conda_setup_nomkl():
@@ -181,3 +181,14 @@ def terminate():
             if d['Name'] == instance_name:
                 i.terminate()
                 insts.append(i)
+
+
+
+@task
+def deploy():
+        local('git ls-tree --full-tree --name-only -r HEAD > .git-files-list')
+    
+        project.rsync_project("/tmp/pywren", local_dir="./",
+                              exclude=['*.npy', "*.ipynb", 'data', "*.mp4", 
+                                       "*.pdf", "*.png"],
+                              extra_opts='--files-from=.git-files-list')
