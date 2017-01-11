@@ -303,6 +303,7 @@ modules = [
 ('docutils', False),
 ('boto3', False),
 ('botocore', False), 
+('boto', False), 
 ('yaml', False), 
 ('builtins', False), 
 ('enum', False), 

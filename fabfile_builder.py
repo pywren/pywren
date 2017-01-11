@@ -91,7 +91,6 @@ def conda_setup_mkl():
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
             run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython")
             run("conda list")
-            run("conda clean -y -i -t -p")
             run("pip install --upgrade cloudpickle")
             run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
             with cd("/tmp/conda/condaruntime/lib"):
@@ -105,9 +104,9 @@ def conda_setup_mkl_avx2():
         run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
         run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
-            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto scipy")
+            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto scipy pillow")
             run("conda list")
-            run("conda clean -y -i -t -p")
+            #run("conda clean -y -i -t -p")
             run("pip install --upgrade cloudpickle")
             
 @task
@@ -120,8 +119,7 @@ def conda_setup_nomkl():
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
             run("conda install -q -y nomkl numpy enum34 pytest Click numba boto3 PyYAML cython")
             run("conda list")
-            run("conda clean -y -i -t -p")
-            run("pip install --upgrade cloudpickle")
+            run("pip install --upgrade cloudpickle glob2")
             
 
 @task
@@ -131,6 +129,28 @@ def package_all():
          get("condaruntime.tar.gz", local_path="/tmp/condaruntime.tar.gz")
          local("aws s3 cp /tmp/condaruntime.tar.gz {}".format(s3url))
 
+@task 
+def install_gist():
+    """
+    https://github.com/yuichiroTCY/lear-gist-python
+    """
+    with cd("/tmp"):
+        sudo("yum install -q -y  git gcc g++ make")
+        run("rm -Rf gist")
+        run("mkdir gist")
+        with cd("gist"):
+            run("git clone https://github.com/yuichiroTCY/lear-gist-python")
+            with cd("lear-gist-python"):
+                run("/tmp/conda/condaruntime/bin/conda install -q -y -c menpo fftw=3.3.4")
+                run("sh download-lear.sh")
+                run("sed -i '1s/^/#define M_PI 3.1415926535897\\n /' lear_gist-1.2/gist.c")
+                run("CFLAGS=-std=c99 /tmp/conda/condaruntime/bin/python setup.py build_ext -I /tmp/conda/condaruntime/include/ -L /tmp/conda/condaruntime/lib/")
+                run("CFLAGS=-std=c99 /tmp/conda/condaruntime/bin/python setup.py install")
+            
+@task
+def shrink_conda():
+    with cd("/tmp/pywren"):
+        run("python shrinkconda.py")
 
 @task
 def numpy():

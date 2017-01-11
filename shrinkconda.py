@@ -47,7 +47,7 @@ with measure("strip shared libs (gcc)"):
             pass
 
 with measure("conda clean"):
-    subprocess.check_output("{}/bin/conda clean --all".format(CONDA_RUNTIME), 
+    subprocess.check_output("{}/bin/conda clean -y -i -t -p ".format(CONDA_RUNTIME), 
                                                               shell=True)
 
 with measure("delete *.pyc"):
