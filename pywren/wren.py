@@ -103,43 +103,54 @@ class Executor(object):
     def invoke_with_keys(self, s3_func_key, s3_data_key, s3_output_key, 
                          s3_status_key, 
                          callset_id, call_id, extra_env, 
-                         extra_meta, data_byte_range, use_cached_runtime):
+                         extra_meta, data_byte_range, use_cached_runtime, 
+                         host_job_meta):
+    
+        arg_dict = {'func_key' : s3_func_key, 
+                    'data_key' : s3_data_key, 
+                    'output_key' : s3_output_key, 
+                    'status_key' : s3_status_key, 
+                    'callset_id': callset_id, 
+                    'data_byte_range' : data_byte_range, 
+                    'call_id' : call_id, 
+                    'use_cached_runtime' : use_cached_runtime, 
+                    'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
+                    'runtime_s3_key' : self.config['runtime']['s3_key']}    
 
-            arg_dict = {'func_key' : s3_func_key, 
-                        'data_key' : s3_data_key, 
-                        'output_key' : s3_output_key, 
-                        'status_key' : s3_status_key, 
-                        'callset_id': callset_id, 
-                        'data_byte_range' : data_byte_range, 
-                        'call_id' : call_id, 
-                        'use_cached_runtime' : use_cached_runtime, 
-                        'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
-                        'runtime_s3_key' : self.config['runtime']['s3_key']}    
+        if extra_env is not None:
+            arg_dict['extra_env'] = extra_env
 
-            if extra_env is not None:
-                arg_dict['extra_env'] = extra_env
-            if extra_meta is not None:
-                # sanity 
-                for k, v in extra_meta.iteritems():
-                    if k in arg_dict:
-                        raise ValueError("Key {} already in dict".format(k))
-                    arg_dict[k] = v
+        if extra_meta is not None:
+            # sanity 
+            for k, v in extra_meta.iteritems():
+                if k in arg_dict:
+                    raise ValueError("Key {} already in dict".format(k))
+                arg_dict[k] = v
 
-            arg_dict['host_submit_time'] =  time.time()
+        host_submit_time = time.time()
+        arg_dict['host_submit_time'] = host_submit_time
 
-            json_arg = json.dumps(arg_dict)
+        json_arg = json.dumps(arg_dict)
 
-            logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
-            res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
-                                         Payload = json.dumps(arg_dict), 
-                                         InvocationType='Event')
-            logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
+        logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
+        lambda_invoke_time_start = time.time()
+        res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
+                                     Payload = json.dumps(arg_dict), 
+                                     InvocationType='Event')
+        host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
+        host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
 
-            fut = ResponseFuture(call_id, callset_id, self)
 
-            fut._set_state(JobState.invoked)
+        logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
 
-            return fut
+
+        host_job_meta.update(arg_dict)
+
+        fut = ResponseFuture(call_id, callset_id, self, host_job_meta)
+
+        fut._set_state(JobState.invoked)
+
+        return fut
         
     def call_async(self, func, data, extra_env = None, 
                     extra_meta=None):
@@ -179,13 +190,23 @@ class Executor(object):
         data_strs = func_and_data_ser[1:]
         data_size_bytes = np.sum(len(x) for x in data_strs)
         s3_agg_data_key = None
+        host_job_meta = {'aggregated_data_in_s3' : False, 
+                         'data_size_bytes' : data_size_bytes}
+        
         if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE and data_all_as_one:
             s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket, 
                                                       self.s3_prefix, callset_id)
             agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
+            agg_upload_time = time.time()
             self.s3client.put_object(Bucket = s3_agg_data_key[0], 
                                      Key = s3_agg_data_key[1], 
                                      Body = agg_data_bytes)
+            host_job_meta['agg_data_in_s3'] = True
+            host_job_meta['data_upload_time'] = time.time() - agg_upload_time
+        else:
+            # FIXME add warning that you wanted data all as one but 
+            # it exceeded max data size 
+            pass
             
 
         module_data = self.create_mod_data(mod_paths)
@@ -201,15 +222,20 @@ class Executor(object):
                                  Body = func_module_str)
 
         def invoke(data_str, callset_id, call_id, s3_func_key, 
+                   host_job_meta, 
                    s3_agg_data_key = None, data_byte_range=None ):
             s3_data_key, s3_output_key, s3_status_key \
                 = s3util.create_keys(self.s3_bucket,
                                      self.s3_prefix, 
                                      callset_id, call_id)
-
+            
             if s3_agg_data_key is None:
+                data_upload_time = time.time()
                 self.put_data(s3_data_key, data_str, 
                               callset_id, call_id)
+                data_upload_time = time.time() - data_upload_time
+                host_job_meta['data_upload_time'] = data_upload_time
+
                 data_key = s3_data_key
             else:
                 data_key = s3_agg_data_key
@@ -219,7 +245,7 @@ class Executor(object):
                                          s3_status_key, 
                                          callset_id, call_id, extra_env, 
                                          extra_meta, data_byte_range, 
-                                         use_cached_runtime)
+                                         use_cached_runtime, {})
 
         N = len(data)
         call_result_objs = []
@@ -232,6 +258,7 @@ class Executor(object):
 
             cb = pool.apply_async(invoke, (data_strs[i], callset_id, 
                                            call_id, s3_func_key, 
+                                           host_job_meta.copy(), 
                                            s3_agg_data_key, 
                                            data_byte_range))
 
@@ -293,12 +320,16 @@ class ResponseFuture(object):
 
     """
     """
-    def __init__(self, call_id, callset_id, executor):
+    GET_RESULT_SLEEP_SECS = 4
+    def __init__(self, call_id, callset_id, executor, invoke_metadata):
 
         self.call_id = call_id
         self.callset_id = callset_id 
         self._state = JobState.new
         self.executor = executor
+        self._invoke_metadata = invoke_metadata.copy()
+        
+        self.status_query_count = 0
         
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -349,40 +380,50 @@ class ResponseFuture(object):
             raise self._exception
 
         
-        status = get_call_status(self.callset_id, self.call_id, 
-                                 AWS_S3_BUCKET = self.executor.s3_bucket, 
-                                 AWS_S3_PREFIX = self.executor.s3_prefix, 
-                                 AWS_REGION = self.executor.aws_region, 
-                                 s3 = self.executor.s3client)
-
+        call_status = get_call_status(self.callset_id, self.call_id, 
+                                      AWS_S3_BUCKET = self.executor.s3_bucket, 
+                                      AWS_S3_PREFIX = self.executor.s3_prefix, 
+                                      AWS_REGION = self.executor.aws_region, 
+                                      s3 = self.executor.s3client)
+        self.status_query_count += 1
 
         ## FIXME implement timeout
         if timeout is not None : raise NotImplementedError()
 
         if check_only is True:
-            if status is None:
+            if call_status is None:
                 return None
 
-        while status is None:
-            time.sleep(4)
-            status = get_call_status(self.callset_id, self.call_id, 
-                                     AWS_S3_BUCKET = self.executor.s3_bucket, 
-                                     AWS_S3_PREFIX = self.executor.s3_prefix, 
-                                     AWS_REGION = self.executor.aws_region, 
-                                     s3 = self.executor.s3client)
+        while call_status is None:
+            time.sleep(self.GET_RESULT_SLEEP_SECS)
+            call_status = get_call_status(self.callset_id, self.call_id, 
+                                          AWS_S3_BUCKET = self.executor.s3_bucket, 
+                                          AWS_S3_PREFIX = self.executor.s3_prefix, 
+                                          AWS_REGION = self.executor.aws_region, 
+                                          s3 = self.executor.s3client)
+            self.status_query_count += 1
+
+        self._invoke_metadata['status_query_count'] = self.status_query_count
             
         # FIXME check if it actually worked all the way through 
-
+        
+        call_output_time = time.time()
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
                                               AWS_S3_BUCKET = self.executor.s3_bucket, 
                                               AWS_S3_PREFIX = self.executor.s3_prefix,
                                               AWS_REGION = self.executor.aws_region, 
                                               s3 = self.executor.s3client)
+        call_output_time_done = time.time()
+        self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time_done
+        
+
         call_success = call_invoker_result['success']
         logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id, 
                                                                            self.call_id, 
                                                                            call_success))
-        self._run_status = status
+        
+
+
         self._call_invoker_result = call_invoker_result
 
         if call_success:
@@ -392,6 +433,10 @@ class ResponseFuture(object):
         else:
             self._exception = call_invoker_result['result']
             self._state = JobState.error
+
+
+        self.run_status = call_status # this is the remote status information
+        self.invoke_status = self._invoke_metadata # local status information
 
         if call_success:
             return self._return_val
