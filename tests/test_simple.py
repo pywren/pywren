@@ -95,7 +95,7 @@ class RuntimeCaching(unittest.TestCase):
         t2 = time.time()
         non_cached_latency = t2-t1
 
-        assert fut._run_status['runtime_cached'] == False
+        assert fut.run_status['runtime_cached'] == False
         assert res == 17
 
         t1 = time.time()
@@ -105,6 +105,6 @@ class RuntimeCaching(unittest.TestCase):
         cached_latency = t2-t1
 
         assert res == 17
-        assert fut._run_status['runtime_cached'] == True
+        assert fut.run_status['runtime_cached'] == True
 
         assert cached_latency < non_cached_latency
