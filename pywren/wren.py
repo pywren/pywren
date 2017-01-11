@@ -17,23 +17,7 @@ import os
 import numpy as np
 from cloudpickle import serialize
 
-logger = logging.getLogger('pywren')
-logger.setLevel(logging.DEBUG)
-
-# create console handler and set level to debug
-ch = logging.StreamHandler()
-ch.setLevel(logging.WARN)
-
-# create formatter
-formatter = logging.Formatter('%(asctime)s.%(msecs)03d - %(name)s - %(levelname)s - %(message)s', 
-                              "%Y-%m-%d %H:%M:%S")
-
-# add formatter to ch
-ch.setFormatter(formatter)
-
-# add ch to logger
-logger.addHandler(ch)
-
+logger = logging.getLogger(__name__)
 
 class JobState(enum.Enum):
     new = 1
@@ -548,3 +532,5 @@ def _wait(fs, THREADPOOL_SIZE):
     return fs_dones, fs_notdones
 
     
+def log_test():
+    logger.info("logging from pywren.wren")

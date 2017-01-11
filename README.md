@@ -95,3 +95,22 @@ You should now be able to run `examples/simpletest.py`. You should see the follo
 ### Local pip install
 
 `pip install --editable ./`
+
+### Developer notes
+
+Pywren will print logging info to console by setting the environment varible as follows:
+
+```
+PYWREN_LOGLEVEL=INFO
+```
+I think we're following this guy's advice for logging:
+https://fangpenlin.com/posts/2012/08/26/good-logging-practice-in-python/
+
+When logging and storing metadata, try and differentiate between:
+
+host (things that occur on user computer) and other
+time (how long something took, sec) and timestamp (unix timestamp) 
+
+
+Logging:
+
