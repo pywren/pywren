@@ -5,6 +5,7 @@ import ntplib
 import cPickle as pickle
 import time
 import re
+import exampleutils
 
 def get_ifconfig_hwaddr(s):
     a = re.search(r'.+?(HWaddr\s+(?P<hardware_address>\S+))', s, re.MULTILINE).groupdict('')
@@ -13,12 +14,14 @@ def get_ifconfig_hwaddr(s):
 
 def get_offset(x):
 
-    hwaddr = exputil.get_hwaddr()
+    hwaddr = exampleutils.get_hwaddr()
 
-    server_list = ['{}.amazon.pool.ntp.org'.format(i) for i in range(4)]
+    server_list = []
     server_list.append('time.mit.edu')
     server_list.append('ntp1.net.berkeley.edu')
     server_list.append('ntp2.net.berkeley.edu')
+    server_list.append('time1.ucla.edu')
+    server_list.append('time2.ucla.edu')
 
     c = ntplib.NTPClient()
     
