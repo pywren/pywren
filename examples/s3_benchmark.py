@@ -86,7 +86,7 @@ def write(bucket_name, mb_per_file, number, key_prefix,
 @cli.command()
 @click.option('--bucket_name', help='bucket to save files in')
 @click.option('--number', help='number of objects to read', type=int)
-@click.option('--outfile', default='s3_benchmark_read.output.pickle', 
+@click.option('--outfile', default='s3_benchmark.read.output.pickle', 
               help='filename to save results in')
 @click.option('--key_file', default=None, help="filename to write keynames to (for later read)")
 @click.option('--s3_key', default=None, help="s3 key to read (repeat)")
