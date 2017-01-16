@@ -50,6 +50,9 @@ with measure("conda clean"):
     subprocess.check_output("{}/bin/conda clean -y -i -t -p ".format(CONDA_RUNTIME), 
                                                               shell=True)
 
+with measure("elimate pkg"):
+    subprocess.check_output("rm -Rf {}/pkgs ".format(CONDA_RUNTIME), shell=True)
+
 with measure("delete *.pyc"):
 
     for pyc_filename in glob2.glob("{}/**/*.pyc".format(CONDA_RUNTIME)):
