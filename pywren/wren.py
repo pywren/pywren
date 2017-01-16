@@ -14,7 +14,6 @@ import logging
 import botocore
 import glob2
 import os
-import numpy as np
 from cloudpickle import serialize
 
 logger = logging.getLogger(__name__)
@@ -172,7 +171,7 @@ class Executor(object):
         
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
-        data_size_bytes = np.sum(len(x) for x in data_strs)
+        data_size_bytes = sum(len(x) for x in data_strs)
         s3_agg_data_key = None
         host_job_meta = {'aggregated_data_in_s3' : False, 
                          'data_size_bytes' : data_size_bytes}
