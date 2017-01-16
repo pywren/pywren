@@ -22,7 +22,7 @@ unique_instance_name = 'pywren_builder'
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.mkl.avx.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl.tar.gz"
-s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy.mkl_avx2.tar.gz"
+s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy-cvxpy.mkl_avx2.tar.gz"
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -92,6 +92,7 @@ def conda_setup_mkl():
             run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython")
             run("conda list")
             run("pip install --upgrade cloudpickle")
+            run("pip install cvxpy")
             run("rm -Rf /tmp/conda/condaruntime/pkgs/mkl-11.3.3-0/*")
             with cd("/tmp/conda/condaruntime/lib"):
                 run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx2*")
