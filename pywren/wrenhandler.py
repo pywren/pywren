@@ -28,7 +28,8 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     # get runtime etag
     runtime_meta = s3conn.meta.client.head_object(Bucket=runtime_s3_bucket, 
                                                   Key=runtime_s3_key)
-    ETag = runtime_meta['ETag']
+    # etags have strings (double quotes) on each end, so we strip those
+    ETag = str(runtime_meta['ETag'])[1:-1]
     print "The etag is ={}".format(ETag)
     runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
     print "Runtime etag dir={}".format(runtime_etag_dir)
