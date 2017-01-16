@@ -45,7 +45,9 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
 
     print "{} not cached, downloading".format(ETag)
     # didn't cache, so we start over
-    shutil.rmtree(CONDA_RUNTIME_DIR, True)
+    if os.path.islink(CONDA_RUNTIME_DIR):
+        os.unlink(CONDA_RUNTIME_DIR)
+
     shutil.rmtree(RUNTIME_LOC, True)
     
     os.makedirs(runtime_etag_dir)
