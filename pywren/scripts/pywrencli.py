@@ -202,3 +202,34 @@ def test_lambda():
     """
 
     config = pywren.wrenconfig.default()
+
+@cli.command()
+def print_latest_logs():
+    """
+    Print the latest log group and log stream. 
+
+    Note this does not contain support for going back further in history, 
+    use the CloudWatch Logs web GUI for that. 
+    """
+
+
+    config = pywren.wrenconfig.default()
+
+    logclient = boto3.client('logs', region_name=config['account']['aws_region'])
+
+    logGroupName = "/aws/lambda/{}".format(config['lambda']['function_name'])
+
+    response = logclient.describe_log_streams(
+        logGroupName=logGroupName,
+        orderBy='LastEventTime',
+        descending=True)
+
+    latest_logStreamName = response['logStreams'][0]['logStreamName']
+
+
+    response = logclient.get_log_events(
+        logGroupName=logGroupName,
+        logStreamName=latest_logStreamName,)
+
+    for event in response['events']:
+        print "{} : {}".format(event['timestamp'], event['message'].strip())

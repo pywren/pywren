@@ -96,6 +96,7 @@ class Executor(object):
                     'callset_id': callset_id, 
                     'data_byte_range' : data_byte_range, 
                     'call_id' : call_id, 
+                    'lambda_function_name' : self.lambda_function_name, 
                     'use_cached_runtime' : use_cached_runtime, 
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                     'runtime_s3_key' : self.config['runtime']['s3_key']}    
@@ -126,7 +127,7 @@ class Executor(object):
 
         logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
 
-
+        
         host_job_meta.update(arg_dict)
 
         fut = ResponseFuture(call_id, callset_id, self, host_job_meta)
@@ -261,6 +262,41 @@ class Executor(object):
         return res
     
     
+    def get_logs(self, future):
+
+
+        logclient = boto3.client('logs', region_name=self.aws_region)
+
+
+        log_group_name = future.run_status['log_group_name']
+        log_stream_name = future.run_status['log_stream_name']
+        lambda_function_name = future.invoke_status['lambda_function_name']
+        aws_request_id = future.run_status['aws_request_id']
+
+        log_events = logclient.get_log_events(
+            logGroupName=log_group_name,
+            logStreamName=log_stream_name,)
+
+        this_events_logs = []
+        in_this_event = False
+        for event in log_events['events']:
+            start_string = "START RequestId: {}".format(aws_request_id)
+            end_string = "REPORT RequestId: {}".format(aws_request_id)
+
+            message = event['message'].strip()
+            timestamp = int(event['timestamp'])
+            if start_string in message:
+                in_this_event = True
+            elif end_string in message:
+                in_this_event = False
+                this_events_logs.append((timestamp, message))
+
+            if in_this_event:
+                this_events_logs.append((timestamp, message))
+
+        return this_events_logs
+
+
     
 def get_call_status(callset_id, call_id, 
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
