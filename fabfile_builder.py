@@ -22,8 +22,8 @@ unique_instance_name = 'pywren_builder'
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.mkl.avx.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl.tar.gz"
-#s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy-cvxpy.mkl_avx2.tar.gz"
-s3url = "s3://ericmjonas-public/condaruntime.minimal.tar.gz"
+s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy-cvxpy-sklearn.mkl_avx2.tar.gz"
+#s3url = "s3://ericmjonas-public/condaruntime.minimal.tar.gz"
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
