@@ -77,10 +77,8 @@ def create_role():
     """
     
     """
-    AWS_ACCOUNT_ID = config['account']['aws_account_id']
-
     config = pywren.wrenconfig.default()
-    print "config=", config
+
     iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
