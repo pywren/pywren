@@ -95,7 +95,7 @@ more_permissions_policy = {
                 "logs:PutLogEvents"
             ],
             "Resource": [
-                "arn:aws:logs:AWS_ACCOUNT_ID:AWS_REGION:log-group:/aws/lambda/*:*"
+                "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:/aws/lambda/*:*"
             ]
         }
 
