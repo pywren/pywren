@@ -77,6 +77,7 @@ def create_role():
     """
     
     """
+    AWS_ACCOUNT_ID = config['account']['aws_account_id']
 
     config = pywren.wrenconfig.default()
     print "config=", config
@@ -86,6 +87,11 @@ def create_role():
     role = iamclient.create_role(RoleName=role_name, 
                                  AssumeRolePolicyDocument=json_policy)
     more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
+    
+    AWS_ACCOUNT_ID = config['account']['aws_account_id']
+    AWS_REGION = config['account']['aws_region']
+    more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", AWS_ACCOUNT_ID)
+    more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
 
     iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)

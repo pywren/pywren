@@ -86,7 +86,7 @@ more_permissions_policy = {
         {
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
-            "Resource": "arn:aws:logs:us-west-2:783175685819:*"
+            "Resource": "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:*"
         },
         {
             "Effect": "Allow",
@@ -95,7 +95,7 @@ more_permissions_policy = {
                 "logs:PutLogEvents"
             ],
             "Resource": [
-                "arn:aws:logs:us-west-2:783175685819:log-group:/aws/lambda/*:*"
+                "arn:aws:logs:AWS_ACCOUNT_ID:AWS_REGION:log-group:/aws/lambda/*:*"
             ]
         }
 
