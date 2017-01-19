@@ -30,13 +30,10 @@ class CloudwatchLogTest(unittest.TestCase):
         res = fut.result() 
         self.assertEqual(res, np.sum(x))
 
-        for i in range(3):
-            try:
-                time.sleep(10) # wait for logs to propagate
-            
-                logs = self.wrenexec.get_logs(fut)
-            except:
-                pass 
+        time.sleep(10) # wait for logs to propagate
+        
+        logs = self.wrenexec.get_logs(fut)
+        
         assert len(logs) >= 3 # make sure we have start, end, report
 
         
