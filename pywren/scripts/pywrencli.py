@@ -233,3 +233,14 @@ def print_latest_logs():
 
     for event in response['events']:
         print "{} : {}".format(event['timestamp'], event['message'].strip())
+
+@cli.command()
+def log_url():
+    """
+    return the cloudwatch log URL
+    """
+    config = pywren.wrenconfig.default()
+    function_name = config['lambda']['function_name']
+    aws_region = config['account']['aws_region']
+    url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
+    print url
