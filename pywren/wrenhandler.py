@@ -197,11 +197,16 @@ def handler(event, context):
     local_env.update(extra_env)
 
     print "command str=", cmdstr
-    process = subprocess.Popen(cmdstr, shell=True, env=local_env, bugsize=1, stdout=subprocess.PIPE)
+    # This is copied from http://stackoverflow.com/a/17698359/4577954
+    process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, stdout=subprocess.PIPE)
+    stdout = ''
     with process.stdout:
-        for line in iter(process.stdout.readline, b'')
-          print line
+        for line in iter(process.stdout.readline, b''):
+            stdout += line
+            print line,
 
+    # TODO(shivaram): It looks like the deadlock warning in subprocess should not apply here
+    # as we drain the stdout before calling wait ?
     process.wait()
     print "command execution finished"
 
