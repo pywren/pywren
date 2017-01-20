@@ -315,4 +315,6 @@ modules = [
 ('OpenGL', False), 
 ('scipy', False), 
 ('sklearn', False), 
+('cvxpy', False), 
+('cvxopt', False)
 ]
