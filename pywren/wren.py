@@ -421,7 +421,7 @@ class ResponseFuture(object):
                                           AWS_REGION = self.executor.aws_region, 
                                           s3 = self.executor.s3client)
             self.status_query_count += 1
-
+        self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
             
         # FIXME check if it actually worked all the way through 
@@ -435,7 +435,7 @@ class ResponseFuture(object):
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time_done
         
-
+        self._invoke_metadata['download_output_timestamp'] = call_output_time_done
         call_success = call_invoker_result['success']
         logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id, 
                                                                            self.call_id, 
