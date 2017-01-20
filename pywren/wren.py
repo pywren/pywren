@@ -162,6 +162,8 @@ class Executor(object):
         to False, redownloads runtime.
         """
 
+        host_job_meta = {}
+
         pool = ThreadPool(invoke_pool_threads)
         callset_id = s3util.create_callset_id()
         data = list(iterdata)
@@ -174,8 +176,8 @@ class Executor(object):
         data_strs = func_and_data_ser[1:]
         data_size_bytes = sum(len(x) for x in data_strs)
         s3_agg_data_key = None
-        host_job_meta = {'aggregated_data_in_s3' : False, 
-                         'data_size_bytes' : data_size_bytes}
+        host_job_meta['aggregated_data_in_s3'] = False
+        host_job_meta['data_size_bytes'] =  data_size_bytes
         
         if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE and data_all_as_one:
             s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket, 
@@ -187,6 +189,7 @@ class Executor(object):
                                      Body = agg_data_bytes)
             host_job_meta['agg_data_in_s3'] = True
             host_job_meta['data_upload_time'] = time.time() - agg_upload_time
+            host_job_meta['data_upload_timestamp'] = time.time()
         else:
             # FIXME add warning that you wanted data all as one but 
             # it exceeded max data size 
@@ -198,13 +201,16 @@ class Executor(object):
         ### Create func and upload 
         func_module_str = pickle.dumps({'func' : func_str, 
                                         'module_data' : module_data}, -1)
+        host_job_meta['func_module_str_len'] = len(func_module_str)
 
+        func_upload_time = time.time()
         s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
                                              callset_id)
         self.s3client.put_object(Bucket = s3_func_key[0], 
                                  Key = s3_func_key[1], 
                                  Body = func_module_str)
-
+        host_job_meta['func_upload_time'] = time.time() - func_upload_time
+        host_job_meta['func_upload_timestamp'] = time.time()
         def invoke(data_str, callset_id, call_id, s3_func_key, 
                    host_job_meta, 
                    s3_agg_data_key = None, data_byte_range=None ):
@@ -212,13 +218,16 @@ class Executor(object):
                 = s3util.create_keys(self.s3_bucket,
                                      self.s3_prefix, 
                                      callset_id, call_id)
-            
+
+            host_job_meta['job_invoke_timestamp'] = time.time()
+
             if s3_agg_data_key is None:
                 data_upload_time = time.time()
                 self.put_data(s3_data_key, data_str, 
                               callset_id, call_id)
                 data_upload_time = time.time() - data_upload_time
                 host_job_meta['data_upload_time'] = data_upload_time
+                host_job_meta['data_upload_timestamp'] = time.time()
 
                 data_key = s3_data_key
             else:
@@ -229,7 +238,7 @@ class Executor(object):
                                          s3_status_key, 
                                          callset_id, call_id, extra_env, 
                                          extra_meta, data_byte_range, 
-                                         use_cached_runtime, {})
+                                         use_cached_runtime, host_job_meta.copy())
 
         N = len(data)
         call_result_objs = []
