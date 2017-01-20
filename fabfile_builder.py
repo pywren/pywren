@@ -110,6 +110,7 @@ def conda_setup_mkl_avx2():
             #run("conda clean -y -i -t -p")
             run("pip install --upgrade cloudpickle")
             run("pip install cvxpy")
+            run("pip install redis")
 
 @task
 def conda_setup_nomkl():
