@@ -197,8 +197,13 @@ def handler(event, context):
     local_env.update(extra_env)
 
     print "command str=", cmdstr
-    stdout = subprocess.check_output(cmdstr, shell=True, env=local_env)
-    print "command executed, stdout=", stdout
+    process = subprocess.Popen(cmdstr, shell=True, env=local_env, bugsize=1, stdout=subprocess.PIPE)
+    with process.stdout:
+        for line in iter(process.stdout.readline, b'')
+          print line
+
+    process.wait()
+    print "command execution finished"
 
     s3.meta.client.upload_file(output_filename, output_key[0], 
                                output_key[1])
