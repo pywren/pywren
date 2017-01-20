@@ -31,12 +31,6 @@ def compute_flops(loopcount, MAT_N):
 def benchmark(outfile, loopcount, workers, matn):
 
         
-    fh = logging.FileHandler('benchmark.log')
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(pywren.wren.formatter)
-    pywren.wren.logger.addHandler(fh)
-
-
     t1 = time.time()
     N = workers
 
@@ -76,7 +70,8 @@ def benchmark(outfile, loopcount, workers, matn):
     print "getting results" 
     results = [f.result() for f in futures]
     print "getting status" 
-    run_statuses = [f._run_status for f in futures]
+    run_statuses = [f.run_status for f in futures]
+    invoke_statuses = [f.invoke_status for f in futures]
 
     all_done = time.time()
     total_time = all_done - t1
@@ -87,6 +82,7 @@ def benchmark(outfile, loopcount, workers, matn):
     pickle.dump({'total_time' : total_time, 
                  'est_flop' : est_flop, 
                  'run_statuses' : run_statuses, 
+                 'invoke_statuses' : invoke_statuses, 
                  'callset_id' : futures[0].callset_id, 
                  'local_jobs_done_timeline' : local_jobs_done_timeline, 
                  'results' : results}, 

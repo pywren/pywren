@@ -30,10 +30,6 @@ def compute_flops(loopcount):
 
 if __name__ == "__main__":
 
-    fh = logging.FileHandler('simpletest.log')
-    fh.setLevel(logging.DEBUG)
-    fh.setFormatter(pywren.wren.formatter)
-    pywren.wren.logger.addHandler(fh)
 
     t1 = time.time()
 
