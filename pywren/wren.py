@@ -1,11 +1,13 @@
+from __future__ import absolute_import
+
 import boto3
 import botocore
 
 import json
 import base64
 import cPickle as pickle
-import wrenconfig
-import wrenutil
+from . import wrenconfig
+from . import wrenutilimport 
 import enum
 from multiprocessing.pool import ThreadPool
 import time
