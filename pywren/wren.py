@@ -15,6 +15,7 @@ import botocore
 import glob2
 import os
 from cloudpickle import serialize
+import invokers
 
 logger = logging.getLogger(__name__)
 
@@ -47,8 +48,9 @@ class Executor(object):
         self.lambda_function_name = function_name
 
         self.session = botocore.session.get_session()
-        self.lambclient = self.session.create_client('lambda', 
-                                                     region_name = aws_region)
+        self.lambda_invoker = invokers.LambdaInvoker(self.session, aws_region, 
+                                                     self.lambda_function_name)
+
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         
 
@@ -118,9 +120,10 @@ class Executor(object):
 
         logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
         lambda_invoke_time_start = time.time()
-        res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
-                                     Payload = json.dumps(arg_dict), 
-                                     InvocationType='Event')
+
+        # do the invocation
+        self.lambda_invoker(arg_dict)
+
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
 
