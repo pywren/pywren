@@ -116,8 +116,6 @@ class Executor(object):
         host_submit_time = time.time()
         arg_dict['host_submit_time'] = host_submit_time
 
-        json_arg = json.dumps(arg_dict)
-
         logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
         lambda_invoke_time_start = time.time()
 

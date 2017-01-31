@@ -10,7 +10,7 @@ class LambdaInvoker(object):
 
     def invoke(self, payload):
         res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
-                                     Payload = json.dumps(arg_dict), 
+                                     Payload = json.dumps(payload), 
                                      InvocationType='Event')
         # FIXME check response
 
