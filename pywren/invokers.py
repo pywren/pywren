@@ -6,7 +6,7 @@ class LambdaInvoker(object):
         self.region_name = region_name
         self.lambda_function_name = lambda_function_name
         self.lambclient = session.create_client('lambda', 
-                                                region_name = aws_region)
+                                                region_name = region_name)
 
     def invoke(self, payload):
         res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
