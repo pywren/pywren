@@ -146,7 +146,7 @@ def deploy_lambda(update_if_exists = True):
             else:
 
                 lambclient.create_function(FunctionName = FUNCTION_NAME, 
-                                           Handler = pywren.wrenconfig.HANDLER_NAME, 
+                                           Handler = pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME, 
                                            Runtime = "python2.7", 
                                            MemorySize = MEMORY, 
                                            Timeout = TIMEOUT, 

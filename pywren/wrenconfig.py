@@ -2,7 +2,8 @@ import os
 
 
 FUNCTION_NAME = "pywren1"
-HANDLER_NAME = "wrenhandler.handler"
+GENERIC_HANDLER_NAME = "wrenhandler.generic_handler"
+AWS_LAMBDA_HANDLER_NAME = "wrenhandler.aws_lambda_handler"
 
 PACKAGE_FILE = "deploy.zip"
 

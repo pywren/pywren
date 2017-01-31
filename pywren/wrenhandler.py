@@ -68,8 +68,22 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     print subprocess.check_output("ls -la /tmp/condaruntime/", shell=True)
     return False
 
+def aws_lambda_handler(event, context):
 
-def handler(event, context):
+    context_dict = {
+        'aws_request_id' : context.aws_request_id, 
+        'log_group_name' : context.log_group_name, 
+        'log_stream_name' : context.log_stream_name, 
+    }
+    return generic_handler(event, context_dict)
+
+
+def generic_handler(event, context_dict):
+    """
+    context_dict is generic infromation about the context
+    that we are running in, provided by the scheduler
+    """
+
     s3 = boto3.resource('s3')
 
     start_time = time.time()
@@ -229,12 +243,9 @@ def handler(event, context):
         'end_time' : end_time, 
         'runtime_cached' : runtime_cached, 
         'host_submit_time' : event['host_submit_time'],  
-        'aws_request_id' : context.aws_request_id, 
-        'log_group_name' : context.log_group_name, 
-        'log_stream_name' : context.log_stream_name, 
         'server_info' : server_info, 
     }  
-
+    d.update(context_dict) 
 
     s3.meta.client.put_object(Bucket=status_key[0], Key=status_key[1], 
                               Body=json.dumps(d))
