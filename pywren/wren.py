@@ -122,7 +122,7 @@ class Executor(object):
         lambda_invoke_time_start = time.time()
 
         # do the invocation
-        self.lambda_invoker(arg_dict)
+        self.lambda_invoker.invoke(arg_dict)
 
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
