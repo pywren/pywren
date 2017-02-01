@@ -42,8 +42,8 @@ def dummy_executor():
     FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME, 
-                    config, use_dummy=True)
+    invoker = invokers.DummyInvoker()
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
     
 class Executor(object):
     """

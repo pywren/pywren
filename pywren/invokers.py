@@ -1,6 +1,7 @@
 import boto3
 import botocore
 import json
+from pywren import wrenhandler
 
 class LambdaInvoker(object):
     def __init__(self, region_name, lambda_function_name):
@@ -43,9 +44,26 @@ class DummyInvoker(object):
     def invoke(self, payload):
         self.payloads.append(payload)
 
-    def run(self):
-        pass
+    def config(self):
+        return {}
 
+    def run_jobs(self, MAXJOBS=-1):
+        """
+        run MAXJOBS in the queue
+        MAXJOBS = -1  to run all
+        """
+
+        jobn = len(self.payloads)
+        if MAXJOBS != -1:
+            jobn = MAXJOBS
+
+        for i in range(jobn):
+            job = self.payloads.pop(0)
+            context = {'invoker' : 'DummyInvoker', 
+                       'jobnum' : i}
+            wrenhandler.generic_handler(job, context)
+        
+    
 class StandaloneInvoker(object):
     """
     """
