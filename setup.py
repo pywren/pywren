@@ -27,7 +27,8 @@ setup(
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 'enum34', 'flaky', 'glob2',
     ],
     entry_points =
-    { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli']},
+    { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli', 
+                           'server=pywren.scripts.standalone']},
     package_data={'pywren': ['default_config.yaml']},
     include_package_data=True
 )

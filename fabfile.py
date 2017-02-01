@@ -7,7 +7,7 @@ import json
 import base64
 import cPickle as pickle
 from pywren.wrenconfig import * 
-
+import time
 
 """
 conda notes
@@ -77,3 +77,72 @@ def deploy():
                               extra_opts="--include '*.ipynb' --include '*.pdf' --include '*.png'  --include='*/' --exclude='*' ", 
                               upload=False)
         
+
+QUEUE_NAME = 'pywren-test-debug-4'
+#MESSAGE_GROUP_ID = 'hello.world'
+@task
+def create_queue():
+
+    sqs = boto3.resource('sqs',  region_name=AWS_REGION)
+
+    queue = sqs.create_queue(QueueName=QUEUE_NAME, 
+                             Attributes={'VisibilityTimeout' : "20"})
+
+@task 
+def put_message(): # MessageBody="hello world"):
+    # Get the service resource
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+    MessageBody = "{}".format(time.time())
+    response = queue.send_message(MessageBody=MessageBody)
+
+@task 
+def get_message(delete=False):
+    # Get the service resource
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+
+    response = queue.receive_messages()
+    if len(response) > 0 :
+        print response[0].body
+        if delete:
+            response[0].delete()
+
+@task
+def sqs_worker(number=1):
+    from multiprocessing.pool import ThreadPool, Pool
+
+    number = int(number)
+
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+
+    LOG_FILE = "sqs.log"
+    def process_message(m):
+        fid = open(LOG_FILE, 'a')
+        fid.write("sent {} received {}\n".format(m.body, time.time()))
+        m.delete()
+        fid.close()
+
+    pool = ThreadPool(10)
+    while(True):
+        print "reading queue" 
+        response = queue.receive_messages(WaitTimeSeconds=10)
+
+        if len(response) > 0:
+            print "Dispatching"
+            #pool.apply_async(
+            process_message(response[0])
+        else:
+            print "no message, sleeping"
+            time.sleep(1)
+
+    
+    
