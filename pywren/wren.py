@@ -39,10 +39,18 @@ def default_executor():
 def dummy_executor():
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
-    FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.DummyInvoker()
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
+    
+def sqs_executor():
+    config = wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE = config['standalone']['pywren-queue']
+    S3_BUCKET = config['s3']['bucket']
+    S3_PREFIX = config['s3']['pywren_prefix']
+    invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
     
 class Executor(object):

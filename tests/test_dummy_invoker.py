@@ -50,3 +50,5 @@ class SimpleAsync(unittest.TestCase):
         self.wrenexec.invoker.run_jobs()
 
         res = fut.result() 
+
+

@@ -4,8 +4,8 @@ import json
 import shutil
 import glob2
 import os
-from pywren import wrenhandler
-
+from pywren import wrenhandler, wrenutil
+from queues import SQSInvoker
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
@@ -56,10 +56,6 @@ class DummyInvoker(object):
     def config(self):
         return {}
 
-    def copy_runtime(self, tgt_dir):
-        files = glob2.glob(os.path.join(SOURCE_DIR, "./*.py"))
-        for f in files:
-            shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
     def run_jobs(self, MAXJOBS=-1, run_dir="/tmp/task"):
         """
@@ -72,24 +68,10 @@ class DummyInvoker(object):
         jobn = len(self.payloads)
         if MAXJOBS != -1:
             jobn = MAXJOBS
-        original_dir = os.getcwd()
+        jobs = self.payloads[:jobn]
 
-        for i in range(jobn):
-            task_run_dir = os.path.join(run_dir, str(i))
-            shutil.rmtree(task_run_dir, True) # delete old modules
-            os.makedirs(task_run_dir)
-            self.copy_runtime(task_run_dir)
+        wrenutil.local_handler(jobs, run_dir, 
+                               {'invoker' : 'DummyInvoker'})
 
-            job = self.payloads.pop(0)
-            context = {'invoker' : 'DummyInvoker', 
-                       'jobnum' : i}
-            os.chdir(task_run_dir)
-            wrenhandler.generic_handler(job, context)
-            
-            os.chdir(original_dir)
-    
-class StandaloneInvoker(object):
-    """
-    """
+        self.payloads = self.payloads[jobn:]
 
-    pass
