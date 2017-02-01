@@ -39,7 +39,7 @@ script:
   - pywren create_role
   - sleep 10
   - pywren deploy_lambda
-  - pytest -s tests
+  - pytest -s tests/test_simple.py
   - pywren delete_lambda
   - pywren delete_role
   #   cd tests && nosetests
