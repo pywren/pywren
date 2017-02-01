@@ -1,8 +1,7 @@
 import uuid
 import os
 import shutil
-import glob2
-
+import glob
 import wrenhandler
 
 def uuid_str():
@@ -106,7 +105,7 @@ def local_handler(jobs, run_dir, extra_context = None):
     """
 
     def copy_runtime(tgt_dir):
-        files = glob2.glob(os.path.join(SOURCE_DIR, "./*.py"))
+        files = glob.glob(os.path.join(SOURCE_DIR, "./*.py"))
         for f in files:
             shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
