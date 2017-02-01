@@ -78,7 +78,7 @@ def deploy():
                               upload=False)
         
 
-QUEUE_NAME = 'pywren-test-debug-4'
+QUEUE_NAME = 'pywren-queue'
 #MESSAGE_GROUP_ID = 'hello.world'
 @task
 def create_queue():
