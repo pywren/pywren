@@ -11,29 +11,29 @@ import unittest
 import numpy as np
 from flaky import flaky
 
-class CloudwatchLogTest(unittest.TestCase):
-    """
-    Simple test to see if we can get any logs
-    """
+# class CloudwatchLogTest(unittest.TestCase):
+#     """
+#     Simple test to see if we can get any logs
+#     """
 
-    def setUp(self):
-        self.wrenexec = pywren.default_executor()
+#     def setUp(self):
+#         self.wrenexec = pywren.default_executor()
 
-    def test_simple(self):
+#     def test_simple(self):
 
-        def sum_list(x):
-            return np.sum(x)
+#         def sum_list(x):
+#             return np.sum(x)
 
-        x = np.arange(10)
-        fut = self.wrenexec.call_async(sum_list, x)
+#         x = np.arange(10)
+#         fut = self.wrenexec.call_async(sum_list, x)
 
-        res = fut.result() 
-        self.assertEqual(res, np.sum(x))
+#         res = fut.result() 
+#         self.assertEqual(res, np.sum(x))
 
-        time.sleep(10) # wait for logs to propagate
+#         time.sleep(10) # wait for logs to propagate
         
-        logs = self.wrenexec.get_logs(fut, True)
+#         logs = self.wrenexec.get_logs(fut, True)
         
-        assert len(logs) >= 3 # make sure we have start, end, report
+#         assert len(logs) >= 3 # make sure we have start, end, report
 
         
