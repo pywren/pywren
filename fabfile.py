@@ -146,3 +146,31 @@ def sqs_worker(number=1):
 
     
     
+@task 
+def get_message(delete=False):
+    # Get the service resource
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+
+    response = queue.receive_messages()
+    if len(response) > 0 :
+        print response[0].body
+        if delete:
+            response[0].delete()
+@task 
+def get_message(delete=False):
+    # Get the service resource
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+
+@task
+def sqs_purge_queue():
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
+    queue.purge()

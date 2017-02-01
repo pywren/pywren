@@ -34,7 +34,7 @@ script:
   # Your test script goes here
   - echo $TRAVIS_BUILD_ID
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test_$TRAVIS_BUILD_ID --function_name=pywren_travis_$TRAVIS_BUILD_ID --bucket_name=jonas-testbucket2
+  - pywren create_config --lambda_role=pywren_travis_test_$TRAVIS_BUILD_ID --function_name=pywren_travis_$TRAVIS_BUILD_ID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$TRAVIS_BUILD_ID
   - pywren create_role
   - sleep 10
   - pywren deploy_lambda
