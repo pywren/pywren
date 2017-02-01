@@ -39,7 +39,7 @@ def process_message(m):
     # 
     
 
-def server(config):
+def server_runner(config):
 
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
@@ -62,7 +62,6 @@ def server(config):
             time.sleep(1)
 
 
-
-if __name__ == "__main__":
+def server():
     config = pywren.wrenconfig.default()
-    server(config)
+    server_runner(config)
