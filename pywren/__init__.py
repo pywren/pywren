@@ -1,5 +1,5 @@
 import wren
-from wren import default_executor, wait
+from wren import default_executor, wait, dummy_executor
 import wrenlogging
 
 import os

@@ -1,4 +1,3 @@
-import wren
 import pytest
 import time
 import boto3 
@@ -24,26 +23,30 @@ class SimpleAsync(unittest.TestCase):
 
         x = np.arange(10)
         fut = self.wrenexec.call_async(sum_list, x)
+        
+        self.wrenexec.invoker.run_jobs()
 
         res = fut.result() 
         self.assertEqual(res, np.sum(x))
 
-    # def test_exception(self):
-    #     def throwexcept(x):
-    #         raise Exception("Throw me out!")
+    def test_exception(self):
+        def throwexcept(x):
+            raise Exception("Throw me out!")
 
-    #     wrenexec = pywren.default_executor()
-    #     fut = self.wrenexec.call_async(throwexcept, None)
-
-    #     with pytest.raises(Exception) as execinfo:
-    #         res = fut.result() 
-    #     assert 'Throw me out!' in str(execinfo.value)
-
-
-    # def test_subprocess(self):
-    #     def uname(x):
-    #         return subprocess.check_output("uname -a", shell=True)
+        wrenexec = pywren.default_executor()
+        fut = self.wrenexec.call_async(throwexcept, None)
+        self.wrenexec.invoker.run_jobs()
         
-    #     fut = self.wrenexec.call_async(uname, None)
+        with pytest.raises(Exception) as execinfo:
+            res = fut.result() 
+        assert 'Throw me out!' in str(execinfo.value)
 
-    #     res = fut.result() 
+
+    def test_subprocess(self):
+        def uname(x):
+            return subprocess.check_output("uname -a", shell=True)
+        
+        fut = self.wrenexec.call_async(uname, None)
+        self.wrenexec.invoker.run_jobs()
+
+        res = fut.result() 

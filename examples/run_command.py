@@ -8,6 +8,7 @@ def run_command(x):
 if __name__ == "__main__":
     cmd = " ".join(sys.argv[1:])
 
+
     wrenexec = pywren.default_executor()
     fut = wrenexec.call_async(run_command, cmd)
     print fut.callset_id
