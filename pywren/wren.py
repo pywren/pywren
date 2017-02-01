@@ -32,25 +32,33 @@ def default_executor():
     FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME, config)
+    
+    invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
 
+def dummy_executor():
+    config = wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    FUNCTION_NAME = config['lambda']['function_name']
+    S3_BUCKET = config['s3']['bucket']
+    S3_PREFIX = config['s3']['pywren_prefix']
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, FUNCTION_NAME, 
+                    config, use_dummy=True)
+    
 class Executor(object):
     """
     Theoretically will allow for cross-AZ invocations
     """
 
-    def __init__(self, aws_region, s3_bucket, s3_prefix, function_name, 
-                 config):
+    def __init__(self, aws_region, s3_bucket, s3_prefix, 
+                 invoker, config):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
         self.config = config
-        self.lambda_function_name = function_name
 
         self.session = botocore.session.get_session()
-        self.lambda_invoker = invokers.LambdaInvoker(self.session, aws_region, 
-                                                     self.lambda_function_name)
-
+        self.lambda_invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         
 
@@ -98,11 +106,10 @@ class Executor(object):
                     'callset_id': callset_id, 
                     'data_byte_range' : data_byte_range, 
                     'call_id' : call_id, 
-                    'lambda_function_name' : self.lambda_function_name, 
                     'use_cached_runtime' : use_cached_runtime, 
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                     'runtime_s3_key' : self.config['runtime']['s3_key']}    
-
+        
         if extra_env is not None:
             arg_dict['extra_env'] = extra_env
 
@@ -125,6 +132,8 @@ class Executor(object):
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
 
+
+        host_job_meta.update(self.invoker.config())
 
         logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
 
@@ -280,7 +289,7 @@ class Executor(object):
 
         log_group_name = future.run_status['log_group_name']
         log_stream_name = future.run_status['log_stream_name']
-        lambda_function_name = future.invoke_status['lambda_function_name']
+
         aws_request_id = future.run_status['aws_request_id']
 
         log_events = logclient.get_log_events(
