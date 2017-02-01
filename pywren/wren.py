@@ -58,7 +58,7 @@ class Executor(object):
         self.config = config
 
         self.session = botocore.session.get_session()
-        self.lambda_invoker = invoker
+        self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         
 
@@ -127,7 +127,7 @@ class Executor(object):
         lambda_invoke_time_start = time.time()
 
         # do the invocation
-        self.lambda_invoker.invoke(arg_dict)
+        self.invoker.invoke(arg_dict)
 
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
