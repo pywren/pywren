@@ -289,7 +289,7 @@ class Executor(object):
         return res
     
     
-    def get_logs(self, future):
+    def get_logs(self, future, verbose=True):
 
 
         logclient = boto3.client('logs', region_name=self.aws_region)
@@ -303,7 +303,8 @@ class Executor(object):
         log_events = logclient.get_log_events(
             logGroupName=log_group_name,
             logStreamName=log_stream_name,)
-
+        if verbose: # FIXME use logger
+            print "log events returned"
         this_events_logs = []
         in_this_event = False
         for event in log_events['events']:
@@ -312,6 +313,8 @@ class Executor(object):
 
             message = event['message'].strip()
             timestamp = int(event['timestamp'])
+            if verbose:
+                print timestamp, message
             if start_string in message:
                 in_this_event = True
             elif end_string in message:
@@ -320,7 +323,7 @@ class Executor(object):
 
             if in_this_event:
                 this_events_logs.append((timestamp, message))
-
+            
         return this_events_logs
 
 

@@ -32,7 +32,7 @@ class CloudwatchLogTest(unittest.TestCase):
 
         time.sleep(10) # wait for logs to propagate
         
-        logs = self.wrenexec.get_logs(fut)
+        logs = self.wrenexec.get_logs(fut, True)
         
         assert len(logs) >= 3 # make sure we have start, end, report
 
