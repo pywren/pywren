@@ -203,6 +203,32 @@ def delete_role():
                                  PolicyName = '{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName = role_name)
     
+@cli.command()
+def create_queue():
+    """
+    Create the SQS queue
+    """
+    config = pywren.wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs',  region_name=AWS_REGION)
+
+    queue = sqs.create_queue(QueueName=SQS_QUEUE_NAME, 
+                             Attributes={'VisibilityTimeout' : "20"})
+
+@cli.command()
+def delete_queue():
+    """
+    Delete the SQS queue
+    """
+    config = pywren.wrenconfig.default()
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs',  region_name=AWS_REGION)
+    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    queue.delete()
 
 def test_lambda():
     """
