@@ -17,5 +17,5 @@ runtime:
     s3_key: condaruntime.nomkl_sklearn.tar.gz
 
 standalone:
-    sqs_queue_name: pywren_queue
+    sqs_queue_name: pywren-queue
     visibility: 10
