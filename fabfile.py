@@ -174,3 +174,101 @@ def sqs_purge_queue():
     # Get the queue
     queue = sqs.get_queue_by_name(QueueName=QUEUE_NAME)
     queue.purge()
+
+INSTANCE_PROFILE_NAME = "pywren_standalone"
+@task
+def create_instance_profile():
+    iam = boto3.resource('iam')
+    #iam.create_instance_profile(InstanceProfileName=INSTANCE_PROFILE_NAME)
+
+    instance_profile = iam.InstanceProfile(INSTANCE_PROFILE_NAME)
+    #instance_profile.add_role(RoleName='pywren_exec_role_refactor8')
+    print instance_profile.name
+
+@task 
+def launch_instance():
+    
+    tgt_ami = 'ami-b04e92d0'
+    AWS_REGION = 'us-west-2'
+    my_aws_key = 'ec2-us-west-2'
+    instance_name = "test_instance"
+    
+    INSTANCE_TYPE = 'm3.xlarge'
+
+
+    ec2 = boto3.resource('ec2', region_name=AWS_REGION)
+
+    BlockDeviceMappings=[
+        {
+            'DeviceName': '/dev/xvda',
+            'Ebs': {
+                'VolumeSize': 100,
+                'DeleteOnTermination': True,
+                'VolumeType': 'standard',
+                'SnapshotId' : 'snap-c87f35ec'
+            },
+        },
+    ]
+
+    user_data = """
+    #cloud-config
+    repo_update: true
+    repo_upgrade: all
+    
+    packages:
+     - tmux
+     - emacs
+     - gcc
+     - g++
+
+    runcmd:
+     - [ sh, -c, 'echo "hello world" > /tmp/hello.txt' ]
+     - [ pip, install, supervisor ]
+    """
+    iam = boto3.resource('iam')
+    instance_profile = iam.InstanceProfile(INSTANCE_PROFILE_NAME)
+    instance_profile_dict =  {
+                              'Name' : instance_profile.name}
+    instances = ec2.create_instances(ImageId=tgt_ami, MinCount=1, MaxCount=1,
+                                     KeyName=my_aws_key, 
+                                     InstanceType=INSTANCE_TYPE, 
+                                     BlockDeviceMappings = BlockDeviceMappings,
+                                     InstanceInitiatedShutdownBehavior='terminate',
+                                     EbsOptimized=True, 
+                                     IamInstanceProfile = instance_profile_dict, 
+                                     UserData=user_data)
+
+    for inst in instances:
+
+
+        inst.wait_until_running()
+        inst.reload()
+        inst.create_tags(
+            Resources=[
+                inst.instance_id
+            ],
+            Tags=[
+                {
+                    'Key': 'Name',
+                    'Value': instance_name
+                },
+            ]
+        )
+        print inst.public_dns_name
+
+def tags_to_dict(d):
+    return {a['Key'] : a['Value'] for a in d}
+
+@task
+def terminate_instance():
+    instance_name = "test_instance"
+
+    ec2 = boto3.resource('ec2', region_name=AWS_REGION)
+
+    insts = []
+    for i in ec2.instances.all():
+        if i.state['Name'] == 'running':
+            d = tags_to_dict(i.tags)
+            if d['Name'] == instance_name:
+                i.terminate()
+                insts.append(i)

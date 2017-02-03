@@ -62,12 +62,16 @@ basic_role_policy = {
     "Statement": [{
         "Sid": "",
         "Effect": "Allow",
-        "Principal": {
-            "Service": "lambda.amazonaws.com"
-        },
+        "Principal": { "Service": "lambda.amazonaws.com"},
         "Action": "sts:AssumeRole"}, 
 
-
+        {
+        "Sid": "",
+        "Effect": "Allow",
+        "Principal": {
+            "Service": "ec2.amazonaws.com",
+        },
+        "Action": "sts:AssumeRole"}, 
     ]
 }
 

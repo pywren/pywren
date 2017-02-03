@@ -11,36 +11,100 @@ import glob2
 import io
 import time 
 import botocore
-
+import boto
+from multiprocess import Process
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
-def process_message(m):
+SQS_VISIBILITY_INCREMENT_SEC = 60
+SLEEP_DUR_SEC=2
+
+def get_my_uptime():
+
+    ec2 = boto3.resource('ec2') # , region_name=AWS_REGION)
+
+    instance_id =  boto.utils.get_instance_metadata()['instance-id']
+    instances = ec2.instances.filter(InstanceIds=[instance_id])
+
+
+    for instance in instances:
+        launch_time = instance.launch_time
+        time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
+        print launch_time, time_delta
+        #hour_frac = (time_delta.total_seconds() % 3600) / 3600
+
+        return time_delta.total_seconds()
+
+def process_message(m, local_message_i, max_run_time, run_dir):
     event = json.loads(m.body)
     
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
-    
+    p =  Process(target=job_handler, args=(event, local_message_i, run_dir))
     # is thread done
+    p.start()
+    start_time = time.time()
+
+    response = message.change_visibility(
+        VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+
     # add 10s to visibility 
-    while True:
-        response = message.change_visibility(
-            VisibilityTimeout=100
-        )
-        for i in range(10):
-            time.sleep(10)
-            # check if thread is done
-            
+    run_time = time.time() - start_time
+    last_visibility_update_time = time.time()
+    while run_time < max_run_time:
+        if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
+            response = message.change_visibility(
+                VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+            last_visibility_update_time = time.time()
+
+        if p.isDone():
             # thread is done, delete the message
-            m.delete()
-        break
+            p.join()
+        else:
+            time.sleep(SLEEP_DUR_SEC)
+
+        run_time = time.time() - start_time
+            
+    m.delete()
+
+def copy_runtime(tgt_dir):
+    files = glob.glob(os.path.join(SOURCE_DIR, "./*.py"))
+    for f in files:
+        shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
+
+def job_handler(job, job_i, run_dir, extra_context = None, 
+                  delete_taskdir=True):
+    """
+    Run a deserialized job in run_dir
+
+    Just for debugging
+    """
+
+    original_dir = os.getcwd()
+
     
-    # sleep 10s
+    task_run_dir = os.path.join(run_dir, str(job_i))
+    shutil.rmtree(task_run_dir, True) # delete old modules
+    os.makedirs(task_run_dir)
+    copy_runtime(task_run_dir)
 
-    # 
-    
 
-def server_runner(config):
+    context = {'jobnum' : job_i}
+    if extra_context is not None:
+        context.update(extra_context)
 
+    os.chdir(task_run_dir)
+    try:
+        wrenhandler.generic_handler(job, context)
+    finally:
+        if delete_taskdir:
+            shutil.rmtree(task_run_dir)
+        os.chdir(original_dir)
+
+
+def server_runner(config, max_run_time, run_dir):
+    """
+    Extract messages from queue
+    """
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
@@ -48,20 +112,26 @@ def server_runner(config):
     
     # Get the queue
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    local_message_i = 0
 
     while(True):
         print "reading queue" 
         response = queue.receive_messages(WaitTimeSeconds=10)
-
         if len(response) > 0:
             print "Dispatching"
-            #pool.apply_async(
-            process_message(response[0])
+            m = response[0]
+            
+            process_message(m, local_message_i, max_run_time, run_dir)
         else:
             print "no message, sleeping"
             time.sleep(1)
 
-
-def server():
+@click.command()
+@click.option('--max_run_time', default=3600, 
+              help='max run time for a job', type=int)
+@click.option('--run_dir', default="/tmp/pywren.rundir", 
+              help='directory to hold intermediate output')
+def server(max_run_time, run_dir):
     config = pywren.wrenconfig.default()
-    server_runner(config)
+    server_runner(config, max_run_time, run_dir)
+
