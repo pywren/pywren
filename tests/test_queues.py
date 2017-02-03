@@ -17,7 +17,7 @@ class SimpleAsync(unittest.TestCase):
     Test sqs dispatch but with local runner
     """
     def setUp(self):
-        self.wrenexec = pywren.sqs_executor()
+        self.wrenexec = pywren.remote_executor()
 
     def test_simple(self):
 
