@@ -20,7 +20,8 @@ be sure to call conda clean --all before compressing
 
 env.roledefs['m'] = ['jonas@c65']
 
-
+AWS_INSTANCE_NAME = "test_instance"
+    
 @task
 def create_zip():
     with lcd("pywren"):
@@ -191,10 +192,10 @@ def launch_instance():
     tgt_ami = 'ami-b04e92d0'
     AWS_REGION = 'us-west-2'
     my_aws_key = 'ec2-us-west-2'
-    instance_name = "test_instance"
+
     
     INSTANCE_TYPE = 'm3.xlarge'
-
+    instance_name = AWS_INSTANCE_NAME
 
     ec2 = boto3.resource('ec2', region_name=AWS_REGION)
 

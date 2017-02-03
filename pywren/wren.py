@@ -44,7 +44,7 @@ def dummy_executor():
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
     
-def sqs_executor():
+def remote_executor():
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE = config['standalone']['sqs_queue_name']

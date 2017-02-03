@@ -7,16 +7,17 @@ import shutil
 import os
 import json
 import zipfile
-import glob2
+from glob2 import glob
 import io
 import time 
 import botocore
 import boto
 from multiprocess import Process
+from pywren import wrenhandler
 
-SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
-SQS_VISIBILITY_INCREMENT_SEC = 60
+
+SQS_VISIBILITY_INCREMENT_SEC = 10
 SLEEP_DUR_SEC=2
 
 def get_my_uptime():
@@ -35,6 +36,31 @@ def get_my_uptime():
 
         return time_delta.total_seconds()
 
+def server_runner(config, max_run_time, run_dir):
+    """
+    Extract messages from queue and pass them off
+    """
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    
+    # Get the queue
+    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    local_message_i = 0
+
+    while(True):
+        print "reading queue" 
+        response = queue.receive_messages(WaitTimeSeconds=10)
+        if len(response) > 0:
+            print "Dispatching"
+            m = response[0]
+            
+            process_message(m, local_message_i, max_run_time, run_dir)
+        else:
+            print "no message, sleeping"
+            time.sleep(1)
+
 def process_message(m, local_message_i, max_run_time, run_dir):
     event = json.loads(m.body)
     
@@ -44,7 +70,7 @@ def process_message(m, local_message_i, max_run_time, run_dir):
     p.start()
     start_time = time.time()
 
-    response = message.change_visibility(
+    response = m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
     # add 10s to visibility 
@@ -52,22 +78,28 @@ def process_message(m, local_message_i, max_run_time, run_dir):
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            response = message.change_visibility(
+            response = m.change_visibility(
                 VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
 
-        if p.isDone():
-            # thread is done, delete the message
+        if p.exitcode is not None:
+            print "attempting to join"
+            # FIXME will this join ever hang? 
             p.join()
+            break
         else:
+            print "sleeping"
             time.sleep(SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
-            
+
+    if p.exitcode is None:
+        p.terminate()  # PRINT LOTS OF ERRORS HERE
+
     m.delete()
 
 def copy_runtime(tgt_dir):
-    files = glob.glob(os.path.join(SOURCE_DIR, "./*.py"))
+    files = glob(os.path.join(pywren.SOURCE_DIR, "./*.py"))
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
@@ -101,30 +133,7 @@ def job_handler(job, job_i, run_dir, extra_context = None,
         os.chdir(original_dir)
 
 
-def server_runner(config, max_run_time, run_dir):
-    """
-    Extract messages from queue
-    """
-    AWS_REGION = config['account']['aws_region']
-    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
-    sqs = boto3.resource('sqs', region_name=AWS_REGION)
-    
-    # Get the queue
-    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
-    local_message_i = 0
-
-    while(True):
-        print "reading queue" 
-        response = queue.receive_messages(WaitTimeSeconds=10)
-        if len(response) > 0:
-            print "Dispatching"
-            m = response[0]
-            
-            process_message(m, local_message_i, max_run_time, run_dir)
-        else:
-            print "no message, sleeping"
-            time.sleep(1)
 
 @click.command()
 @click.option('--max_run_time', default=3600, 
@@ -133,5 +142,5 @@ def server_runner(config, max_run_time, run_dir):
               help='directory to hold intermediate output')
 def server(max_run_time, run_dir):
     config = pywren.wrenconfig.default()
-    server_runner(config, max_run_time, run_dir)
+    server_runner(config, max_run_time, os.path.abspath(run_dir))
 
