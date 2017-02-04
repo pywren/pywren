@@ -17,8 +17,17 @@ from pywren import ec2standalone
 def cli():
     pass
 
+@click.group("standalone")
+def standalone():
+    """
+    Standalone commands to control groups of servers
+    """
+
+
+# FIXME use pywren main module SOURCE_DIR
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
-@cli.command()
+
+@click.command()
 @click.option('--filename', default=pywren.wrenconfig.get_default_home_filename(), 
               help='create a default config and populate with sane values')
 @click.option('--lambda_role', default='pywren_exec_role', 
@@ -63,7 +72,8 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     click.echo("lambda role is {}".format(lambda_role))
     click.echo("remember to set your s3 bucket and preferred AWS region")
 
-@cli.command()
+
+@click.command()
 def test_config():
     """
     Test that you have properly filled in the necessary
@@ -77,7 +87,7 @@ def test_config():
     # make sure the bucket exists
     #config = pywren.wrenconfig.default()
 
-@cli.command()
+@click.command()
 def create_role():
     """
     
@@ -99,7 +109,8 @@ def create_role():
     iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)
 
-@cli.command()    
+
+@click.command()    
 def deploy_lambda(update_if_exists = True):
     """
     Package up the source code and deploy to aws. Only creates the new
@@ -176,7 +187,7 @@ def deploy_lambda(update_if_exists = True):
         raise ValueError("could not register funciton after 10 tries")
         
                 
-@cli.command()    
+@click.command()    
 def delete_lambda():
     config = pywren.wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
@@ -190,7 +201,8 @@ def delete_lambda():
         raise Exception()
     lambclient.delete_function(FunctionName = FUNCTION_NAME)
 
-@cli.command()
+
+@click.command()
 def delete_role():
     """
     
@@ -204,7 +216,8 @@ def delete_role():
                                  PolicyName = '{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName = role_name)
     
-@cli.command()
+
+@click.command()
 def create_queue():
     """
     Create the SQS queue
@@ -218,7 +231,8 @@ def create_queue():
     queue = sqs.create_queue(QueueName=SQS_QUEUE_NAME, 
                              Attributes={'VisibilityTimeout' : "20"})
 
-@cli.command()
+
+@click.command()
 def delete_queue():
     """
     Delete the SQS queue
@@ -231,6 +245,7 @@ def delete_queue():
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
     queue.delete()
 
+
 def test_lambda():
     """
     Simple single-function test
@@ -238,7 +253,8 @@ def test_lambda():
 
     config = pywren.wrenconfig.default()
 
-@cli.command()
+
+@click.command()
 def print_latest_logs():
     """
     Print the latest log group and log stream. 
@@ -269,7 +285,8 @@ def print_latest_logs():
     for event in response['events']:
         print "{} : {}".format(event['timestamp'], event['message'].strip())
 
-@cli.command()
+
+@click.command()
 def log_url():
     """
     return the cloudwatch log URL
@@ -280,7 +297,8 @@ def log_url():
     url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
     print url
 
-@cli.command()
+
+@standalone.command('launch_instances')
 @click.option('--number', default=1, type=int, 
               help='number of instances to launch')
 def standalone_launch_instances(number):
@@ -295,7 +313,7 @@ def standalone_launch_instances(number):
 
 
 
-@cli.command()
+@standalone.command("list_instances")
 def standalone_list_instances():
     config = pywren.wrenconfig.default()
     aws_region = config['account']['aws_region']
@@ -304,11 +322,11 @@ def standalone_list_instances():
     inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
     ec2standalone.prettyprint_instances(inst_list)
 
-@cli.command()
+@standalone.command("instance_uptime")
 def standalone_instance_uptime():
     pass
 
-@cli.command()
+@standalone.command("terminate_instances")
 def standalone_terminate_instances():
     config = pywren.wrenconfig.default()
     aws_region = config['account']['aws_region']
@@ -318,3 +336,16 @@ def standalone_terminate_instances():
     print "terminate"
     ec2standalone.prettyprint_instances(inst_list)
     ec2standalone.terminate_instances(inst_list)
+
+
+cli.add_command(create_config)
+cli.add_command(test_config)
+cli.add_command(create_role)
+cli.add_command(deploy_lambda)
+cli.add_command(delete_lambda)
+cli.add_command(delete_role)
+cli.add_command(create_queue)
+cli.add_command(delete_queue)
+cli.add_command(print_latest_logs)
+cli.add_command(log_url)
+cli.add_command(standalone)
