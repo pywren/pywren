@@ -22,7 +22,7 @@ if __name__ == "__main__":
     print fut.callset_id
     
     res = fut.result() 
-    print "cached=", fut._run_status['runtime_cached']
+    print "cached=", fut.run_status['runtime_cached']
     print res
 
 
