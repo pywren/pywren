@@ -36,17 +36,16 @@ def get_my_uptime():
 
         return time_delta.total_seconds()
 
-def server_runner(config, max_run_time, run_dir):
+def server_runner(aws_region, sqs_queue_name, 
+                  max_run_time, run_dir):
     """
     Extract messages from queue and pass them off
     """
-    AWS_REGION = config['account']['aws_region']
-    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
-    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    sqs = boto3.resource('sqs', region_name=aws_region)
     
     # Get the queue
-    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    queue = sqs.get_queue_by_name(QueueName=sqs_name)
     local_message_i = 0
 
     while(True):
@@ -140,7 +139,12 @@ def job_handler(job, job_i, run_dir, extra_context = None,
               help='max run time for a job', type=int)
 @click.option('--run_dir', default="/tmp/pywren.rundir", 
               help='directory to hold intermediate output')
-def server(max_run_time, run_dir):
-    config = pywren.wrenconfig.default()
-    server_runner(config, max_run_time, os.path.abspath(run_dir))
+@click.option('--aws_region', default="us-west-2", 
+              help='aws region')
+@click.option('--sqs_queue_name', default="pywren-queue", 
+              help='queue')
+def server(aws_region, max_run_time, run_dir, sqs_queue_name):
+    #config = pywren.wrenconfig.default()
+    server_runner(aws_region, sqs_queue_name, 
+                  max_run_time, os.path.abspath(run_dir))
 
