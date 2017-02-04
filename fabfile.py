@@ -221,11 +221,27 @@ def launch_instance():
      - emacs
      - gcc
      - g++
+     - git 
+     - htop
 
     runcmd:
      - [ sh, -c, 'echo "hello world" > /tmp/hello.txt' ]
-     - [ pip, install, supervisor ]
+     - pip install supervisor 
+     - [ sudo, -Hu, ec2-user, sh, -c, "wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O /tmp/miniconda.sh"]
+     - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]
+     - [ sudo, -Hu, ec2-user, sh, -c, "/tmp/miniconda.sh -b -p  /home/ec2-user/anaconda"]
+     - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/conda install -q -y numpy boto3"]
+     - [ sudo, -Hu, ec2-user, sh, -c, "git clone -b standalone-worker https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
+     - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
     """
+    #      - [
+    # - /home/ec2-user/anaconda/bin/conda install -q -y numpy boto3
+
+    #      - git clone -b standalone-worker "https://github.com/ericmjonas/pywren.git" /home/ec2-user/pywren
+    #  - /home/ec2-user/anaconda/bin/pip install -e 
+    # - [ ./Miniconda2-latest-Linux-x86_64.sh -b -p /home/ec2-user/anaconda] 
+    #  - [ /home/ec2-user/anaconda/bin/conda install numpy boto3] 
+
     iam = boto3.resource('iam')
     instance_profile = iam.InstanceProfile(INSTANCE_PROFILE_NAME)
     instance_profile_dict =  {

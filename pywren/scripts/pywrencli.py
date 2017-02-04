@@ -11,6 +11,7 @@ import glob2
 import io
 import time 
 import botocore
+from pywren import ec2standalone
 
 @click.group()
 def cli():
@@ -278,3 +279,42 @@ def log_url():
     aws_region = config['account']['aws_region']
     url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
     print url
+
+@cli.command()
+@click.option('--number', default=1, type=int, 
+              help='number of instances to launch')
+def standalone_launch_instances(number):
+    config = pywren.wrenconfig.default()
+    sc= config['standalone']
+    aws_region = config['account']['aws_region']
+
+    ec2standalone.launch_instances(sc['target_ami'], aws_region, 
+                                   sc['ec2_ssh_key'], sc['ec2_instance_type'], 
+                                   sc['instance_name'], sc['instance_profile_name'])
+    
+
+
+
+@cli.command()
+def standalone_list_instances():
+    config = pywren.wrenconfig.default()
+    aws_region = config['account']['aws_region']
+    sc= config['standalone']
+    
+    inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
+    ec2standalone.prettyprint_instances(inst_list)
+
+@cli.command()
+def standalone_instance_uptime():
+    pass
+
+@cli.command()
+def standalone_terminate_instances():
+    config = pywren.wrenconfig.default()
+    aws_region = config['account']['aws_region']
+    sc= config['standalone']
+    
+    inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
+    print "terminate"
+    ec2standalone.prettyprint_instances(inst_list)
+    ec2standalone.terminate_instances(inst_list)
