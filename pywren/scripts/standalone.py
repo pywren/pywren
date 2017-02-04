@@ -45,7 +45,7 @@ def server_runner(aws_region, sqs_queue_name,
     sqs = boto3.resource('sqs', region_name=aws_region)
     
     # Get the queue
-    queue = sqs.get_queue_by_name(QueueName=sqs_name)
+    queue = sqs.get_queue_by_name(QueueName=sqs_queue_name)
     local_message_i = 0
 
     while(True):
