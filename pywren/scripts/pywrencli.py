@@ -113,6 +113,19 @@ def create_role():
         PolicyDocument=more_json_policy)
 
 
+@click.command()
+def create_instance_profile():
+    config = pywren.wrenconfig.default()
+    role_name = config['account']['aws_lambda_role']
+    instance_profile_name = config['standalone']['instance_profile_name']
+
+    iam = boto3.resource('iam')
+    iam.create_instance_profile(InstanceProfileName=instance_profile_name)
+    
+    instance_profile = iam.InstanceProfile(instance_profile_name)
+    instance_profile.add_role(RoleName=role_name)
+
+
 @click.command()    
 def deploy_lambda(update_if_exists = True):
     """
