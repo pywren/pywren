@@ -62,6 +62,11 @@ def ec2_self_terminate(idle_time, uptime, message_count):
     else:
         logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
 
+
+def idle_granularity_valid(idle_terminate_granularity, 
+                           queue_receive_message_timeout):
+    return (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity >  (queue_receive_message_timeout)*1.1
+    
 def server_runner(aws_region, sqs_queue_name, 
                   max_run_time, run_dir, 
                   max_idle_time=None, 
@@ -79,7 +84,8 @@ def server_runner(aws_region, sqs_queue_name,
     last_processed_timestamp = time.time()
 
     terminate_thold_sec = (IDLE_TERMINATE_THRESHOLD * idle_terminate_granularity)
-    if (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity <= (queue_receive_message_timeout)*1.1:
+    if not idle_granularity_valid(idle_terminate_granularity, 
+                              queue_receive_message_timeout)
         raise Exception("Idle time granularity window smaller than queue receive message timeout with headroom, instance will not self-terminate")
     message_count = 0
     idle_time = 0
