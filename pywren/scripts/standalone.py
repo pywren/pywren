@@ -126,9 +126,10 @@ def server_runner(aws_region, sqs_queue_name,
                 if time_frac > terminate_thold_sec:
                     logger.info("Instance has been up for {:.0f} and inactive for {:.0f}, terminating".format(my_uptime, 
                                                                                                               idle_time))
-
+                    for h in logger.handlers:
+                        h.flush()
                     ec2_self_terminate(idle_time, my_uptime, message_count)
-
+                    logger.flush()
 
 def process_message(m, local_message_i, max_run_time, run_dir, aws_region):
     event = json.loads(m.body)

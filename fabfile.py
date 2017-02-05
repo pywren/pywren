@@ -7,6 +7,7 @@ import json
 import base64
 import cPickle as pickle
 from pywren.wrenconfig import * 
+import pywren
 import time
 
 """
@@ -289,3 +290,17 @@ def terminate_instance():
             if d['Name'] == instance_name:
                 i.terminate()
                 insts.append(i)
+
+
+@task
+def delete_log_groups(prefix):
+    config = pywren.wrenconfig.default()
+
+    logclient = boto3.client('logs', region_name=config['account']['aws_region'])
+    lg = logclient.describe_log_groups(logGroupNamePrefix=prefix)
+    for l in lg['logGroups']:
+        logGroupName = l['logGroupName']
+        print 'deleting', logGroupName
+        logclient.delete_log_group(logGroupName = logGroupName)
+        
+
