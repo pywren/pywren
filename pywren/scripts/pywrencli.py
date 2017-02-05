@@ -371,6 +371,7 @@ def standalone_terminate_instances():
 cli.add_command(create_config)
 cli.add_command(test_config)
 cli.add_command(create_role)
+cli.add_command(create_instance_profile)
 cli.add_command(deploy_lambda)
 cli.add_command(delete_lambda)
 cli.add_command(delete_role)
