@@ -38,10 +38,12 @@ SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
               help='s3 bucket name for intermediates')
 @click.option('--sqs_queue', default='pywren-queue', 
               help='sqs queue name for standalone execution')
+@click.option('--standalone_name', default='pywren-standalone', 
+              help='ec2 standalone server name and profile name')
 @click.option('--force', is_flag=True, default=False, 
               help='force overwrite an existing file')
 def create_config(filename, force, lambda_role, function_name, bucket_name, 
-                  sqs_queue):
+                  sqs_queue, standalone_name):
     """
     Create a config file initialized with the defaults, and
     put it in your ~/.pywren_config
@@ -62,7 +64,8 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     default_yaml = default_yaml.replace('pywren1', function_name)
     default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
     default_yaml = default_yaml.replace('pywren-queue', sqs_queue)
-    
+    default_yaml = default_yaml.replace('pywren-standalone', standalone_name)
+
     # print out message about the stuff you need to do 
     if os.path.exists(filename) and not force:
         raise ValueError("{} already exists; not overwriting (did you need --force?)".format(filename))

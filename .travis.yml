@@ -36,14 +36,15 @@ before_script:
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`
   - echo "CLEAN BUILD ID IS $BUILD_GUID"
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$BUILD_GUID
+  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
   - pywren create_role
   - pywren create_queue
   - sleep 10
   - pywren deploy_lambda
   
 script:
-  - pytest tests
+  - if [[ $RUN_LAMBDA == true ]]; then pytest tests; fi;
+  - if [[ $RUN_STANDALONE == true ]]; then tests/ec2_standalone_tests.sh; fi;
 
 after_script:
   # always make sure we do this cleanup if we can
@@ -56,5 +57,5 @@ env:
     - secure: "EZo8fKyGMC780UqZyJRO12W0TZnVm6f14MkijGeTuBOl7rV09RTXAKbhDC4yYUZp1TSHj4+kcMts7V0ZS/PHl+QQazHpt9SA4Yqp5XUNaMrk87cAi/yHK6yFGoinisqDTT4k40Fv57cSoZlvoNK+UtEJv2lz0oFvUcTvxttUSO0KpikIhggp0KO2qWF2n8TxuDfBnfP1vvQjg9J5ge3X08k80LaOGtJYISZNgptYIF72nDJV3N0Cd66m4vfJmuOvO9UqLQx7QljNhxGCYPuLA9BaLYvhvkNAobTiEroOzts/DWgFx0maEPtNsJhuTwrQL1OCoAUW6PqGKJeILQpHkEQEmvhGqzhmyfDqvvg5miL4utGqgTatRapw/Gnfwd8fkvs9P2iem6jhIc7OL/rid73rh1XOaIcsGgiGgRdbIHHNPczBu/UQzZuoBli3+E+6lKi2il65KjNH5yVi3wHg37G2Z6H5WkeE4oQ1JGMjo9IPbhCmbtm7LXZuZNIhkpgWuchvfSFcHZRFN2yFKpN/cmtSv/nesVTPRIuqMMmRds+pxvrotWJQb3j8IJ5NIeJyPR8iAwfvaHvbEsVt+zbvqP5c6J5rkKDNEErXBJqzUWYftCQKuPMdh8/WJd2Eg05wSWBizVVKdf7oT+POumQaVp2B9tCCuRzLL8ciaBqcN8U="
     - secure: "jnif74QgPCty1WQcicfPThmOy01I+yIMw/6913flFVPnGOhZ7asyHln+O5QGyYTQCjs0EtD32twaxux20CpCv55sBjLOgFfmCrP1LRqJxR1+LfP+MrLn3Reb41kLZ6f7JqGrHGn10Sjc3I5+Z6Yhzbx5rBvLGnl/zvNF+xFFnIG5/Ps/BAX4VOLP/0S+2E0PdKmT5JqXD6+FfiH8J+p78asYVRohB7sBMEPPNKp/bMSnzi4iO0FgZWciSZHQn7jjTEIn1Vlm+RW9Ll87QEtI1Z6kZxlEsgThh/xDP9L1ux2yVKcsfWwZb9kSQMup4MNBKdG0NHTOkOPgnwnL6753DgAUwKAiQ3Avk8NucPakjfht1xnrRrDXhTnlNaguPxotncuFxiBSm9D3durOcjaj5cYeFYz3TCC650safkAXYggX9JQX8gG6Lq1Q4N14mabHHq8QtAZ5HY4cGSNdDlw79WBUsWnz3ufn8RmgJGC1yQcvjhUsNJrrts8EdG4CCgM0SJSpcvA95Enzt1SIB6x9UETHZd+tknAOFv5aXNIFqzx2b8vqrrC6VPVbe2mhrtWIzpKGbUUow6o7OGElFQgFlPFPyP4RGanlW3Ytbqxf4MFjL/Pdu9mps5hvBKlG6a6dS0cMwTqFLUzqSlp7dnyocEpZoSFT4yF4ndF9i0isk6A="
   matrix:
-    - ISOLATED=true
-    - ISOLATED=false
+    - RUN_STANDALONE=true
+    - RUN_LAMBDA=true
