@@ -92,7 +92,7 @@ def idle_granularity_valid(idle_terminate_granularity,
     return (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity >  (queue_receive_message_timeout)*1.1
     
 def server_runner(aws_region, sqs_queue_name, 
-                  max_run_time, run_dir, 
+                  max_run_time, run_dir, server_name, 
                   max_idle_time=None, 
                   idle_terminate_granularity = None, 
                   queue_receive_message_timeout=10):
@@ -124,7 +124,7 @@ def server_runner(aws_region, sqs_queue_name,
             logger.info("Dispatching")
             
             process_message(m, local_message_i, max_run_time, run_dir, 
-                            aws_region)
+                            aws_region, server_name)
             message_count += 1
             last_processed_timestamp = time.time()
             idle_time = 0
@@ -154,12 +154,14 @@ def server_runner(aws_region, sqs_queue_name,
                     ec2_self_terminate(idle_time, my_uptime, message_count)
 
 
-def process_message(m, local_message_i, max_run_time, run_dir, aws_region):
+def process_message(m, local_message_i, max_run_time, run_dir, 
+                    aws_region, 
+                    server_name):
     event = json.loads(m.body)
     
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
     p =  Process(target=job_handler, args=(event, local_message_i, 
-                                           run_dir, aws_region))
+                                           run_dir, aws_region, server_name))
     # is thread done
     p.start()
     start_time = time.time()
@@ -197,8 +199,10 @@ def copy_runtime(tgt_dir):
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
-def job_handler(job, job_i, run_dir, aws_region, extra_context = None, 
-                  delete_taskdir=True):
+def job_handler(job, job_i, run_dir, aws_region, 
+                server_name, 
+                extra_context = None, 
+                delete_taskdir=True):
     """
     Run a deserialized job in run_dir
 
@@ -211,6 +215,11 @@ def job_handler(job, job_i, run_dir, aws_region, extra_context = None,
                                               log_group="pywren.standalone", 
                                               boto3_session=session,
                                               max_batch_count=10)
+    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+
+    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+    handler.setFormatter(formatter)
+
 
     wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
     wren_log.setLevel(logging.DEBUG)
@@ -274,8 +283,8 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
     instance = get_my_ec2_instance(aws_region)
     ec2_metadata = get_my_ec2_meta(instance)
-    
-    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(ec2_metadata['Name'])
+    server_name = ec2_metadata['Name']
+    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
@@ -284,6 +293,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name, 
                   max_run_time, os.path.abspath(run_dir), 
+                  server_name, 
                   max_idle_time, 
                   idle_terminate_granularity, 
                   queue_receive_message_timeout)
