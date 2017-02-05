@@ -25,6 +25,7 @@ Todo:
 
 
 Supervisord notes:
+# get this init script
 
 https://gist.github.com/hilios/b4974ad4b7771571705e6d0830c67119
 
@@ -38,4 +39,7 @@ stand-alone server
 1. grabs from queue, processes job out-of-band
 2. if there are no jobs for 5 min and you've been idle for 5 min, terminate
 
+
+order of cloud-init directives:
+http://stackoverflow.com/questions/34095839/cloud-init-what-is-the-execution-order-of-cloud-config-directives
 

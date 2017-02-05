@@ -3,7 +3,8 @@ Code to handle EC2 stand-alone instances
 """
 import boto3
 import os
-
+import pywren
+import base64
 
 def create_instance_profile(instance_profile_name):
     iam = boto3.resource('iam')
@@ -24,6 +25,7 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
     
     # INSTANCE_TYPE = 'm3.xlarge'
     # instance_name = AWS_INSTANCE_NAME
+    sqs_queue_name='pywren-queue'
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
 
@@ -40,15 +42,25 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
     ]
     template_file = os.path.join(pywren.SOURCE_DIR, 
                                  'ec2standalone.cloudinit.template')
-    user_data = open(template_file, 'r').read()
-    
-    #      - [
-    # - /home/ec2-user/anaconda/bin/conda install -q -y numpy boto3
 
-    #      - git clone -b standalone-worker "https://github.com/ericmjonas/pywren.git" /home/ec2-user/pywren
-    #  - /home/ec2-user/anaconda/bin/pip install -e 
-    # - [ ./Miniconda2-latest-Linux-x86_64.sh -b -p /home/ec2-user/anaconda] 
-    #  - [ /home/ec2-user/anaconda/bin/conda install numpy boto3] 
+    user_data = open(template_file, 'r').read()
+
+    supervisord_init_script = open(os.path.join(pywren.SOURCE_DIR, 
+                                                'supervisord.init'), 'r').read()
+    supervisord_init_script_64 = base64.b64encode(supervisord_init_script)
+
+    supervisord_conf = open(os.path.join(pywren.SOURCE_DIR, 
+                                         'supervisord.conf'), 'r').read()
+    supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
+                                               sqs_queue_name=sqs_queue_name, 
+                                               aws_region=aws_region)
+    supervisord_conf_64 = base64.b64encode(supervisord_conf)
+
+    user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
+                                 supervisord_conf = supervisord_conf_64)
+
+
+    open("/tmp/user_data", 'w').write(user_data)
 
     iam = boto3.resource('iam')
     instance_profile = iam.InstanceProfile(instance_profile_name)

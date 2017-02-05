@@ -17,6 +17,30 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/tmp/miniconda.sh -b -p  /home/ec2-user/anaconda"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/conda install -q -y numpy boto3 boto"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install multiprocess"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install multiprocess supervisor"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git clone -b standalone-worker https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
+  - [ ls, /etc/init.d/]
+  - chmod +x /etc/init.d/supervisor
+  - chkconfig --add supervisor
+  - chkconfig supervisor on
+  - service supervisor start
+
+write_files:
+- path: "/tmp/test.og"
+  permissions: "0644"
+  owner: root:root
+  content: |
+      hello World
+- encoding: b64
+  content: {supervisord_init_script}
+  path: "/etc/init.d/supervisor"
+  permissions: "0644"
+  owner: root:root
+
+- encoding: b64
+  content: {supervisord_conf}
+  path: "/etc/supervisord.conf"
+  permissions: "0644"
+  owner: root:root
+
