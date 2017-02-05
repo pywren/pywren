@@ -24,3 +24,6 @@ standalone:
     target_ami : ami-b04e92d0
     instance_name: pywren-standalone
     instance_profile_name: pywren_standalone
+    max_idle_time: 60
+    idle_terminate_granularity:3600
+                   

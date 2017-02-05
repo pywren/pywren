@@ -16,6 +16,7 @@ import s3util
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
+logger = logging.getLogger(__name__)
 
 def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
@@ -64,8 +65,6 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
 
     # final operation 
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
-    print subprocess.check_output("ls -la /tmp", shell=True)
-    print subprocess.check_output("ls -la /tmp/condaruntime/", shell=True)
     return False
 
 def aws_lambda_handler(event, context):
@@ -98,7 +97,7 @@ def generic_handler(event, context_dict):
                    '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
                    '/proc/cgroups': open("/proc/cgroups", 'r').read() } 
         
-    print "invocation started"
+    logger.info("invocation started")
 
     # download the input 
     func_key = event['func_key']
@@ -111,9 +110,9 @@ def generic_handler(event, context_dict):
 
     b, k = data_key
     KS =  s3util.key_size(b, k)
-    print "bucket=", b, "key=", k,  "status: ", KS, "bytes" 
+    #logger.info("bucket=", b, "key=", k,  "status: ", KS, "bytes" )
     while KS is None:
-        print "WARNING COULD NOT GET FIRST KEY" 
+        logger.warn("WARNING COULD NOT GET FIRST KEY" )
 
         KS =  s3util.key_size(b, k)
     if not event['use_cached_runtime'] :
@@ -123,7 +122,7 @@ def generic_handler(event, context_dict):
     # FIXME here is we where we would attach the "canceled" metadata
     s3.meta.client.download_file(func_key[0], func_key[1], func_filename)
     func_download_time = time.time()
-    print "func download complete"
+    logger.info("func download complete")
 
     if data_byte_range is None:
         s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
@@ -137,7 +136,7 @@ def generic_handler(event, context_dict):
 
     input_download_time = time.time()
 
-    print "input data download complete"
+    logger.info("input data download complete")
     
     # now split
     d = pickle.load(open(func_filename, 'r'))
@@ -163,8 +162,8 @@ def generic_handler(event, context_dict):
         fid = open(full_filename, 'w')
         fid.write(m_text)
         fid.close()
-    print subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True)
-    print subprocess.check_output("find {}".format(os.getcwd()), shell=True)
+    logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
+    logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
         
     ## Now get the runtime
 

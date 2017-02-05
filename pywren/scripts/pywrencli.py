@@ -301,14 +301,25 @@ def log_url():
 @standalone.command('launch_instances')
 @click.option('--number', default=1, type=int, 
               help='number of instances to launch')
-def standalone_launch_instances(number):
+@click.option('--max_idle_time', default=None, type=int, 
+              help='instance queue idle time before checking self-termination')
+@click.option('--idle_terminate_granularity', default=None, type=int, 
+              help='granularity of billing (sec)')
+def standalone_launch_instances(number, max_idle_time, idle_terminate_granularity):
     config = pywren.wrenconfig.default()
     sc= config['standalone']
     aws_region = config['account']['aws_region']
 
+    if max_idle_time is not None:
+        sc['max_idle_time'] = max_idle_time
+    if idle_terminate_granularity is not None:
+        sc['idle_terminate_granularity'] = idle_terminate_granularity
+            
     ec2standalone.launch_instances(sc['target_ami'], aws_region, 
                                    sc['ec2_ssh_key'], sc['ec2_instance_type'], 
-                                   sc['instance_name'], sc['instance_profile_name'])
+                                   sc['instance_name'], sc['instance_profile_name'], 
+                                   sc['max_idle_time'], 
+                                   sc['idle_terminate_granularity'] )
     
 
 

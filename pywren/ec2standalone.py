@@ -5,6 +5,10 @@ import boto3
 import os
 import pywren
 import base64
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 def create_instance_profile(instance_profile_name):
     iam = boto3.resource('iam')
@@ -16,7 +20,8 @@ def create_instance_profile(instance_profile_name):
 
 def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type, 
                      instance_name, 
-                     instance_profile_name, default_volume_size=100, ):
+                     instance_profile_name, default_volume_size=100, 
+                     max_idle_time=60, idle_terminate_granularity=600):
 
     # tgt_ami = 'ami-b04e92d0'
     # AWS_REGION = 'us-west-2'
@@ -53,7 +58,9 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
                                          'supervisord.conf'), 'r').read()
     supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
                                                sqs_queue_name=sqs_queue_name, 
-                                               aws_region=aws_region)
+                                               aws_region=aws_region, 
+                                               max_idle_time=max_idle_time,
+                                               idle_terminate_granularity=idle_terminate_granularity)
     supervisord_conf_64 = base64.b64encode(supervisord_conf)
 
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
