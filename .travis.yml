@@ -29,7 +29,10 @@ install:
   - pip install glob2
   - python setup.py install
 
-
+env:
+  - ISOLATED=true
+  - ISOLATED=false
+  
 before_script:
   # Your test script goes here
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`
