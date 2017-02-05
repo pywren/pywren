@@ -30,8 +30,9 @@ install:
   - python setup.py install
 
 env:
-  - ISOLATED=true
-  - ISOLATED=false
+  matrix:
+    - ISOLATED=true
+    - ISOLATED=false
   
 before_script:
   # Your test script goes here
@@ -43,6 +44,7 @@ before_script:
   - pywren create_queue
   - sleep 10
   - pywren deploy_lambda
+  
 script:
   - pytest tests
 
