@@ -79,6 +79,9 @@ def check_is_ec2():
 def ec2_self_terminate(idle_time, uptime, message_count):
     if check_is_ec2():
         logger.info("self-terminating after idle for {:.0f} sec ({:.0f} s uptime), processed {:d} messages".format(idle_time, uptime, message_count))
+        for h in logger.handlers:
+            h.flush()
+
         subprocess.call("sudo shutdown -h now", shell=True)
     else:
         logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
@@ -149,7 +152,7 @@ def server_runner(aws_region, sqs_queue_name,
                     for h in logger.handlers:
                         h.flush()
                     ec2_self_terminate(idle_time, my_uptime, message_count)
-                    logger.flush()
+
 
 def process_message(m, local_message_i, max_run_time, run_dir, aws_region):
     event = json.loads(m.body)
