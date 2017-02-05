@@ -41,6 +41,9 @@ script:
   - sleep 10
   - pywren deploy_lambda
   - pytest tests
+
+after_script:
+  # always make sure we do this cleanup if we can
   - pywren delete_queue
   - pywren delete_lambda
   - pywren delete_role

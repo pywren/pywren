@@ -109,7 +109,7 @@ more_permissions_policy = {
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
-            "Resource": "arn:aws:iam::AWS_CCOUNT_ID:role/*"
+            "Resource": "arn:aws:iam::AWS_ACCOUNT_ID:role/*"
         },
         {
             "Effect": "Allow",
