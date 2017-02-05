@@ -27,6 +27,20 @@ class JobState(enum.Enum):
     error = 5
 
 def default_executor():
+    executor_str = 'lambda'
+    if 'PYWREN_EXECUTOR' in os.environ:
+        executor_str = os.environ['PYWREN_EXECUTOR']
+    
+    if executor_str == 'lambda':
+        return lambda_executor()
+    elif executor_str == 'remote':
+        return remote_executor()
+    elif executor_str == 'dummy':
+        return dummy_executor()
+    return lambda_executor()
+        
+def lambda_executor():
+
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
