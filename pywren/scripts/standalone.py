@@ -17,6 +17,7 @@ from pywren import wrenhandler
 import logging
 import watchtower
 import subprocess
+import math
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ def server_runner(aws_region, sqs_queue_name,
 
     terminate_thold_sec = (IDLE_TERMINATE_THRESHOLD * idle_terminate_granularity)
     terminate_window_sec = idle_terminate_granularity - terminate_thold_sec
-    queue_receive_message_timeout = min(floor(terminate_window_sec/1.2), queue_receive_message_timeout)
+    queue_receive_message_timeout = min(math.floor(terminate_window_sec/1.2), queue_receive_message_timeout)
     queue_receive_message_timeout = int(max(queue_receive_message_timeout, 1))
     if not idle_granularity_valid(idle_terminate_granularity, 
                               queue_receive_message_timeout):
