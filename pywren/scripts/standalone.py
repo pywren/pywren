@@ -56,7 +56,7 @@ def check_is_ec2():
     
 def ec2_self_terminate(idle_time, uptime, message_count):
     if check_is_ec2():
-        logger.info("self-terminating after idle for {:3.0f} sec, processed {:d} messages".format(idle_time, uptime, message_count))
+        logger.info("self-terminating after idle for {:.0f} sec ({:.0f} s uptime), processed {:d} messages".format(idle_time, uptime, message_count))
         subprocess.call("sudo shutdown -h now", shell=True)
     else:
         logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
