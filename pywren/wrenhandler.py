@@ -31,20 +31,20 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
                                                   Key=runtime_s3_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
-    print "The etag is ={}".format(ETag)
+    logger.debug("The etag is ={}".format(ETag))
     runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
-    print "Runtime etag dir={}".format(runtime_etag_dir)
+    logger.debug("Runtime etag dir={}".format(runtime_etag_dir))
     expected_target = os.path.join(runtime_etag_dir, 'condaruntime')    
-    print "Expected target={}".format(expected_target)
+    logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
         if os.path.exists(CONDA_RUNTIME_DIR):
             existing_link = os.readlink(CONDA_RUNTIME_DIR)
             if existing_link == expected_target:
-                print "found existing {}, not re-downloading".format(ETag)
+                logger.debug("found existing {}, not re-downloading".format(ETag))
                 return True
 
-    print "{} not cached, downloading".format(ETag)
+    logger.debug("{} not cached, downloading".format(ETag))
     # didn't cache, so we start over
     if os.path.islink(CONDA_RUNTIME_DIR):
         os.unlink(CONDA_RUNTIME_DIR)
@@ -149,7 +149,7 @@ def generic_handler(event, context_dict):
         if len(m_path) > 0 and m_path[0] == "/":
             m_path = m_path[1:]
         to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-        print "to_make=", to_make, "m_path=", m_path
+        #print "to_make=", to_make, "m_path=", m_path
         try:
             os.makedirs(to_make)
         except OSError as e:
@@ -158,7 +158,7 @@ def generic_handler(event, context_dict):
             else:
                 raise e
         full_filename = os.path.join(to_make, os.path.basename(m_filename))
-        print "creating", full_filename
+        #print "creating", full_filename
         fid = open(full_filename, 'w')
         fid.write(m_text)
         fid.close()
@@ -184,14 +184,12 @@ def generic_handler(event, context_dict):
     cwd = os.getcwd()
     jobrunner_path = os.path.join(cwd, "jobrunner.py")
     
-    print event
     extra_env = event.get('extra_env', {})
     extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
 
     call_id = event['call_id']
     callset_id = event['callset_id']
 
-    print "state written to disk" 
 
     CONDA_PYTHON_RUNTIME = "/tmp/condaruntime/bin/python"
     
@@ -209,22 +207,23 @@ def generic_handler(event, context_dict):
     local_env["OMP_NUM_THREADS"] = "1"
     local_env.update(extra_env)
 
-    print "command str=", cmdstr
+    logger.debug("command str=%s", cmdstr)
     # This is copied from http://stackoverflow.com/a/17698359/4577954
     process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, stdout=subprocess.PIPE)
     stdout = ''
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             stdout += line
-            print line,
+            logger.info(line)
 
     # TODO(shivaram): It looks like the deadlock warning in subprocess should not apply here
     # as we drain the stdout before calling wait ?
     process.wait()
-    print "command execution finished"
+    logger.info("command execution finished")
 
     s3.meta.client.upload_file(output_filename, output_key[0], 
                                output_key[1])
+    logger.debug("output uploaded to %s %", output_key[0], output_key[1])
     
     end_time = time.time()
 
