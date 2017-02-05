@@ -28,7 +28,7 @@ AWS_REGION_DEBUG='us-west-2'
 QUEUE_SLEEP_DUR_SEC=2
 IDLE_TERMINATE_THRESHOLD = 0.95
 
-def get_my_ec2_uptime():
+def get_my_ec2_instance():
 
     ec2 = boto3.resource('ec2') # , region_name=AWS_REGION)
 
@@ -37,12 +37,33 @@ def get_my_ec2_uptime():
 
 
     for instance in instances:
-        launch_time = instance.launch_time
-        time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
-        print launch_time, time_delta
-        #hour_frac = (time_delta.total_seconds() % 3600) / 3600
+        return instance
 
-        return time_delta.total_seconds()
+def get_my_ec2_uptime():
+    instance = get_my_ec2_instance()
+
+    launch_time = instance.launch_time
+    time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
+    print launch_time, time_delta
+    #hour_frac = (time_delta.total_seconds() % 3600) / 3600
+
+    return time_delta.total_seconds()
+
+def tags_to_dict(d):
+    if d is None:
+        return {}
+    return {a['Key'] : a['Value'] for a in d}
+
+
+def get_my_ec2_meta():
+    instance = get_my_ec2_instance()
+    
+    tags = tags_to_dict(instance.tags)
+
+    r = {'public_dns_name' : instance.public_dns_name, 
+         'public_ip_address' : instance.public_ip_address}
+    r.update(tags)
+    return r
 
 def get_my_uptime():
     with open('/proc/uptime', 'r') as f:
@@ -239,7 +260,6 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     
     session = boto3.session.Session(region_name=aws_region)
 
-    logging.basicConfig(level=logging.DEBUG)
     # make boto quiet locally FIXME is there a better way of doing this? 
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
@@ -250,8 +270,11 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                                               boto3_session=session,
                                               max_batch_count=10)
 
+    ec2_metadata = get_my_ec2_meta()
+    
+    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(ec2_metadata['Name'])
 
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
