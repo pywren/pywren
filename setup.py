@@ -32,7 +32,7 @@ setup(
                            'pywren-server=pywren.scripts.standalone:server']},
     package_data={'pywren': ['default_config.yaml', 
                              'ec2standalone.cloudinit.template', 
-                             'pywren.supervisord.conf', 
+                             'supervisord.conf', 
                              'supervisord.init']},
     include_package_data=True
 )
