@@ -54,7 +54,7 @@ def check_is_ec2():
     """
     return get_instance_metadata(timeout=2, num_retries=3) != {}
     
-def ec2_self_terminate(idle_time, uptime):
+def ec2_self_terminate(idle_time, uptime, message_count):
     if check_is_ec2():
         logger.info("self-terminating after idle for {:3.0f} sec, processed {:d} messages".format(idle_time, uptime, message_count))
         subprocess.call("sudo shutdown -h now", shell=True)
@@ -80,7 +80,7 @@ def server_runner(aws_region, sqs_queue_name,
     terminate_thold_sec = (IDLE_TERMINATE_THRESHOLD * idle_terminate_granularity)
     if (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity <= (queue_receive_message_timeout)*1.1:
         raise Exception("Idle time granularity window smaller than queue receive message timeout with headroom, instance will not self-terminate")
-
+    message_count = 0
     idle_time = 0
     while(True):
         logger.debug("reading queue" )
@@ -91,6 +91,7 @@ def server_runner(aws_region, sqs_queue_name,
             
             process_message(m, local_message_i, max_run_time, run_dir, 
                             aws_region)
+            message_count += 1
             last_processed_timestamp = time.time()
             idle_time = 0
         else:
@@ -115,7 +116,7 @@ def server_runner(aws_region, sqs_queue_name,
                     logger.info("Instance has been up for {:.0f} and inactive for {:.0f}, terminating".format(my_uptime, 
                                                                                                               idle_time))
 
-                    ec2_self_terminate(idle_time, my_uptime)
+                    ec2_self_terminate(idle_time, my_uptime, message_count)
 
 
 def process_message(m, local_message_i, max_run_time, run_dir, aws_region):
