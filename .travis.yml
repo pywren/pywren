@@ -30,7 +30,7 @@ install:
   - python setup.py install
 
 
-script:
+before_script:
   # Your test script goes here
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`
   - echo "CLEAN BUILD ID IS $BUILD_GUID"
@@ -40,6 +40,7 @@ script:
   - pywren create_queue
   - sleep 10
   - pywren deploy_lambda
+script:
   - pytest tests
 
 after_script:

@@ -25,7 +25,7 @@ setup(
     packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
     install_requires=[
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 
-        'enum34', 'flaky', 'glob2', 'boto', 'multiprocess' # it's nuts that we need both botos
+        'enum34', 'flaky', 'glob2', 'boto', 'multiprocess', 'watchtower' # it's nuts that we need both botos
     ],
     entry_points =
     { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli', 
