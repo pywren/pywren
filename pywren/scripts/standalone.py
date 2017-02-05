@@ -28,9 +28,9 @@ AWS_REGION_DEBUG='us-west-2'
 QUEUE_SLEEP_DUR_SEC=2
 IDLE_TERMINATE_THRESHOLD = 0.95
 
-def get_my_ec2_instance():
+def get_my_ec2_instance(aws_region):
 
-    ec2 = boto3.resource('ec2') # , region_name=AWS_REGION)
+    ec2 = boto3.resource('ec2', region_name=aws_region)
 
     instance_id =  get_instance_metadata()['instance-id']
     instances = ec2.instances.filter(InstanceIds=[instance_id])
@@ -39,15 +39,15 @@ def get_my_ec2_instance():
     for instance in instances:
         return instance
 
-def get_my_ec2_uptime():
-    instance = get_my_ec2_instance()
+# def get_my_ec2_uptime():
+#     instance = get_my_ec2_instance()
 
-    launch_time = instance.launch_time
-    time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
-    print launch_time, time_delta
-    #hour_frac = (time_delta.total_seconds() % 3600) / 3600
+#     launch_time = instance.launch_time
+#     time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
+#     print launch_time, time_delta
+#     #hour_frac = (time_delta.total_seconds() % 3600) / 3600
 
-    return time_delta.total_seconds()
+#     return time_delta.total_seconds()
 
 def tags_to_dict(d):
     if d is None:
@@ -55,8 +55,7 @@ def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
 
 
-def get_my_ec2_meta():
-    instance = get_my_ec2_instance()
+def get_my_ec2_meta(instance):
     
     tags = tags_to_dict(instance.tags)
 
@@ -270,7 +269,8 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                                               boto3_session=session,
                                               max_batch_count=10)
 
-    ec2_metadata = get_my_ec2_meta()
+    instance = get_my_ec2_instance(aws_region)
+    ec2_metadata = get_my_ec2_meta(instance)
     
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(ec2_metadata['Name'])
 
