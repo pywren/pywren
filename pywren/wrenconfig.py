@@ -75,6 +75,9 @@ basic_role_policy = {
     ]
 }
 
+# FIXME make these permissions more curtailed, esp. w.r.t. the target
+# bucket and the target sqs queue and the target logs
+
 more_permissions_policy = {
     "Version": "2012-10-17",
     'Statement': [
@@ -102,6 +105,31 @@ more_permissions_policy = {
             "Resource": [
                 "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:/aws/lambda/*:*"
             ]
+        }, 
+        {
+            "Effect": "Allow",
+            "Action": "sts:AssumeRole",
+            "Resource": "arn:aws:iam::AWS_CCOUNT_ID:role/*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "ec2:Describe*",
+            "Resource": "*"
+        },
+        {
+            "Action": "sqs:*",
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": [
+                "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:*:*"
+            ],
+            "Effect": "Allow"
         }
 
 
