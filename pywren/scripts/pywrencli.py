@@ -299,8 +299,7 @@ def log_url():
 
 
 @standalone.command('launch_instances')
-@click.option('--number', default=1, type=int, 
-              help='number of instances to launch')
+@click.argument('number', default=1, type=int)
 @click.option('--max_idle_time', default=None, type=int, 
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int, 
@@ -315,13 +314,17 @@ def standalone_launch_instances(number, max_idle_time, idle_terminate_granularit
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
             
-    ec2standalone.launch_instances(sc['target_ami'], aws_region, 
-                                   sc['ec2_ssh_key'], sc['ec2_instance_type'], 
-                                   sc['instance_name'], sc['instance_profile_name'], 
-                                   sc['max_idle_time'], 
-                                   sc['idle_terminate_granularity'] )
+    inst_list = ec2standalone.launch_instances(number, 
+                                               sc['target_ami'], aws_region, 
+                                               sc['ec2_ssh_key'], 
+                                               sc['ec2_instance_type'], 
+                                               sc['instance_name'], 
+                                               sc['instance_profile_name'], 
+                                               sc['max_idle_time'], 
+                                               idle_terminate_granularity = sc['idle_terminate_granularity'] )
     
-
+    print "launched:"
+    ec2standalone.prettyprint_instances(inst_list)
 
 
 @standalone.command("list_instances")

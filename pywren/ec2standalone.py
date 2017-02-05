@@ -18,7 +18,7 @@ def create_instance_profile(instance_profile_name):
     #instance_profile.add_role(RoleName='pywren_exec_role_refactor8')
 
 
-def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type, 
+def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type, 
                      instance_name, 
                      instance_profile_name, default_volume_size=100, 
                      max_idle_time=60, idle_terminate_granularity=600):
@@ -27,7 +27,9 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
     # AWS_REGION = 'us-west-2'
     # my_aws_key = 'ec2-us-west-2'
 
-    
+
+    logger.info("launching {} {} instances in {}".format(number, instance_type, 
+                                                         aws_region))
     # INSTANCE_TYPE = 'm3.xlarge'
     # instance_name = AWS_INSTANCE_NAME
     sqs_queue_name='pywren-queue'
@@ -56,6 +58,7 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
 
     supervisord_conf = open(os.path.join(pywren.SOURCE_DIR, 
                                          'supervisord.conf'), 'r').read()
+    logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
     supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
                                                sqs_queue_name=sqs_queue_name, 
                                                aws_region=aws_region, 
@@ -73,7 +76,8 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
     instance_profile = iam.InstanceProfile(instance_profile_name)
     instance_profile_dict =  {
                               'Name' : instance_profile.name}
-    instances = ec2.create_instances(ImageId=tgt_ami, MinCount=1, MaxCount=1,
+    instances = ec2.create_instances(ImageId=tgt_ami, MinCount=number, 
+                                     MaxCount=number,
                                      KeyName=my_aws_key, 
                                      InstanceType=instance_type, 
                                      BlockDeviceMappings = BlockDeviceMappings,
@@ -96,11 +100,12 @@ def launch_instances(tgt_ami, aws_region, my_aws_key, instance_type,
             if (name_string not in [a[0] for a in new_instances_with_names]) and \
                (name_string not in existing_instance_names):
                 return name_string
+            inst_pos += 1
 
     for inst in instances:
         
         unique_instance_name = generate_unique_instance_name()
-        print "setting instance name to", unique_instance_name
+        logger.info("setting instance name to {}".format(unique_instance_name))
 
         inst.reload()
         inst.create_tags(
