@@ -87,7 +87,7 @@ def server_runner(aws_region, sqs_queue_name,
     terminate_window_sec = idle_terminate_granularity - terminate_thold_sec
     queue_receive_message_timeout = min(terminate_window_sec, queue_receive_message_timeout)
     if not idle_granularity_valid(idle_terminate_granularity, 
-                              queue_receive_message_timeout)
+                              queue_receive_message_timeout):
         raise Exception("Idle time granularity window smaller than queue receive message timeout with headroom, instance will not self-terminate")
     message_count = 0
     idle_time = 0
