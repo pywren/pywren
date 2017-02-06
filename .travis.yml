@@ -54,6 +54,7 @@ after_script:
   - pywren delete_lambda
   - pywren delete_role
   # fixme delete instance profile
+  - pywren standalone terminate_instances
 
 env:
   global:
