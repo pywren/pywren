@@ -223,7 +223,7 @@ def generic_handler(event, context_dict):
 
     s3.meta.client.upload_file(output_filename, output_key[0], 
                                output_key[1])
-    logger.debug("output uploaded to %s %", output_key[0], output_key[1])
+    logger.debug("output uploaded to %s %s", output_key[0], output_key[1])
     
     end_time = time.time()
 
