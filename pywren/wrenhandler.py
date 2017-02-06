@@ -116,7 +116,7 @@ def generic_handler(event, context_dict):
 
         KS =  s3util.key_size(b, k)
     if not event['use_cached_runtime'] :
-        subprocess.check_output("rm -Rf /tmp/*", shell=True)
+        subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
     # get the input and save to disk 
     # FIXME here is we where we would attach the "canceled" metadata
