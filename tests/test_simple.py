@@ -27,6 +27,17 @@ class SimpleAsync(unittest.TestCase):
         res = fut.result() 
         self.assertEqual(res, np.sum(x))
 
+    def test_simple2(self):
+        
+        def sum_list(x):
+            return np.sum(x)
+
+        x = np.arange(10)
+        fut = self.wrenexec.call_async(sum_list, x)
+
+        res = fut.result() 
+        self.assertEqual(res, np.sum(x))
+
     def test_exception(self):
         def throwexcept(x):
             raise Exception("Throw me out!")
