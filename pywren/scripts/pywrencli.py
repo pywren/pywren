@@ -334,8 +334,9 @@ def standalone_launch_instances(number, max_idle_time, idle_terminate_granularit
                                                sc['target_ami'], aws_region, 
                                                sc['ec2_ssh_key'], 
                                                sc['ec2_instance_type'], 
-                                               sc['instance_name'], 
+                                               sc['instance_name'],
                                                sc['instance_profile_name'], 
+                                               sc['sqs_queue_name'], 
                                                sc['max_idle_time'], 
                                                idle_terminate_granularity = sc['idle_terminate_granularity'] )
     

@@ -19,8 +19,8 @@ def create_instance_profile(instance_profile_name):
 
 
 def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type, 
-                     instance_name, 
-                     instance_profile_name, default_volume_size=100, 
+                     instance_name, instance_profile_name, sqs_queue_name, 
+                     default_volume_size=100, 
                      max_idle_time=60, idle_terminate_granularity=600):
 
     # tgt_ami = 'ami-b04e92d0'
@@ -32,7 +32,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                                          aws_region))
     # INSTANCE_TYPE = 'm3.xlarge'
     # instance_name = AWS_INSTANCE_NAME
-    sqs_queue_name='pywren-queue'
+
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
 
