@@ -163,7 +163,9 @@ class Executor(object):
         
         host_job_meta.update(arg_dict)
 
-        fut = ResponseFuture(call_id, callset_id, self, host_job_meta)
+        fut = ResponseFuture(call_id, callset_id, host_job_meta, 
+                             self.s3_bucket, self.s3_prefix, 
+                             self.aws_region)
 
         fut._set_state(JobState.invoked)
 
@@ -341,7 +343,8 @@ class Executor(object):
             
         return this_events_logs
 
-
+# this really should not be a global singleton FIXME
+global_s3_client = boto3.client('s3') # , region_name = AWS_REGION)
     
 def get_call_status(callset_id, call_id, 
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
@@ -385,12 +388,16 @@ class ResponseFuture(object):
     """
     """
     GET_RESULT_SLEEP_SECS = 4
-    def __init__(self, call_id, callset_id, executor, invoke_metadata):
+    def __init__(self, call_id, callset_id, invoke_metadata, 
+                 s3_bucket, s3_prefix, aws_region):
 
         self.call_id = call_id
         self.callset_id = callset_id 
         self._state = JobState.new
-        self.executor = executor
+        self.s3_bucket = s3_bucket
+        self.s3_prefix = s3_prefix
+        self.aws_region = aws_region
+
         self._invoke_metadata = invoke_metadata.copy()
         
         self.status_query_count = 0
@@ -445,10 +452,10 @@ class ResponseFuture(object):
 
         
         call_status = get_call_status(self.callset_id, self.call_id, 
-                                      AWS_S3_BUCKET = self.executor.s3_bucket, 
-                                      AWS_S3_PREFIX = self.executor.s3_prefix, 
-                                      AWS_REGION = self.executor.aws_region, 
-                                      s3 = self.executor.s3client)
+                                      AWS_S3_BUCKET = self.s3_bucket, 
+                                      AWS_S3_PREFIX = self.s3_prefix, 
+                                      AWS_REGION = self.aws_region)
+
         self.status_query_count += 1
 
         ## FIXME implement timeout
@@ -461,10 +468,10 @@ class ResponseFuture(object):
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
             call_status = get_call_status(self.callset_id, self.call_id, 
-                                          AWS_S3_BUCKET = self.executor.s3_bucket, 
-                                          AWS_S3_PREFIX = self.executor.s3_prefix, 
-                                          AWS_REGION = self.executor.aws_region, 
-                                          s3 = self.executor.s3client)
+                                          AWS_S3_BUCKET = self.s3_bucket, 
+                                          AWS_S3_PREFIX = self.s3_prefix, 
+                                          AWS_REGION = self.aws_region)
+
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
@@ -473,10 +480,9 @@ class ResponseFuture(object):
         
         call_output_time = time.time()
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
-                                              AWS_S3_BUCKET = self.executor.s3_bucket, 
-                                              AWS_S3_PREFIX = self.executor.s3_prefix,
-                                              AWS_REGION = self.executor.aws_region, 
-                                              s3 = self.executor.s3client)
+                                              AWS_S3_BUCKET = self.s3_bucket, 
+                                              AWS_S3_PREFIX = self.s3_prefix,
+                                              AWS_REGION = self.aws_region)
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time_done
         
