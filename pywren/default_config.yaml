@@ -14,7 +14,7 @@ s3:
 
 runtime:
     s3_bucket: ericmjonas-public
-    s3_key: condaruntime.nomkl_sklearn.tar.gz
+    s3_key: condaruntime.stripped.scipy-cvxpy-sklearn.mkl_avx2.tar.gz
 
 standalone:
     ec2_instance_type: m4.4xlarge

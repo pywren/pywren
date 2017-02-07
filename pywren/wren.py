@@ -1,6 +1,6 @@
 import boto3
 import botocore
-
+from six import reraise
 import json
 import base64
 import cPickle as pickle
@@ -16,6 +16,8 @@ import glob2
 import os
 from cloudpickle import serialize
 import invokers
+from tblib import pickling_support
+pickling_support.install()
 
 logger = logging.getLogger(__name__)
 
@@ -502,7 +504,12 @@ class ResponseFuture(object):
             self._state = JobState.success
         else:
             self._exception = call_invoker_result['result']
+            self._traceback = (call_invoker_result['exc_type'], 
+                               call_invoker_result['exc_value'], 
+                               call_invoker_result['exc_traceback'])
+
             self._state = JobState.error
+
 
 
         self.run_status = call_status # this is the remote status information
@@ -511,7 +518,7 @@ class ResponseFuture(object):
         if call_success:
             return self._return_val
         elif call_success == False and throw_except:
-            raise self._exception
+            reraise(*self._traceback)
         return None
             
     def exception(self, timeout = None):

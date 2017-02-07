@@ -11,6 +11,7 @@ import cPickle as pickle
 import unittest
 import numpy as np
 from flaky import flaky
+import sys
 
 class SimpleAsync(unittest.TestCase):
 
@@ -58,6 +59,35 @@ class SimpleAsync(unittest.TestCase):
         fut = self.wrenexec.call_async(uname, None)
 
         res = fut.result() 
+
+    def test_exception2(self):
+        """
+        More complex exception
+        """
+
+        def throw_exception(x):
+            1 / 0
+            return 10
+
+
+        wrenexec = pywren.default_executor()
+
+        fut = wrenexec.call_async(throw_exception, None)
+
+        try:
+            throw_exception(1)
+        except Exception as e:
+
+            exc_type_true, exc_value_true, exc_traceback_true = sys.exc_info()
+
+
+        try:
+            print fut.result()
+        except Exception as e:
+            exc_type_wren, exc_value_wren, exc_traceback_wren = sys.exc_info()
+
+        assert exc_type_wren == exc_type_true
+        assert type(exc_value_wren) == type(exc_value_true)
 
 
 class SimpleMap(unittest.TestCase):

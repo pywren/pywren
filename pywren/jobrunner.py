@@ -2,6 +2,8 @@ import cPickle as pickle
 import sys
 import traceback
 import boto3
+from tblib import pickling_support
+pickling_support.install()
 
 try:
     func_filename = sys.argv[1]
@@ -24,6 +26,8 @@ except Exception as e:
     traceback.print_tb(exc_traceback)
     pickle.dump({'result' : e, 
                  'exc_type' : exc_type, 
+                 'exc_value' : exc_value, 
+                 'exc_traceback' : exc_traceback, 
                  'sys.path' : sys.path, 
                  'success' : False}, 
                 open(out_filename, 'w'), -1)
