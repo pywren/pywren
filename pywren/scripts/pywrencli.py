@@ -320,7 +320,10 @@ def log_url():
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int, 
               help='granularity of billing (sec)')
-def standalone_launch_instances(number, max_idle_time, idle_terminate_granularity):
+@click.option('--pywren_git_branch', default=None, type=str, 
+              help='which branch to use on the stand-alone')
+def standalone_launch_instances(number, max_idle_time, idle_terminate_granularity, 
+                                pywren_git_branch):
     config = pywren.wrenconfig.default()
     sc= config['standalone']
     aws_region = config['account']['aws_region']
@@ -338,7 +341,7 @@ def standalone_launch_instances(number, max_idle_time, idle_terminate_granularit
                                                sc['instance_profile_name'], 
                                                sc['sqs_queue_name'], 
                                                sc['max_idle_time'], 
-                                               idle_terminate_granularity = sc['idle_terminate_granularity'] )
+                                               idle_terminate_granularity = sc['idle_terminate_granularity'], pywren_git_branch=pywren_git_branch )
     
     print "launched:"
     ec2standalone.prettyprint_instances(inst_list)
