@@ -21,7 +21,7 @@ def foo(b):
     return np.dot(A, x)
 
 pwex = pywren.default_executor()
-res = pwex.map(foo, np.linspace(0.1, 100, 1000)
+res = pwex.map(foo, np.linspace(0.1, 100, 1000))
 ```
 
 
@@ -59,7 +59,7 @@ by this remote process
 ## Getting started
 
 First, make sure you have boto set up to use your AWS credentials and
-have a sane python installation (I recommend [Anaconda](https://www.continuum.io/downloads ). Clone the repo from git and invoke:
+have a sane python installation (I recommend [Anaconda](https://www.continuum.io/downloads )). Clone the repo from git and invoke:
 
 ```
 python setup.py install
