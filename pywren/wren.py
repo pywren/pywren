@@ -314,8 +314,8 @@ class Executor(object):
 
         # FIXME change to lazy iterator
         """
-        if self.invoker.TIME_LIMIT:
-            wait(list_of_futures, return_when=ALL_COMPLETED)
+        #if self.invoker.TIME_LIMIT:
+        wait(list_of_futures, return_when=ALL_COMPLETED) # avoid race condition
 
         def reduce_func(fut_list):
             # FIXME speed this up for big reduce
