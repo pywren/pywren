@@ -56,6 +56,12 @@ after_script:
   # fixme delete instance profile
   - pywren standalone terminate_instances
 
+after_failure:
+  - pywren delete_queue
+  - pywren delete_lambda
+  - pywren delete_role
+  - pywren standalone terminate_instances
+
 env:
   global:
     - secure: "EZo8fKyGMC780UqZyJRO12W0TZnVm6f14MkijGeTuBOl7rV09RTXAKbhDC4yYUZp1TSHj4+kcMts7V0ZS/PHl+QQazHpt9SA4Yqp5XUNaMrk87cAi/yHK6yFGoinisqDTT4k40Fv57cSoZlvoNK+UtEJv2lz0oFvUcTvxttUSO0KpikIhggp0KO2qWF2n8TxuDfBnfP1vvQjg9J5ge3X08k80LaOGtJYISZNgptYIF72nDJV3N0Cd66m4vfJmuOvO9UqLQx7QljNhxGCYPuLA9BaLYvhvkNAobTiEroOzts/DWgFx0maEPtNsJhuTwrQL1OCoAUW6PqGKJeILQpHkEQEmvhGqzhmyfDqvvg5miL4utGqgTatRapw/Gnfwd8fkvs9P2iem6jhIc7OL/rid73rh1XOaIcsGgiGgRdbIHHNPczBu/UQzZuoBli3+E+6lKi2il65KjNH5yVi3wHg37G2Z6H5WkeE4oQ1JGMjo9IPbhCmbtm7LXZuZNIhkpgWuchvfSFcHZRFN2yFKpN/cmtSv/nesVTPRIuqMMmRds+pxvrotWJQb3j8IJ5NIeJyPR8iAwfvaHvbEsVt+zbvqP5c6J5rkKDNEErXBJqzUWYftCQKuPMdh8/WJd2Eg05wSWBizVVKdf7oT+POumQaVp2B9tCCuRzLL8ciaBqcN8U="
