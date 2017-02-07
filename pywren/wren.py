@@ -133,6 +133,7 @@ class Executor(object):
                     'runtime_s3_key' : self.config['runtime']['s3_key']}    
         
         if extra_env is not None:
+            logger.debug("Extra environment vars {}".format(extra_env))
             arg_dict['extra_env'] = extra_env
 
         if extra_meta is not None:
@@ -170,7 +171,7 @@ class Executor(object):
         
     def call_async(self, func, data, extra_env = None, 
                     extra_meta=None):
-        return self.map(func, [data], extra_meta, extra_env)[0]
+        return self.map(func, [data],  extra_env, extra_meta)[0]
 
     def agg_data(self, data_strs):
         ranges = []
