@@ -20,6 +20,7 @@ class SQSInvoker(object):
 
         self.queue = self.sqs.get_queue_by_name(QueueName=sqs_queue_name)
         
+        self.TIME_LIMIT = False
 
     def invoke(self, payload):
         """

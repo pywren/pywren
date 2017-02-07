@@ -307,7 +307,26 @@ class Executor(object):
 
         return res
     
-    
+    def reduce(self, function, list_of_futures, 
+               extra_env = None, extra_meta = None):
+        """
+        Apply a function across all futures. 
+
+        # FIXME change to lazy iterator
+        """
+        if self.invoker.TIME_LIMIT:
+            wait(list_of_futures, return_when=ALL_COMPLETED)
+
+        def reduce_func(fut_list):
+            # FIXME speed this up for big reduce
+            accum_list = []
+            for f in fut_list:
+                accum_list.append(f.result())
+            return function(accum_list) 
+
+        return self.call_async(reduce_func, list_of_futures, 
+                               extra_env=extra_env, extra_meta=extra_meta)
+
     def get_logs(self, future, verbose=True):
 
 

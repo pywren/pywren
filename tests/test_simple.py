@@ -129,6 +129,24 @@ class SimpleMap(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x + 1)
 
+class SimpleReduce(unittest.TestCase):
+
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_reduce(self):
+
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures = self.wrenexec.map(plus_one, x)
+        
+        reduce_future = self.wrenexec.reduce(sum, futures)
+
+        np.testing.assert_array_equal(reduce_future.result(), 55)
+
 class RuntimeCaching(unittest.TestCase):
 
     def setUp(self):

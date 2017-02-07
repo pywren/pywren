@@ -19,6 +19,7 @@ class LambdaInvoker(object):
         self.lambda_function_name = lambda_function_name
         self.lambclient = self.session.create_client('lambda', 
                                                      region_name = region_name)
+        self.TIME_LIMIT = True
 
     def invoke(self, payload):
         """
@@ -49,6 +50,7 @@ class DummyInvoker(object):
 
     def __init__(self):
         self.payloads = []
+        self.TIME_LIMIT = False
 
     def invoke(self, payload):
         self.payloads.append(payload)
