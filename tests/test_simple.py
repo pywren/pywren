@@ -7,6 +7,7 @@ import time
 import pywren
 import subprocess
 import logging
+import cPickle as pickle
 import unittest
 import numpy as np
 from flaky import flaky
@@ -119,3 +120,29 @@ class RuntimeCaching(unittest.TestCase):
         assert fut.run_status['runtime_cached'] == True
 
         assert cached_latency < non_cached_latency
+
+
+class SerializeFutures(unittest.TestCase):
+
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_map(self):
+
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures_original = self.wrenexec.map(plus_one, x)
+        futures_str = pickle.dumps(futures_original)
+        futures = pickle.loads(futures_str)
+
+        result_count = 0
+        while result_count < N:
+            
+            fs_dones, fs_notdones = pywren.wait(futures)
+            result_count = len(fs_dones)
+
+        res = np.array([f.result() for f in futures])
+        np.testing.assert_array_equal(res, x + 1)
