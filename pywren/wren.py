@@ -585,6 +585,8 @@ def _wait(fs, THREADPOOL_SIZE):
     # get all the futures that are not yet done
     not_done_futures =  [f for f in fs if f._state not in [JobState.success, 
                                                        JobState.error]]
+    if len(not_done_futures) == 0:
+        return fs, []
 
     # check if the not-done ones have the same callset_id
     present_callsets = set([f.callset_id for f in not_done_futures])
