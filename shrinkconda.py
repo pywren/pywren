@@ -25,6 +25,12 @@ def measure(phase_name):
     phases.append((phase_name, size_before, size_after))
 
 
+with measure("conda clean"):
+    subprocess.check_output("{}/bin/conda clean -y -i -t -p ".format(CONDA_RUNTIME), 
+                                                              shell=True)
+
+with measure("elimate pkg"):
+    subprocess.check_output("rm -Rf {}/pkgs ".format(CONDA_RUNTIME), shell=True)
 
 with measure("delete non-avx2 mkl"):
 
@@ -46,12 +52,7 @@ with measure("strip shared libs (gcc)"):
             print "whoops", so_filename
             pass
 
-with measure("conda clean"):
-    subprocess.check_output("{}/bin/conda clean -y -i -t -p ".format(CONDA_RUNTIME), 
-                                                              shell=True)
 
-with measure("elimate pkg"):
-    subprocess.check_output("rm -Rf {}/pkgs ".format(CONDA_RUNTIME), shell=True)
 
 with measure("delete *.pyc"):
 
