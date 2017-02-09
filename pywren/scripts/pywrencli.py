@@ -320,7 +320,7 @@ def log_url():
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int, 
               help='granularity of billing (sec)')
-@click.option('--pywren_git_branch', default=None, type=str, 
+@click.option('--pywren_git_branch', default='master', type=str, 
               help='which branch to use on the stand-alone')
 def standalone_launch_instances(number, max_idle_time, idle_terminate_granularity, 
                                 pywren_git_branch):

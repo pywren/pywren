@@ -15,5 +15,5 @@ if __name__ == "__main__":
     def reduce_func(x):
         return sum(x)
 
-    reduce_future = lambda_exec.reduce(reduce_func, futures)
+    reduce_future = remote_exec.reduce(reduce_func, futures)
     print reduce_future.result()
