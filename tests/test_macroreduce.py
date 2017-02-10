@@ -14,6 +14,14 @@ from flaky import flaky
 import sys
 
 
+macro = pytest.mark.skipif(
+    not pytest.config.getoption("--runmacro"),
+    reason="need --runmacro option to run"
+)
+
+
+
+
 class MacroReduce(unittest.TestCase):
     """
     Test running with both a lambda executor and a remote
@@ -23,6 +31,7 @@ class MacroReduce(unittest.TestCase):
         self.lambda_exec = pywren.lambda_executor()
         self.remote_exec = pywren.remote_executor()
 
+    @macro
     def test_reduce(self):
 
         def plus_one(x):
