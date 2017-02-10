@@ -47,6 +47,7 @@ before_script:
 script:
   - if [[ $RUN_LAMBDA == true ]]; then pytest -v tests; fi;
   - if [[ $RUN_STANDALONE == true ]]; then tests/ec2_standalone_tests.sh; fi;
+  - if [[ $RUN_MACROREDUCE == true ]]; then tests/ec2_macroreduce_tests.sh; fi;
 
 after_script:
   # always make sure we do this cleanup if we can
@@ -69,3 +70,4 @@ env:
   matrix:
     - RUN_STANDALONE=true
     - RUN_LAMBDA=true
+    - RUN_MACROREDUCE=true
