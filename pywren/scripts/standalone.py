@@ -60,7 +60,8 @@ def get_my_ec2_meta(instance):
     tags = tags_to_dict(instance.tags)
 
     r = {'public_dns_name' : instance.public_dns_name, 
-         'public_ip_address' : instance.public_ip_address}
+         'public_ip_address' : instance.public_ip_address, 
+         'instance_id': instance.id}
     r.update(tags)
     return r
 
@@ -282,7 +283,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     ec2_metadata = get_my_ec2_meta(instance)
     server_name = ec2_metadata['Name']
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
-    log_stream_prefix = ec2_metadata['Id']
+    log_stream_prefix = ec2_metadata['instance_id']
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
 
