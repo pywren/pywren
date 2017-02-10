@@ -214,7 +214,7 @@ def job_handler(job, job_i, run_dir, aws_region,
     # because of how multiprocessing works
     handler = watchtower.CloudWatchLogHandler(send_interval=20, 
                                               log_group="pywren.standalone", 
-                                              log_stream=log_stream_prefix + "-{logger_name}", 
+                                              stream_name=log_stream_prefix + "-{logger_name}", 
                                               boto3_session=session,
                                               max_batch_count=10)
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
@@ -290,7 +290,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
     handler = watchtower.CloudWatchLogHandler(send_interval=20, 
                                               log_group="pywren.standalone", 
-                                              log_stream=log_stream_prefix + "-{logger_name}", 
+                                              stream_name=log_stream_prefix + "-{logger_name}", 
                                               boto3_session=session,
                                               max_batch_count=10)
 
