@@ -92,7 +92,7 @@ def idle_granularity_valid(idle_terminate_granularity,
     return (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity >  (queue_receive_message_timeout)*1.1
     
 def server_runner(aws_region, sqs_queue_name, 
-                  max_run_time, run_dir, server_name, 
+                  max_run_time, run_dir, server_name, log_stream_prefix,
                   max_idle_time=None, 
                   idle_terminate_granularity = None, 
                   queue_receive_message_timeout=10):
@@ -124,7 +124,7 @@ def server_runner(aws_region, sqs_queue_name,
             logger.info("Dispatching")
             
             process_message(m, local_message_i, max_run_time, run_dir, 
-                            aws_region, server_name)
+                            aws_region, server_name, log_stream_prefix)
             message_count += 1
             last_processed_timestamp = time.time()
             idle_time = 0
@@ -156,12 +156,13 @@ def server_runner(aws_region, sqs_queue_name,
 
 def process_message(m, local_message_i, max_run_time, run_dir, 
                     aws_region, 
-                    server_name):
+                    server_name, log_stream_prefix):
     event = json.loads(m.body)
     
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
     p =  Process(target=job_handler, args=(event, local_message_i, 
-                                           run_dir, aws_region, server_name))
+                                           run_dir, aws_region, server_name, 
+                                           log_stream_prefix))
     # is thread done
     p.start()
     start_time = time.time()
@@ -174,8 +175,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            response = m.change_visibility(
-                VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
             logger.debug("incrementing visibility timeout by {} sec".format(SQS_VISIBILITY_INCREMENT_SEC))
         if p.exitcode is not None:
@@ -200,7 +200,7 @@ def copy_runtime(tgt_dir):
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
 def job_handler(job, job_i, run_dir, aws_region, 
-                server_name, 
+                server_name, log_stream_prefix, 
                 extra_context = None, 
                 delete_taskdir=True):
     """
@@ -213,6 +213,7 @@ def job_handler(job, job_i, run_dir, aws_region,
     # because of how multiprocessing works
     handler = watchtower.CloudWatchLogHandler(send_interval=20, 
                                               log_group="pywren.standalone", 
+                                              log_stream=log_stream_prefix + "-{logger_name}", 
                                               boto3_session=session,
                                               max_batch_count=10)
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
@@ -276,24 +277,29 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
     
-    handler = watchtower.CloudWatchLogHandler(send_interval=20, 
-                                              log_group="pywren.standalone", 
-                                              boto3_session=session,
-                                              max_batch_count=10)
 
     instance = get_my_ec2_instance(aws_region)
     ec2_metadata = get_my_ec2_meta(instance)
     server_name = ec2_metadata['Name']
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+    log_stream_prefix = ec2_metadata['Id']
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+
+
+    handler = watchtower.CloudWatchLogHandler(send_interval=20, 
+                                              log_group="pywren.standalone", 
+                                              log_stream=log_stream_prefix + "-{logger_name}", 
+                                              boto3_session=session,
+                                              max_batch_count=10)
+
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name, 
                   max_run_time, os.path.abspath(run_dir), 
-                  server_name, 
+                  server_name, log_stream_prefix, 
                   max_idle_time, 
                   idle_terminate_granularity, 
                   queue_receive_message_timeout)
