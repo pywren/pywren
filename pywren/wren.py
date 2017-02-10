@@ -35,7 +35,7 @@ def default_executor():
     
     if executor_str == 'lambda':
         return lambda_executor()
-    elif executor_str == 'remote':
+    elif executor_str == 'remote' or executor_str=='standalone':
         return remote_executor()
     elif executor_str == 'dummy':
         return dummy_executor()

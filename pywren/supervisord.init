@@ -10,7 +10,7 @@
 . /etc/init.d/functions
  
 DAEMON=/home/ec2-user/anaconda/bin/supervisord
-PIDFILE=/var/run/supervisord.pid
+PIDFILE=/var/run/supervisor/supervisord.pid
  
 [ -x "$DAEMON" ] || exit 0
  

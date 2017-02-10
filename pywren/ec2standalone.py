@@ -24,10 +24,6 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      max_idle_time=60, idle_terminate_granularity=600, 
                      pywren_git_branch='master'):
 
-    # tgt_ami = 'ami-b04e92d0'
-    # AWS_REGION = 'us-west-2'
-    # my_aws_key = 'ec2-us-west-2'
-
 
     logger.info("launching {} {} instances in {}".format(number, instance_type, 
                                                          aws_region))
@@ -68,8 +64,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     supervisord_conf_64 = base64.b64encode(supervisord_conf)
 
     cloud_agent_conf = open(os.path.join(pywren.SOURCE_DIR, "cloudwatch-agent.config"), 
-                            'r')
-    cloud_agent_conf_64 = base64.base64encode(cloud_agent_conf)
+                            'r').read()
+    cloud_agent_conf_64 = base64.b64encode(cloud_agent_conf)
 
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 

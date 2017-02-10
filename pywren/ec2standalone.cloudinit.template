@@ -24,6 +24,8 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "git clone -b {pywren_git_branch} https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
   - [ ls, /etc/init.d/]
+  - mkdir /var/run/supervisor
+  - chown ec2-user:ec2user /var/run/supervisor
   - chmod +x /etc/init.d/supervisor
   - chkconfig --add supervisor
   - chkconfig supervisor on
