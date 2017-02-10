@@ -67,9 +67,15 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                                idle_terminate_granularity=idle_terminate_granularity)
     supervisord_conf_64 = base64.b64encode(supervisord_conf)
 
+    cloud_agent_conf = open(os.path.join(pywren.SOURCE_DIR, "cloudwatch-agent.config"), 
+                            'r')
+    cloud_agent_conf_64 = base64.base64encode(cloud_agent_conf)
+
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 
-                                 pywren_git_branch=pywren_git_branch)
+                                 pywren_git_branch=pywren_git_branch, 
+                                 aws_region = aws_region, 
+                                 cloud_agent_conf = cloud_agent_conf_64)
 
 
     open("/tmp/user_data", 'w').write(user_data)

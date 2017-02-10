@@ -11,8 +11,11 @@ packages:
   - htop
   
 runcmd:
-  - [ sh, -c, 'echo "hello world" > /tmp/hello.txt' ]
-  - pip install supervisor 
+  # first and always, cloudwatch agent
+  - [ curl,  "https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py", "-O"]
+  - chmod +x ./awslogs-agent-setup.py
+  - ./awslogs-agent-setup.py -n -r {aws_region} -c /etc/cloud-agent.conf
+  - pip install supervisor
   - [ sudo, -Hu, ec2-user, sh, -c, "wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/tmp/miniconda.sh -b -p  /home/ec2-user/anaconda"]
@@ -41,6 +44,12 @@ write_files:
 - encoding: b64
   content: {supervisord_conf}
   path: "/etc/supervisord.conf"
+  permissions: "0644"
+  owner: root:root
+
+- encoding: b64
+  content: {cloud_agent_conf}
+  path: "/etc/cloud-agent.conf"
   permissions: "0644"
   owner: root:root
 

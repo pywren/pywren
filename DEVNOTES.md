@@ -43,4 +43,10 @@ stand-alone server
 order of cloud-init directives:
 http://stackoverflow.com/questions/34095839/cloud-init-what-is-the-execution-order-of-cloud-config-directives
 
+We're going to store as many of our logging results in cloudwatch as possible
+our loggroup will always be pywren-standalone
+and the stream will be instanceid-$FOO
+
+
+http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/EC2NewInstanceCWL.html
 
