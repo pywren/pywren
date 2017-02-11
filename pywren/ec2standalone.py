@@ -10,6 +10,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+def sd(filename):
+    """
+    get the file in the standalone dir
+    """
+    return os.path.join(pywren.SOURCE_DIR, 
+                        'ec2_standalone_files', filename)
+
 def create_instance_profile(instance_profile_name):
     iam = boto3.resource('iam')
     #iam.create_instance_profile(InstanceProfileName=INSTANCE_PROFILE_NAME)
@@ -44,17 +51,14 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
             },
         },
     ]
-    template_file = os.path.join(pywren.SOURCE_DIR, 
-                                 'ec2standalone.cloudinit.template')
+    template_file = sd('ec2standalone.cloudinit.template')
 
     user_data = open(template_file, 'r').read()
 
-    supervisord_init_script = open(os.path.join(pywren.SOURCE_DIR, 
-                                                'supervisord.init'), 'r').read()
+    supervisord_init_script = open(sd('supervisord.init'), 'r').read()
     supervisord_init_script_64 = base64.b64encode(supervisord_init_script)
 
-    supervisord_conf = open(os.path.join(pywren.SOURCE_DIR, 
-                                         'supervisord.conf'), 'r').read()
+    supervisord_conf = open(sd('supervisord.conf'), 'r').read()
     logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
     supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
                                                sqs_queue_name=sqs_queue_name, 
@@ -63,7 +67,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                                idle_terminate_granularity=idle_terminate_granularity)
     supervisord_conf_64 = base64.b64encode(supervisord_conf)
 
-    cloud_agent_conf = open(os.path.join(pywren.SOURCE_DIR, "cloudwatch-agent.config"), 
+    cloud_agent_conf = open(sd("cloudwatch-agent.config"), 
                             'r').read()
     cloud_agent_conf_64 = base64.b64encode(cloud_agent_conf)
 

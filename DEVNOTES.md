@@ -50,3 +50,16 @@ and the stream will be instanceid-$FOO
 
 http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/EC2NewInstanceCWL.html
 
+
+## How to release with PyPi:
+```
+python setup.py bdist_wheel
+twine register dist/
+```
+
+note that travis has support for auto-releasing this, which we should investigate
+
+## Watchtower / cloudatch
+Currently we want to pass a log stream prefix to cloudwatch
+
+http://stackoverflow.com/questions/32688688/how-to-write-setup-py-to-include-a-git-repo-as-a-dependency
