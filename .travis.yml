@@ -8,12 +8,14 @@ dist: trusty
 python:
   # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
+  - "3.5"
 install:
   # We do this conditionally because it saves us some downloading if the
   # version is the same. 
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
     else
+      # getting the python-3 version of miniconda
       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -46,8 +48,8 @@ before_script:
   
 script:
   - if [[ $RUN_LAMBDA == true ]]; then pytest -v tests; fi;
-  - if [[ $RUN_STANDALONE == true ]]; then tests/ec2_standalone_tests.sh; fi;
-  - if [[ $RUN_MACROREDUCE == true ]]; then tests/ec2_macroreduce_tests.sh; fi;
+  #- if [[ $RUN_STANDALONE == true ]]; then tests/ec2_standalone_tests.sh; fi;
+  #- if [[ $RUN_MACROREDUCE == true ]]; then tests/ec2_macroreduce_tests.sh; fi;
 
 after_script:
   # always make sure we do this cleanup if we can
