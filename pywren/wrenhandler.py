@@ -149,7 +149,7 @@ def generic_handler(event, context_dict):
         range_str = 'bytes={}-{}'.format(*data_byte_range)
         dres = s3.meta.client.get_object(Bucket=data_key[0], Key=data_key[1], 
                                          Range=range_str)
-        data_fid = open(data_filename, 'w')
+        data_fid = open(data_filename, 'wb')
         data_fid.write(dres['Body'].read())
         data_fid.close()
 
@@ -162,7 +162,7 @@ def generic_handler(event, context_dict):
     shutil.rmtree("/tmp/pymodules", True) # delete old modules
     os.mkdir("/tmp/pymodules")
     # get modules and save
-    for m_filename, m_text in d['module_data'].iteritems():
+    for m_filename, m_text in d['module_data'].items():
         m_path = os.path.dirname(m_filename)
         
         if len(m_path) > 0 and m_path[0] == "/":
