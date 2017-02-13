@@ -348,9 +348,11 @@ def log_url():
               help='granularity of billing (sec)')
 @click.option('--pywren_git_branch', default='master', type=str, 
               help='which branch to use on the stand-alone')
+@click.option('--pywren_git_commit', default=None, 
+              help='which git to use on the stand-alone (superceeds pywren_git_branch')
 def standalone_launch_instances(number, max_idle_time, 
                                 idle_terminate_granularity, 
-                                pywren_git_branch):
+                                pywren_git_branch, pywren_git_commit):
     config = pywren.wrenconfig.default()
     sc= config['standalone']
     aws_region = config['account']['aws_region']
@@ -368,7 +370,9 @@ def standalone_launch_instances(number, max_idle_time,
                                                sc['instance_profile_name'], 
                                                sc['sqs_queue_name'], 
                                                sc['max_idle_time'], 
-                                               idle_terminate_granularity = sc['idle_terminate_granularity'], pywren_git_branch=pywren_git_branch )
+                                               idle_terminate_granularity = sc['idle_terminate_granularity'], 
+                                               pywren_git_branch=pywren_git_branch, 
+                                               pywren_git_commit = pywren_git_commit)
     
     print("launched:")
     ec2standalone.prettyprint_instances(inst_list)

@@ -34,7 +34,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      instance_name, instance_profile_name, sqs_queue_name, 
                      default_volume_size=100, 
                      max_idle_time=60, idle_terminate_granularity=600, 
-                     pywren_git_branch='master'):
+                     pywren_git_branch='master', 
+                     pywren_git_commit=None):
 
 
     logger.info("launching {} {} instances in {}".format(number, instance_type, 
@@ -76,9 +77,15 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                             'r').read()
     cloud_agent_conf_64 = b64s(cloud_agent_conf)
 
+    if pywren_git_commit is not None:
+        # use a git commit
+        git_checkout_string = str(pywren_git_commit)
+    else: 
+        git_checkout_string = "-b {}".format(pywren_git_branch)
+
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 
-                                 pywren_git_branch=pywren_git_branch, 
+                                 git_checkout_string = git_checkout_string, 
                                  aws_region = aws_region, 
                                  cloud_agent_conf = cloud_agent_conf_64)
 

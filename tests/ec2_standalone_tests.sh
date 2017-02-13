@@ -5,7 +5,7 @@ if [ "$RUN_STANDALONE" != "true" ]; then
     exit 0
 fi
 
-pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granularity=600 --pywren_git_branch=$TRAVIS_BRANCH
+pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granularity=600 --pywren_git_commit=$TRAVIS_COMMIT
 sleep 20
 export PYWREN_EXECUTOR=remote
 pytest -v tests/test_simple.py
