@@ -45,10 +45,11 @@ before_script:
   - sleep 10
   - pywren deploy_lambda
   
-script:
-  - if [[ $RUN_LAMBDA == true ]]; then pytest -v tests; fi;
-  #- if [[ $RUN_STANDALONE == true ]]; then tests/ec2_standalone_tests.sh; fi;
-  #- if [[ $RUN_MACROREDUCE == true ]]; then tests/ec2_macroreduce_tests.sh; fi;
+script: # all run but inside the scripts they check 
+  - tests/lambda_tests.sh
+  - tests/ec2_standalone_tests.sh
+  - tests/ec2_macroreduce_tests.sh
+  
 
 after_script:
   # always make sure we do this cleanup if we can
