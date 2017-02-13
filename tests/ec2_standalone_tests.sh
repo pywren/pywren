@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 set -x
-if [ ${RUN_STANDALONE} != "true" ]; then
+if [ "$RUN_STANDALONE" != "true" ]; then
     exit 0
 fi
 
