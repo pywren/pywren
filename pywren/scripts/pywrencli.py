@@ -73,7 +73,7 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     elif python_major_ver == 3:
         k = pywren.wrenconfig.DEFAULT_PYTHON3_RUNTIME
     else:
-        raise ValueError("invalid python version {}".format(pythonver)
+        raise ValueError("invalid python version {}".format(pythonver))
     default_yaml = default_yaml.replace(RUNTIME_KEY, k)
 
     # print out message about the stuff you need to do 
