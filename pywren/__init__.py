@@ -1,6 +1,6 @@
-import wren
-from wren import default_executor, wait, lambda_executor, dummy_executor, remote_executor
-import wrenlogging
+from __future__ import absolute_import
+from pywren.wren import default_executor, wait, lambda_executor, dummy_executor, remote_executor
+from pywren import wrenlogging
 import logging
 import os
 if "PYWREN_LOGLEVEL" in os.environ:

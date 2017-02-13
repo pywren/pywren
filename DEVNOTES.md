@@ -63,3 +63,19 @@ note that travis has support for auto-releasing this, which we should investigat
 Currently we want to pass a log stream prefix to cloudwatch
 
 http://stackoverflow.com/questions/32688688/how-to-write-setup-py-to-include-a-git-repo-as-a-dependency
+
+
+## Testing python3
+
+I (@ericmjonas) am mostly a python2 developer still, so this is how
+you can set up a python3 environment inside conda to try things out.
+
+```
+conda create -n py35-pywren python=3.5 anaconda
+```
+and then
+```
+source activate py35-pywren
+pip install -e pywren
+```
+

@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import boto3
-import wrenconfig
-import wrenutil
+from . import wrenconfig
+from . import wrenutil
 import os
 import botocore
 

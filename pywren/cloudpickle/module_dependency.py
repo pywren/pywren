@@ -6,15 +6,13 @@ https://github.com/cloudpipe/multyvac-fork/blob/master/multyvac/util/module_depe
 
 """
 
-
-
 import ast
 import imp
 import logging
 import pkgutil
 
+
 class ModuleDependencyAnalyzer(object):
-    
     _IMP_TYPE_NAMES = {
         imp.PY_FROZEN: 'frozen',
         imp.PY_SOURCE: 'source',
@@ -36,7 +34,7 @@ class ModuleDependencyAnalyzer(object):
         # that contain c-extensions, and are thus untransmittable.
         self._paths_to_transmit = set()
         self.has_module_dependencies = False
-        
+
     def add(self, module_name):
         """
         Adds a module to be analyzed.
@@ -76,11 +74,11 @@ class ModuleDependencyAnalyzer(object):
         """
         if root_module_name in self._inspected_modules:
             self._logger.debug('Already inspected module %r, skipping',
-                              root_module_name)
+                               root_module_name)
             return
         elif root_module_name in self._modules_to_ignore:
             self._logger.debug('Module %r is to be ignored, skipping',
-                              root_module_name)
+                               root_module_name)
             return
         else:
             # Add module to set of scanned modules, before we've analyzed it
@@ -91,133 +89,133 @@ class ModuleDependencyAnalyzer(object):
             fp, pathname, description = imp.find_module(root_module_name)
         except ImportError:
             self._logger.debug('Could not find module %r, skipping',
-                              root_module_name)
+                               root_module_name)
             return
         suffix, mode, type = description
         if type == imp.PY_SOURCE:
             self._paths_to_transmit.add(pathname)
             self._logger.debug('Module %r is source/compiled. Added path %r',
-                              root_module_name, pathname)
+                               root_module_name, pathname)
             # TODO: Does this work with compiled sources?
             try:
                 source_imps = self._find_imports(ast.parse(fp.read(),
-                                                 root_module_name))
+                                                           root_module_name))
             except SyntaxError:
                 self._logger.debug('Module %r has a syntax error. '
-                                  'Skipping source analysis',
-                                  root_module_name)
+                                   'Skipping source analysis',
+                                   root_module_name)
                 # For malformed source code
                 source_imps = []
             # Close the file handle that's been opened for us by find_module
             fp.close()
             self._logger.debug('Module %r had these imports %r',
-                              root_module_name, source_imps)
+                               root_module_name, source_imps)
             for source_imp in source_imps:
                 if source_imp in self._inspected_modules:
                     self._logger.debug('Module %r Source import %r '
-                                      'already inspected', root_module_name,
-                                      source_imp)
+                                       'already inspected', root_module_name,
+                                       source_imp)
                 elif source_imp in self._modules_to_inspect:
                     self._logger.debug('Module %r Source import %r '
-                                      'already queued', root_module_name,
-                                      source_imp)
+                                       'already queued', root_module_name,
+                                       source_imp)
                 elif source_imp in self._modules_to_ignore:
                     self._logger.debug('Module %r Source import %r '
-                                      'to be ignored', root_module_name,
-                                      source_imp)
+                                       'to be ignored', root_module_name,
+                                       source_imp)
                 else:
                     # Cannot be relative import since this is top-level
                     self._modules_to_inspect.add(source_imp)
                     self._logger.debug('Module %r Source import %r added '
-                                      'to queue', root_module_name, source_imp)
+                                       'to queue', root_module_name, source_imp)
         elif type == imp.PKG_DIRECTORY:
             self._logger.debug('Module %r is package. Recursing...',
-                              root_module_name)
+                               root_module_name)
             if self._deep_inspect_path(pathname, root_module_name):
                 self._paths_to_transmit.add(pathname)
                 self._logger.debug('Module %r has no c-extensions. Added path %r',
-                                  root_module_name, pathname)
+                                   root_module_name, pathname)
         elif type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
                       imp.PY_COMPILED):
             self._logger.debug('Module %r is %s. Skipping.',
-                              root_module_name,
-                             self._IMP_TYPE_NAMES[type])
+                               root_module_name,
+                               self._IMP_TYPE_NAMES[type])
         else:
             raise Exception('Unrecognized module %r type %s'
                             % (root_module_name, type))
-        
+
     def _deep_inspect_path(self, path, package_name):
         """
         Traverses :param path: analyzing all valid Python modules.
         Returns True if this path is eligible to be sent (No c-extensions).
         Adds module references to list of modules to be inspected.
         """
-        ret = True 
+        ret = True
         for _, submodule_name, is_pkg in pkgutil.iter_modules([path]):
             self._logger.debug('Inspecting submodule %r', submodule_name)
             fp, pathname, description = imp.find_module(submodule_name, [path])
             suffix, mode, type = description
             if type == imp.PY_SOURCE:
                 self._logger.debug('%r -> %r is source/compiled. '
-                                  'Scanning imports.',
-                                  package_name,
-                                  submodule_name)
+                                   'Scanning imports.',
+                                   package_name,
+                                   submodule_name)
                 # TODO: Does this work with compiled sources?
                 try:
                     source_imps = self._find_imports(ast.parse(fp.read(),
-                                                     submodule_name))
+                                                               submodule_name))
                 except SyntaxError:
                     self._logger.debug('%r -> %r has a syntax error. '
-                                      'Skipping source analysis',
-                                      package_name,
-                                      submodule_name)
+                                       'Skipping source analysis',
+                                       package_name,
+                                       submodule_name)
                     source_imps = []
                 # Close the file handle that's been opened for us by find_module
                 fp.close()
                 self._logger.debug('%r -> %r had these imports %r',
-                                  package_name, submodule_name, source_imps)
+                                   package_name, submodule_name, source_imps)
                 for source_imp in source_imps:
                     if source_imp in self._inspected_modules:
                         self._logger.debug('%r -> %r -> %r already inspected',
-                                          package_name,
-                                          submodule_name,
-                                          source_imp)
+                                           package_name,
+                                           submodule_name,
+                                           source_imp)
                     elif source_imp in self._modules_to_inspect:
                         self._logger.debug('%r -> %r -> %r already queued',
-                                          package_name,
-                                          submodule_name,
-                                          source_imp)
+                                           package_name,
+                                           submodule_name,
+                                           source_imp)
                     elif source_imp in self._modules_to_ignore:
                         self._logger.debug('%r -> %r -> %r to be ignored',
-                                          package_name,
-                                          submodule_name,
-                                          source_imp)
+                                           package_name,
+                                           submodule_name,
+                                           source_imp)
                     elif self._is_relative_import(source_imp, path):
                         self._logger.debug('%r -> %r -> %r is relative.',
-                                          package_name,
-                                          submodule_name,
-                                          source_imp)
+                                           package_name,
+                                           submodule_name,
+                                           source_imp)
                     else:
                         self._modules_to_inspect.add(source_imp)
                         self._logger.debug('%r -> %r -> %r added to queue',
-                                          package_name,
-                                          submodule_name,
-                                          source_imp)
+                                           package_name,
+                                           submodule_name,
+                                           source_imp)
             elif type == imp.PKG_DIRECTORY:
                 self._logger.debug('%r -> %r is package. Recursing...',
-                                  package_name, submodule_name)
+                                   package_name, submodule_name)
                 ret = ret and self._deep_inspect_path(pathname, package_name)
             elif type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
                           imp.PY_COMPILED):
-                
+
                 self._logger.debug('%r -> %r is %s.',
-                                  package_name,
-                                  submodule_name,
-                                  self._IMP_TYPE_NAMES[type])
-                
+                                   package_name,
+                                   submodule_name,
+                                   self._IMP_TYPE_NAMES[type])
+
                 # Close the file handle that's been opened for us by find_module
                 fp.close()
-                
+
                 # TODO: Can we go from compiled Python to an AST to identify
                 # imports?
                 # Since this is a common case, we assume that the PY will be
@@ -227,7 +225,7 @@ class ModuleDependencyAnalyzer(object):
                     ret = False
             else:
                 raise Exception('Unrecognized module type %s' % submodule_name)
-        
+
         return ret
 
     def _is_relative_import(self, module_name, path):
@@ -288,13 +286,14 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
     mda = ModuleDependencyAnalyzer()
     import preinstalls
+
     mda.ignore([module for module, pkg in preinstalls.modules])
-    #mda.ignore('encodings')
-    #mda.ignore('test')
+    # mda.ignore('encodings')
+    # mda.ignore('test')
     mda.add('tau')
-    #mda.ignore('s')
-    #mda.add('s')
-    #mda.add('numpy')
-    print 'inspected modules', mda._inspected_modules
-    print 'modules to inspect', mda._modules_to_inspect
-    print 'paths to trans', mda._paths_to_transmit
+    # mda.ignore('s')
+    # mda.add('s')
+    # mda.add('numpy')
+    print('inspected modules', mda._inspected_modules)
+    print('modules to inspect', mda._modules_to_inspect)
+    print('paths to trans', mda._paths_to_transmit)

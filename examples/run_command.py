@@ -1,3 +1,4 @@
+from __future__ import print_function
 import pywren
 import subprocess
 import sys
@@ -8,12 +9,9 @@ def run_command(x):
 if __name__ == "__main__":
     cmd = " ".join(sys.argv[1:])
 
-    #wrenexec = pywren.dummy_executor()
     wrenexec = pywren.default_executor()
-    #wrenexec = pywren.remote_executor()
     fut = wrenexec.call_async(run_command, cmd)
-    print fut.callset_id
-    #wrenexec.invoker.run_jobs()
+    print(fut.callset_id)
 
     res = fut.result() 
-    print res
+    print(res)

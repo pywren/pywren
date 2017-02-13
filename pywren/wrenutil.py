@@ -1,8 +1,9 @@
+from __future__ import absolute_import
 import uuid
 import os
 import shutil
 import glob
-import wrenhandler
+from . import wrenhandler
 
 def uuid_str():
     return str(uuid.uuid4())
@@ -79,7 +80,7 @@ class WrappedStreamingBody:
         
         if attr == 'tell':
             return self.tell
-	elif attr == 'seek':
+        elif attr == 'seek':
             return self.seek
         elif attr == 'read':
             return self.read

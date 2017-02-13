@@ -1,13 +1,27 @@
+from __future__ import absolute_import
 import base64
 import copy
+import sys
+import types
 try:
-    import cPickle as pickle
+    from six.moves import cPickle as pickle
 except:
     import pickle
 try:
-    from cStringIO import StringIO
+    from pywren.cStringIO import StringIO
 except:
-    import StringIO
+    if sys.version < '3':
+        from pickle import Pickler
+        try:
+            from cStringIO import StringIO
+        except ImportError:
+            from io import BytesIO
+        PY3 = False
+    else:
+        types.ClassType = type
+        from pickle import _Pickler as Pickler
+        from io import BytesIO as StringIO
+        PY3 = True
 
 from functools import partial
 import inspect
@@ -18,9 +32,9 @@ import time
 import logging
 import numpy as np
 
-from cloudpickle import CloudPickler
-from module_dependency import ModuleDependencyAnalyzer
-import preinstalls
+from pywren.cloudpickle.cloudpickle import CloudPickler
+from pywren.cloudpickle.module_dependency import ModuleDependencyAnalyzer
+from pywren.cloudpickle import preinstalls
 
 # class Serialize(object):
 #     def __init__(self):
@@ -169,5 +183,5 @@ if __name__ == "__main__":
         return y + 1
 
     cp , sb, paths =  serialize(foo, 7)
-    print cp.modules
-    print "paths=", paths
+    print(cp.modules)
+    print("paths=", paths)

@@ -1,4 +1,5 @@
-import cPickle as pickle
+from __future__ import absolute_import
+from six.moves import cPickle as pickle
 import boto3
 import tarfile
 import subprocess
@@ -7,10 +8,11 @@ import time
 import base64
 import logging
 import uuid
-import wrenutil
+from . import wrenutil
 import json
 import shutil
-import s3util
+from . import s3util
+
 
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"

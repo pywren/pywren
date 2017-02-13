@@ -43,6 +43,7 @@ NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 from __future__ import print_function
+from __future__ import absolute_import
 
 import operator
 import io
@@ -61,7 +62,7 @@ if sys.version < '3':
     try:
         from cStringIO import StringIO
     except ImportError:
-        from StringIO import StringIO
+        from io import BytesIO
     PY3 = False
 else:
     types.ClassType = type
@@ -580,9 +581,9 @@ class CloudPickler(Pickler):
     def save_file(self, obj):
         """Save a file"""
         try:
-            import StringIO as pystringIO #we can't use cStringIO as it lacks the name attribute
+            import io.BytesIO as pystringIO #we can't use cStringIO as it lacks the name attribute
         except ImportError:
-            import io as pystringIO
+            import io as BytesIO
 
         if not hasattr(obj, 'name') or  not hasattr(obj, 'mode'):
             raise pickle.PicklingError("Cannot pickle files that do not map to an actual file")
@@ -601,7 +602,7 @@ class CloudPickler(Pickler):
 
         name = obj.name
 
-        retval = pystringIO.StringIO()
+        retval = pystringIO.BytesIO()
 
         try:
             # Read the whole file
@@ -645,7 +646,7 @@ def dump(obj, file, protocol=2):
 
 
 def dumps(obj, protocol=2):
-    file = StringIO()
+    file = BytesIO()
 
     cp = CloudPickler(file,protocol)
     cp.dump(obj)

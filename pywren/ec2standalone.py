@@ -165,5 +165,5 @@ def terminate_instances(instance_list):
     
 def prettyprint_instances(inst_list):
     for instance_name, instance_obj in inst_list:
-        print instance_name, instance_obj.public_dns_name
+        print(instance_name, instance_obj.public_dns_name)
 

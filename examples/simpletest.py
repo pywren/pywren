@@ -19,10 +19,10 @@ if __name__ == "__main__":
 
     wrenexec = pywren.default_executor()
     fut = wrenexec.call_async(test_add, 10)
-    print fut.callset_id
+    print(fut.callset_id)
     
     res = fut.result() 
-    print "cached=", fut._run_status['runtime_cached']
-    print res
+    print("cached=", fut.run_status['runtime_cached'])
+    print(res)
 
 

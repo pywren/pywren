@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import boto3
 import botocore
 import json
@@ -5,7 +6,9 @@ import shutil
 import glob2
 import os
 from pywren import wrenhandler, wrenutil
-from queues import SQSInvoker
+from . import queues
+from queue import *
+#from queues import SQSInvoker
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 

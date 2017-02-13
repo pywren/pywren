@@ -1,21 +1,25 @@
+from __future__ import absolute_import
 import boto3
 import botocore
 from six import reraise
 import json
 import base64
-import cPickle as pickle
-import wrenconfig
-import wrenutil
+try:
+    from six.moves import cPickle as pickle
+except:
+    import pickle
+from pywren.wrenconfig import *
+from pywren import wrenconfig
 import enum
 from multiprocessing.pool import ThreadPool
 import time
-import s3util
+from pywren import s3util
 import logging
 import botocore
 import glob2
 import os
-from cloudpickle import serialize
-import invokers
+from pywren.cloudpickle import serialize
+from pywren import invokers
 from tblib import pickling_support
 pickling_support.install()
 
@@ -184,7 +188,7 @@ class Executor(object):
             l = len(datum)
             ranges.append((pos, pos + l -1))
             pos += l
-        return "".join(data_strs), ranges
+        return b"".join(data_strs), ranges
 
     def map(self, func, iterdata, extra_env = None, extra_meta = None, 
             invoke_pool_threads=64, data_all_as_one=True, 
@@ -342,7 +346,7 @@ class Executor(object):
             logGroupName=log_group_name,
             logStreamName=log_stream_name,)
         if verbose: # FIXME use logger
-            print "log events returned"
+            print("log events returned")
         this_events_logs = []
         in_this_event = False
         for event in log_events['events']:
@@ -352,7 +356,7 @@ class Executor(object):
             message = event['message'].strip()
             timestamp = int(event['timestamp'])
             if verbose:
-                print timestamp, message
+                print(timestamp, message)
             if start_string in message:
                 in_this_event = True
             elif end_string in message:

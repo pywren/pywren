@@ -86,7 +86,7 @@ def test_config():
 
     client = boto3.client("sts")
     account_id = client.get_caller_identity()["Account"]
-    print "The accountID is ", account_id
+    print("The accountID is ", account_id)
     # make sure the bucket exists
     #config = pywren.wrenconfig.default()
 
@@ -167,7 +167,7 @@ def deploy_lambda(update_if_exists = True):
     while retries < 10:
         try:
             if function_exists:
-                print "function exists, updating"
+                print("function exists, updating")
                 if update_if_exists:
 
                     response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
@@ -184,18 +184,18 @@ def deploy_lambda(update_if_exists = True):
                                            Timeout = TIMEOUT, 
                                            Role = ROLE, 
                                            Code = {'ZipFile' : file_like_object.getvalue()})
-                print "Create successful" 
+                print("Create successful")
                 break
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "InvalidParameterValueException":
 
-                print "attempt", retries
+                print("attempt", retries)
                 retries += 1
 
                 # FIXME actually check for "botocore.exceptions.ClientError: An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda."
-                print "sleeping for 5"
+                print("sleeping for 5")
                 time.sleep(5)
-                print "done"
+                print("done")
                 continue
             else:
                 raise e
@@ -299,7 +299,7 @@ def print_latest_logs():
         logStreamName=latest_logStreamName,)
 
     for event in response['events']:
-        print "{} : {}".format(event['timestamp'], event['message'].strip())
+        print("{} : {}".format(event['timestamp'], event['message'].strip()))
 
 
 @click.command()
@@ -311,7 +311,7 @@ def log_url():
     function_name = config['lambda']['function_name']
     aws_region = config['account']['aws_region']
     url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
-    print url
+    print(url)
 
 
 @standalone.command('launch_instances')
@@ -343,7 +343,7 @@ def standalone_launch_instances(number, max_idle_time, idle_terminate_granularit
                                                sc['max_idle_time'], 
                                                idle_terminate_granularity = sc['idle_terminate_granularity'], pywren_git_branch=pywren_git_branch )
     
-    print "launched:"
+    print("launched:")
     ec2standalone.prettyprint_instances(inst_list)
 
 
@@ -367,7 +367,7 @@ def standalone_terminate_instances():
     sc= config['standalone']
     
     inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
-    print "terminate"
+    print("terminate")
     ec2standalone.prettyprint_instances(inst_list)
     ec2standalone.terminate_instances(inst_list)
 

@@ -5,7 +5,7 @@ import boto3
 import cloudpickle
 import json
 import base64
-import cPickle as pickle
+from six.moves import cPickle as pickle
 from pywren.wrenconfig import * 
 import pywren
 import time

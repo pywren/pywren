@@ -56,7 +56,7 @@ def sqs_run_local(region_name, sqs_queue_name, job_num=1,
                                               MaxNumberOfMessages=1)
 
             if len(response) > 0:
-                print "Dispatching"
+                print("Dispatching")
                 #pool.apply_async(
                 m = response[0]
                 job = json.loads(m.body)
@@ -65,9 +65,9 @@ def sqs_run_local(region_name, sqs_queue_name, job_num=1,
                 wrenutil.local_handler([job], run_dir, 
                                        {'invoker' : 'SQSInvoker', 
                                         'job_i' : job_i})
-                print "done with invocation"
+                print("done with invocation")
                 break
             else:
-                print "no message, sleeping"
+                print("no message, sleeping")
                 time.sleep(4)
-    print "run_local_done"
+    print("run_local_done")
