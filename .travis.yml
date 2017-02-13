@@ -56,13 +56,14 @@ after_script:
   - pywren delete_queue
   - pywren delete_lambda
   - pywren delete_role
-  # fixme delete instance profile
+  - pywren delete_instance_profile
   - pywren standalone terminate_instances
 
 after_failure:
   - pywren delete_queue
   - pywren delete_lambda
   - pywren delete_role
+  - pywren delete_instance_profile
   - pywren standalone terminate_instances
 
 env:

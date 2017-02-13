@@ -241,6 +241,22 @@ def delete_role():
     iamclient.delete_role_policy(RoleName = role_name, 
                                  PolicyName = '{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName = role_name)
+
+@click.command("delete_instance_profile")
+@click.argument('name', default="", type=str)
+def delete_instance_profile(name):
+    config = pywren.wrenconfig.default()
+    role_name = config['account']['aws_lambda_role']
+    instance_profile_name = config['standalone']['instance_profile_name']
+
+    if name != "":
+        instance_profile_name = name
+    iam = boto3.resource('iam')
+    profile = iam.InstanceProfile(instance_profile_name)
+    roles = profile.roles
+    for r in roles:
+        profile.remove_role(RoleName=r.name)
+    profile.delete()
     
 
 @click.command()
@@ -387,6 +403,7 @@ cli.add_command(create_config)
 cli.add_command(test_config)
 cli.add_command(create_role)
 cli.add_command(create_instance_profile)
+cli.add_command(delete_instance_profile)
 cli.add_command(deploy_lambda)
 cli.add_command(delete_lambda)
 cli.add_command(delete_role)
