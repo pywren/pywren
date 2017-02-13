@@ -229,7 +229,7 @@ def generic_handler(event, context_dict):
     logger.debug("command str=%s", cmdstr)
     # This is copied from http://stackoverflow.com/a/17698359/4577954
     process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, stdout=subprocess.PIPE)
-    stdout = ''
+    stdout = b''
     with process.stdout:
         for line in iter(process.stdout.readline, b''):
             stdout += line
