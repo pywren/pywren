@@ -7,5 +7,5 @@ fi
 
 pytest -v tests
 RESULT = $?
-exit RESULT
+exit $RESULT
 
