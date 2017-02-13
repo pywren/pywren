@@ -247,7 +247,7 @@ def generic_handler(event, context_dict):
     end_time = time.time()
 
     d = { 
-        'stdout' : stdout, 
+        'stdout' : stdout.decode("ascii"), 
         'call_id' : call_id, 
         'callset_id' : callset_id, 
         'start_time' : start_time, 
