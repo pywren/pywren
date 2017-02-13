@@ -82,7 +82,7 @@ class SimpleAsync(unittest.TestCase):
 
 
         try:
-            print fut.result()
+            fut.result()
         except Exception as e:
             exc_type_wren, exc_value_wren, exc_traceback_wren = sys.exc_info()
 
