@@ -5,7 +5,7 @@ import json
 import shutil
 import glob2
 import os
-from pywren import wrenhandler, wrenutil
+from pywren import wrenhandler, wrenutil, local
 from pywren.queues import SQSInvoker
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
@@ -73,8 +73,8 @@ class DummyInvoker(object):
             jobn = MAXJOBS
         jobs = self.payloads[:jobn]
 
-        wrenutil.local_handler(jobs, run_dir, 
-                               {'invoker' : 'DummyInvoker'})
+        local.local_handler(jobs, run_dir, 
+                            {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
 

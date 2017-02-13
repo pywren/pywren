@@ -109,12 +109,13 @@ def generic_handler(event, context_dict):
     data_filename = "/tmp/data.pickle"
     output_filename = "/tmp/output.pickle"
 
+    server_info = {'uname' : subprocess.check_output("uname -a", shell=True)}
+    if os.path.exists("/proc"):
+        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
+                            '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
+                            '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
+                            '/proc/cgroups': open("/proc/cgroups", 'r').read()})
 
-    server_info = {'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
-                   '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
-                   '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
-                   '/proc/cgroups': open("/proc/cgroups", 'r').read() } 
-        
     logger.info("invocation started")
 
     # download the input 

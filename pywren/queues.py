@@ -5,7 +5,7 @@ import shutil
 import glob2
 import os
 import time
-from pywren import wrenhandler, wrenutil
+from pywren import wrenhandler, wrenutil, local
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
@@ -62,7 +62,7 @@ def sqs_run_local(region_name, sqs_queue_name, job_num=1,
                 job = json.loads(m.body)
                 
                 m.delete()
-                wrenutil.local_handler([job], run_dir, 
+                local.local_handler([job], run_dir, 
                                        {'invoker' : 'SQSInvoker', 
                                         'job_i' : job_i})
                 print("done with invocation")
