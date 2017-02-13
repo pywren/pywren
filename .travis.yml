@@ -14,10 +14,10 @@ install:
   # version is the same. 
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-      export RANDOM_ID=`python -c "from random import choice; print ''.join([choice('1234567890') for i in range(6)])"`
+      export RANDOM_ID=`python -c "from random import choice; print ''.join([choice('1234567890') for i in range(6)])"`; 
     else
       wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-      export RANDOM_ID=`python -c "from random import choice; print(''.join([choice('1234567890') for i in range(6)]))"`
+      export RANDOM_ID=`python -c "from random import choice; print(''.join([choice('1234567890') for i in range(6)]))"`; 
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
