@@ -21,6 +21,11 @@ install:
     fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
+  - printenv TRAVIS_PULL_REQUEST
+  - printenv TRAVIS_PULL_REQUEST_BRANCH
+  - printenv TRAVIS_COMMIT
+  - printenv TRAVIS_BRANCH
+  - printenv
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
