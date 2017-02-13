@@ -1,9 +1,8 @@
-from __future__ import absolute_import
 import uuid
 import os
 import shutil
+import base64
 import glob
-from . import wrenhandler
 
 def uuid_str():
     return str(uuid.uuid4())
@@ -125,7 +124,19 @@ def local_handler(jobs, run_dir, extra_context = None):
             context.update(extra_context)
 
         os.chdir(task_run_dir)
+        # FIXME debug
         wrenhandler.generic_handler(job, context)
 
         os.chdir(original_dir)
     
+def bytes_to_b64str(byte_data):
+    byte_data_64 = base64.b64encode(byte_data)
+    byte_data_64_ascii = byte_data_64.decode('ascii')
+    return byte_data_64_ascii
+
+
+def b64str_to_bytes(str_data):
+    str_ascii = str_data.encode('ascii')
+    byte_data= base64.b64decode(str_ascii)
+    return byte_data
+

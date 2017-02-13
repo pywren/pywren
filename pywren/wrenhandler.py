@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 from six.moves import cPickle as pickle
 import boto3
 import tarfile
@@ -8,17 +7,34 @@ import time
 import base64
 import logging
 import uuid
-from . import wrenutil
 import json
 import shutil
-from . import s3util
+import sys
 
-
+if (sys.version_info > (3, 0)):
+    from . import wrenutil
+    from . import s3util
+else:
+    import wrenutil
+    import s3util
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 logger = logging.getLogger(__name__)
+
+def key_size(bucket, key):
+    try:
+
+        s3 = boto3.resource('s3')
+        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
+        return a['ContentLength']
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return None
+        else:
+            raise e
+
 
 def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
@@ -141,7 +157,7 @@ def generic_handler(event, context_dict):
     logger.info("input data download complete")
     
     # now split
-    d = pickle.load(open(func_filename, 'r'))
+    d = json.load(open(func_filename, 'r'))
     shutil.rmtree("/tmp/pymodules", True) # delete old modules
     os.mkdir("/tmp/pymodules")
     # get modules and save

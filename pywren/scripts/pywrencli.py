@@ -42,8 +42,10 @@ SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
               help='ec2 standalone server name and profile name')
 @click.option('--force', is_flag=True, default=False, 
               help='force overwrite an existing file')
+@click.option('--pythonver', default="2.7", 
+              help="Python version to use for runtime")
 def create_config(filename, force, lambda_role, function_name, bucket_name, 
-                  sqs_queue, standalone_name):
+                  sqs_queue, standalone_name, pythonver):
     """
     Create a config file initialized with the defaults, and
     put it in your ~/.pywren_config
@@ -65,6 +67,14 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
     default_yaml = default_yaml.replace('pywren-queue', sqs_queue)
     default_yaml = default_yaml.replace('pywren-standalone', standalone_name)
+    python_major_ver = int(pythonver.split(".")[0])
+    if python_major_ver == 2: 
+        k = pywren.wrenconfig.DEFAULT_PYTHON2_RUNTIME
+    elif python_major_ver == 3:
+        k = pywren.wrenconfig.DEFAULT_PYTHON3_RUNTIME
+    else:
+        raise ValueError("invalid python version {}".format(pythonver)
+    default_yaml = default_yaml.replace(RUNTIME_KEY, k)
 
     # print out message about the stuff you need to do 
     if os.path.exists(filename) and not force:
@@ -322,7 +332,8 @@ def log_url():
               help='granularity of billing (sec)')
 @click.option('--pywren_git_branch', default='master', type=str, 
               help='which branch to use on the stand-alone')
-def standalone_launch_instances(number, max_idle_time, idle_terminate_granularity, 
+def standalone_launch_instances(number, max_idle_time, 
+                                idle_terminate_granularity, 
                                 pywren_git_branch):
     config = pywren.wrenconfig.default()
     sc= config['standalone']

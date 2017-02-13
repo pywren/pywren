@@ -9,7 +9,7 @@ try:
 except:
     import pickle
 from pywren.wrenconfig import *
-from pywren import wrenconfig
+from pywren import wrenconfig, wrenutil
 import enum
 from multiprocessing.pool import ThreadPool
 import time
@@ -238,10 +238,14 @@ class Executor(object):
             
 
         module_data = self.create_mod_data(mod_paths)
+        func_str_encoded = wrenutil.bytes_to_b64str(func_str)
+        #debug_foo = {'func' : func_str_encoded, 
+        #             'module_data' : module_data}
 
+        #pickle.dump(debug_foo, open("/tmp/py35.debug.pickle", 'wb'))
         ### Create func and upload 
-        func_module_str = pickle.dumps({'func' : func_str, 
-                                        'module_data' : module_data}, -1)
+        func_module_str = json.dumps({'func' : func_str_encoded, 
+                                      'module_data' : module_data})
         host_job_meta['func_module_str_len'] = len(func_module_str)
 
         func_upload_time = time.time()
@@ -384,7 +388,7 @@ def get_call_status(callset_id, call_id,
     try:
         r = s3.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
         result_json = r['Body'].read()
-        return json.loads(result_json)
+        return json.loads(result_json.decode('ascii'))
     
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "NoSuchKey":

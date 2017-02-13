@@ -1,9 +1,15 @@
-from __future__ import absolute_import
 import boto3
-from . import wrenconfig
-from . import wrenutil
 import os
 import botocore
+import sys
+
+if (sys.version_info > (3, 0)):
+    from . import wrenutil
+    from . import wrenconfig
+else:
+    import wrenutil
+    import wrenconfig
+
 
 def create_callset_id():
     return wrenutil.uuid_str()
