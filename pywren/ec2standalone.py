@@ -9,6 +9,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+def b64s(string):
+    """
+    Base-64 encode a string and return a string
+    """
+    return base64.b64encode(string.encode('utf-8')).decode('ascii')
 
 def sd(filename):
     """
@@ -56,7 +61,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     user_data = open(template_file, 'r').read()
 
     supervisord_init_script = open(sd('supervisord.init'), 'r').read()
-    supervisord_init_script_64 = base64.b64encode(supervisord_init_script)
+    supervisord_init_script_64 = b64s(supervisord_init_script)
 
     supervisord_conf = open(sd('supervisord.conf'), 'r').read()
     logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
@@ -65,11 +70,11 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                                aws_region=aws_region, 
                                                max_idle_time=max_idle_time,
                                                idle_terminate_granularity=idle_terminate_granularity)
-    supervisord_conf_64 = base64.b64encode(supervisord_conf)
+    supervisord_conf_64 = b64s(supervisord_conf)
 
     cloud_agent_conf = open(sd("cloudwatch-agent.config"), 
                             'r').read()
-    cloud_agent_conf_64 = base64.b64encode(cloud_agent_conf)
+    cloud_agent_conf_64 = b64s(cloud_agent_conf)
 
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 
