@@ -6,6 +6,6 @@ if [ "$RUN_LAMBDA" != "true" ]; then
 fi
 
 pytest -v tests
-RESULT = $?
+RESULT=$?
 exit $RESULT
 
