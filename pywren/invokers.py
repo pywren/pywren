@@ -6,9 +6,7 @@ import shutil
 import glob2
 import os
 from pywren import wrenhandler, wrenutil
-from . import queues
-
-from queues import SQSInvoker
+from pywren.queues import SQSInvoker
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
