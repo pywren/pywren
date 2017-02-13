@@ -11,13 +11,18 @@ from glob2 import glob
 import io
 import time 
 import botocore
-from boto.utils import get_instance_metadata
 from multiprocess import Process
 from pywren import wrenhandler
 import logging
 import watchtower
 import subprocess
 import math
+try:
+    # For Python 3.0 and later
+    from urllib.request import urlopen
+except ImportError:
+    # Fall back to Python 2's urllib2
+    from urllib2 import urlopen
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +33,12 @@ AWS_REGION_DEBUG='us-west-2'
 QUEUE_SLEEP_DUR_SEC=2
 IDLE_TERMINATE_THRESHOLD = 0.95
 
+INSTANCE_ID_URL = "http://169.254.169.254/latest/meta-data/instance-id"
 def get_my_ec2_instance(aws_region):
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
 
-    instance_id =  get_instance_metadata()['instance-id']
+    instance_id =  urlopen(INSTANCE_ID_URL).read()
     instances = ec2.instances.filter(InstanceIds=[instance_id])
 
 
@@ -73,10 +79,14 @@ def get_my_uptime():
 def check_is_ec2():
     """
     last-minute check to make sure we are on EC2. 
-    Takes ~10sec to timeotu. 
+
     """
-    return get_instance_metadata(timeout=2, num_retries=3) != {}
-    
+    try:
+        instance_id =  urlopen(INSTANCE_ID_URL, timeout=3).read()
+        return True
+    except: 
+        return False
+
 def ec2_self_terminate(idle_time, uptime, message_count):
     if check_is_ec2():
         logger.info("self-terminating after idle for {:.0f} sec ({:.0f} s uptime), processed {:d} messages".format(idle_time, uptime, message_count))
