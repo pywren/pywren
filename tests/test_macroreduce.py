@@ -7,7 +7,7 @@ import time
 import pywren
 import subprocess
 import logging
-import cPickle as pickle
+from six.moves import cPickle as pickle
 import unittest
 import numpy as np
 from flaky import flaky
