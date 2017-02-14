@@ -11,8 +11,12 @@ import json
 import shutil
 import sys
 
-from pywren import wrenutil
-from pywren import s3util
+if (sys.version_info > (3, 0)):
+    from . import wrenutil
+    from . import s3util
+else:
+    import wrenutil
+    import s3util
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
