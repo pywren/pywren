@@ -247,9 +247,9 @@ def build_runtimes(s3url_base="s3://ericmjonas-public/pywren.runtime.staging"):
         
         conda_env_yaml = execute(get_conda_root_env, CONDA_INSTALL_DIR)
         conda_env_yaml_single = conda_env_yaml.values()[0]  # HACK
-        conda_env = yaml.loads(conda_env_yaml_single)
+        conda_env = yaml.load(conda_env_yaml_single)
         runtime_dict = {'python_ver' : python_ver, 
-                        'conda_instal' : v[1], 
+                        'conda_install' : v[1], 
                         'pip_install' : v[2], 
                         'pip_upgrade' : v[3], 
                         'pkg_ver_list' : freeze_pkgs, 
