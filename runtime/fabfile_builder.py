@@ -167,7 +167,7 @@ def install_gist():
             
 @task
 def shrink_conda():
-    with cd("/tmp/pywren"):
+    with cd("/tmp/pywren/runtime"):
         run("python shrinkconda.py")
 
 @task
