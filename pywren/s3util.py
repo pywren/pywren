@@ -2,13 +2,8 @@ import boto3
 import os
 import botocore
 import sys
-
-if (sys.version_info > (3, 0)):
-    from . import wrenutil
-    from . import wrenconfig
-else:
-    import wrenutil
-    import wrenconfig
+from pywren import wrenutil
+from pywren import wrenconfig
 
 
 def create_callset_id():
