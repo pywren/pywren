@@ -22,8 +22,12 @@ unique_instance_name = 'pywren_builder'
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl_sklearn.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.mkl.avx.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.nomkl.tar.gz"
-s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy-cvxpy-sklearn.mkl_avx2.tar.gz"
+#s3url = "s3://ericmjonas-public/condaruntime.stripped.scipy-cvxpy-sklearn.mkl_avx2.tar.gz"
 #s3url = "s3://ericmjonas-public/condaruntime.minimal.tar.gz"
+
+s3url = "s3://ericmjonas-public/condaruntime.python3.stripped.scipy-cvxpy-sklearn.mkl_avx2.tar.gz"
+
+
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -98,20 +102,20 @@ def conda_setup_mkl():
                 run("rm *_mc.so *_mc2.so *_mc3.so *_avx512* *_avx2*")
             
 @task
-def conda_setup_mkl_avx2():
+def conda_setup_mkl_avx2(pythonver=2):
     run("rm -Rf /tmp/conda")
     run("mkdir -p /tmp/conda")
     with cd("/tmp/conda"):
-        run("wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh ")
+        run("wget https://repo.continuum.io/miniconda/Miniconda{}-latest-Linux-x86_64.sh -O miniconda.sh ".format(pythonver))
         run("bash miniconda.sh -b -p /tmp/conda/condaruntime")
         with path("/tmp/conda/condaruntime/bin", behavior="prepend"):
-            run("conda install -q -y numpy enum34 pytest Click numba boto3 PyYAML cython boto scipy pillow cvxopt scikit-learn tblib")
+            run("conda install -q -y numpy pytest Click numba boto3 PyYAML cython boto scipy pillow cvxopt scikit-learn tblib")
             run("conda list")
             #run("conda clean -y -i -t -p")
-            run("pip install --upgrade cloudpickle")
+            run("pip install --upgrade cloudpickle enum34")
             run("pip install cvxpy")
             run("pip install redis")
-            run("pip install cloudpickle")
+            run("pip install glob2")
 
 @task
 def conda_setup_nomkl():

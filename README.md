@@ -26,7 +26,7 @@ res = pwex.map(foo, np.linspace(0.1, 100, 1000))
 
 
 ## Key technologies leveraged
-- AWS Lambda for containerized, stateless compute 
+- AWS Lambda fo8lsr containerized, stateless compute 
 - s3 for event coordination 
 - Conda for up-to-date python packages
 - cloudpickle for shipping functions back and forth
