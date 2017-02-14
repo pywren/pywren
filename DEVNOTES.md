@@ -79,3 +79,5 @@ source activate py35-pywren
 pip install -e pywren
 ```
 
+## The runtime
+The runtime is a tremendous challenge

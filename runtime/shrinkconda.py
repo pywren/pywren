@@ -9,7 +9,7 @@ import glob2
 from contextlib import contextmanager
 
 
-CONDA_RUNTIME = "/tmp/conda/condaruntime"
+CONDA_RUNTIME = sys.argv[1]
 
 def get_size():
     o = subprocess.check_output("du -s {}".format(CONDA_RUNTIME), shell=True)
