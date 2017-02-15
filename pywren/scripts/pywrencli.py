@@ -136,6 +136,9 @@ def create_instance_profile():
     instance_profile.add_role(RoleName=role_name)
 
 
+def list_all_funcs(lambclient):
+    return lambclient.get_paginator('list_functions').paginate().build_full_result()
+
 @click.command()    
 def deploy_lambda(update_if_exists = True):
     """
@@ -167,10 +170,13 @@ def deploy_lambda(update_if_exists = True):
 
     ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_LAMBDA_ROLE)
 
-    b = lambclient.list_functions()
+    b = list_all_funcs(lambclient)
+    
     function_exists = False
+    
+    function_name_list = [f['FunctionName'] for f in b['Functions']]
 
-    if FUNCTION_NAME in [f['FunctionName'] for f in b['Functions']]:
+    if FUNCTION_NAME in function_name_list:
         function_exists = True
 
     retries = 0
@@ -221,7 +227,7 @@ def delete_lambda():
 
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 
-    b = lambclient.list_functions()
+    b = list_all_funcs(lambclient)
 
     if FUNCTION_NAME not in [f['FunctionName'] for f in b['Functions']]:
         raise Exception()
