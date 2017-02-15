@@ -45,9 +45,11 @@ def default_executor():
         return dummy_executor()
     return lambda_executor()
         
-def lambda_executor():
+def lambda_executor(config= None):
 
-    config = wrenconfig.default()
+    if config is None:
+        config = wrenconfig.default()
+
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
