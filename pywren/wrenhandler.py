@@ -86,7 +86,7 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     return False
 
 def aws_lambda_handler(event, context):
-
+    logger.setLevel(logging.INFO)
     context_dict = {
         'aws_request_id' : context.aws_request_id, 
         'log_group_name' : context.log_group_name, 
