@@ -304,3 +304,25 @@ def delete_log_groups(prefix):
         logclient.delete_log_group(logGroupName = logGroupName)
         
 
+@task
+def cleanup_travis_leftovers():
+    """
+    When travis builds fail they can leave behind IAM resources
+    """
+
+    iam = boto3.resource('iam')
+    client = boto3.client('iam')
+
+    for p in iam.instance_profiles.all():
+        if 'pywren_travis_' in p.name:
+            print p.name
+            for r in p.roles:
+                p.remove_role(RoleName=r.name)
+            p.delete()
+
+    for r in iam.roles.all():
+        if 'pywren_travis_test_' in r.name:
+            for p in r.policies.all():
+                r.detach_policy(p)
+                p.delete()
+            r.delete()
