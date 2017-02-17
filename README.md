@@ -92,25 +92,24 @@ You should now be able to run `examples/simpletest.py`. You should see the follo
 # Linux ip-10-13-24-185 4.4.19-29.55.amzn1.x86_64 #1 SMP Mon Aug 29 23:29:40 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
-### Local pip install
+## Debugging (When things go wrong)
 
-`pip install --editable ./`
-
-### Developer notes
-
-Pywren will print logging info to console by setting the environment varible as follows:
+Pywren will print logging info to console by setting the environment
+varible as follows:
 
 ```
 PYWREN_LOGLEVEL=INFO
 ```
-I think we're following this guy's advice for logging:
-https://fangpenlin.com/posts/2012/08/26/good-logging-practice-in-python/
 
-When logging and storing metadata, try and differentiate between:
+Logs are written to AWS Cloudwatch. To print the latest cloudwatch from the commandline use:
+```
+pywren print_latest_logs
+```
 
-host (things that occur on user computer) and other
-time (how long something took, sec) and timestamp (unix timestamp) 
+To inspect the logs through the AWS GUI get the URL for the current worker
+via 
+```
+pywren log_url
+```
 
-
-Logging:
 

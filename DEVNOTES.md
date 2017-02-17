@@ -1,8 +1,22 @@
 Random developer notes:
 
-Logging:
+# Logging
+
 I think we're following this guy's advice:
 https://fangpenlin.com/posts/2012/08/26/good-logging-practice-in-python/
+
+When logging and storing metadata, try and differentiate between:
+
+host (things that occur on user computer) and other
+time (how long something took, sec) and timestamp (unix timestamp) 
+
+## Local pip install
+If you'd like to work on pywren, I recommend doing a local editable pip install
+from the pywren souce dir via
+
+```
+pip install --editable ./
+```
 
 
 # Standalone Workers
