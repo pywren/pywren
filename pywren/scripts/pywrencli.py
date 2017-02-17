@@ -67,13 +67,7 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
     default_yaml = default_yaml.replace('pywren-queue', sqs_queue)
     default_yaml = default_yaml.replace('pywren-standalone', standalone_name)
-    python_major_ver = int(pythonver.split(".")[0])
-    if python_major_ver == 2: 
-        k = pywren.wrenconfig.DEFAULT_PYTHON2_RUNTIME
-    elif python_major_ver == 3:
-        k = pywren.wrenconfig.DEFAULT_PYTHON3_RUNTIME
-    else:
-        raise ValueError("invalid python version {}".format(pythonver))
+    k = pywren.wrenconfig.default_runtime[pythonver]
     default_yaml = default_yaml.replace("RUNTIME_KEY", k)
 
     # print out message about the stuff you need to do 
