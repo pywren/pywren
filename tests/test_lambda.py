@@ -19,7 +19,7 @@ import sys
 
 
 macro = pytest.mark.skipif(
-    not pytest.config.getoption("--runlambda"),
+    not pytest.config.getoption("--runlambda", False),
     reason="need --runlambda option to run"
 )
 
