@@ -21,7 +21,6 @@ macro = pytest.mark.skipif(
 
 
 
-
 class MacroReduce(unittest.TestCase):
     """
     Test running with both a lambda executor and a remote
