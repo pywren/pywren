@@ -66,7 +66,8 @@ def dummy_executor():
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.DummyInvoker()
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
+                    100)
     
 def remote_executor():
     config = wrenconfig.default()
