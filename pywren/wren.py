@@ -69,15 +69,17 @@ def dummy_executor():
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
                     100)
     
-def remote_executor():
-    config = wrenconfig.default()
+def remote_executor(config= None, job_max_runtime=3600):
+    if config is None:
+        config = wrenconfig.default()
+
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
-                    3600)
+                    job_max_runtime)
     
 class Executor(object):
     """
