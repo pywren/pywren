@@ -33,18 +33,18 @@ class JobState(enum.Enum):
     success = 4
     error = 5
 
-def default_executor():
+def default_executor(**kwargs):
     executor_str = 'lambda'
     if 'PYWREN_EXECUTOR' in os.environ:
         executor_str = os.environ['PYWREN_EXECUTOR']
     
     if executor_str == 'lambda':
-        return lambda_executor()
+        return lambda_executor(**kwargs)
     elif executor_str == 'remote' or executor_str=='standalone':
-        return remote_executor()
+        return remote_executor(**kwargs)
     elif executor_str == 'dummy':
-        return dummy_executor()
-    return lambda_executor()
+        return dummy_executor(**kwargs)
+    return lambda_executor(**kwargs)
         
 def lambda_executor(config= None, job_max_runtime=280):
 
