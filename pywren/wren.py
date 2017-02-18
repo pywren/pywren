@@ -4,6 +4,7 @@ import botocore
 from six import reraise
 import json
 import base64
+from threading import Thread
 try:
     from six.moves import cPickle as pickle
 except:
@@ -45,7 +46,7 @@ def default_executor():
         return dummy_executor()
     return lambda_executor()
         
-def lambda_executor(config= None):
+def lambda_executor(config= None, job_max_runtime=280):
 
     if config is None:
         config = wrenconfig.default()
@@ -56,7 +57,8 @@ def lambda_executor(config= None):
     S3_PREFIX = config['s3']['pywren_prefix']
     
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
+                    job_max_runtime)
 
 def dummy_executor():
     config = wrenconfig.default()
@@ -73,7 +75,8 @@ def remote_executor():
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
+                    3600)
     
 class Executor(object):
     """
@@ -81,7 +84,7 @@ class Executor(object):
     """
 
     def __init__(self, aws_region, s3_bucket, s3_prefix, 
-                 invoker, config):
+                 invoker, config, job_max_runtime):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
@@ -90,7 +93,7 @@ class Executor(object):
         self.session = botocore.session.get_session()
         self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
-        
+        self.job_max_runtime = job_max_runtime
 
 
     def create_mod_data(self, mod_paths):
@@ -127,13 +130,14 @@ class Executor(object):
                          s3_status_key, 
                          callset_id, call_id, extra_env, 
                          extra_meta, data_byte_range, use_cached_runtime, 
-                         host_job_meta):
+                         host_job_meta, job_max_runtime):
     
         arg_dict = {'func_key' : s3_func_key, 
                     'data_key' : s3_data_key, 
                     'output_key' : s3_output_key, 
                     'status_key' : s3_status_key, 
                     'callset_id': callset_id, 
+                    'job_max_runtime' : job_max_runtime, 
                     'data_byte_range' : data_byte_range, 
                     'call_id' : call_id, 
                     'use_cached_runtime' : use_cached_runtime, 
@@ -285,7 +289,8 @@ class Executor(object):
                                          s3_status_key, 
                                          callset_id, call_id, extra_env, 
                                          extra_meta, data_byte_range, 
-                                         use_cached_runtime, host_job_meta.copy())
+                                         use_cached_runtime, host_job_meta.copy(), 
+                                         self.job_max_runtime)
 
         N = len(data)
         call_result_objs = []
@@ -528,10 +533,12 @@ class ResponseFuture(object):
         self._call_invoker_result = call_invoker_result
 
         if call_success:
-            
+
             self._return_val = call_invoker_result['result']
             self._state = JobState.success
         else:
+            if call_status['process_timeout_killed']:
+                raise Exception("Process timeout: exceeded max runtime")
             self._exception = call_invoker_result['result']
             self._traceback = (call_invoker_result['exc_type'], 
                                call_invoker_result['exc_value'], 

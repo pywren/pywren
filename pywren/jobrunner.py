@@ -17,6 +17,11 @@ try:
     func_filename = sys.argv[1]
     data_filename = sys.argv[2]
     out_filename = sys.argv[3]
+    # initial output file in case job fails
+    pickle.dump({'result' : None, 
+                 'success' : False}, 
+                open(out_filename, 'wb'), -1)
+
     print("loading", func_filename, data_filename, out_filename)
     func_b64 = b64str_to_bytes(json.load(open(func_filename, 'r'))['func'])
     loaded_func = pickle.loads(func_b64)

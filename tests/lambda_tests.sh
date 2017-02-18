@@ -5,7 +5,7 @@ if [ "$RUN_LAMBDA" != "true" ]; then
     exit 0;
 fi
 
-pytest -v tests
+pytest -v tests --runlambda
 RESULT=$?
 exit $RESULT
 

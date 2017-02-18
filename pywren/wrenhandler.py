@@ -10,18 +10,26 @@ import uuid
 import json
 import shutil
 import sys
+from threading import Thread
+import signal
 
 if (sys.version_info > (3, 0)):
     from . import wrenutil
     from . import s3util
+    from queue import Queue, Empty  # python 3.x
+
 else:
     import wrenutil
     import s3util
+    from Queue import Queue, Empty
+
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 logger = logging.getLogger(__name__)
+
+PROCESS_STDOUT_SLEEP_SECS = 2
 
 def key_size(bucket, key):
     try:
@@ -126,6 +134,7 @@ def generic_handler(event, context_dict):
     status_key = event['status_key']
     runtime_s3_bucket = event['runtime_s3_bucket']
     runtime_s3_key = event['runtime_s3_key']
+    job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
     b, k = data_key
     KS =  s3util.key_size(b, k)
@@ -228,16 +237,40 @@ def generic_handler(event, context_dict):
 
     logger.debug("command str=%s", cmdstr)
     # This is copied from http://stackoverflow.com/a/17698359/4577954
-    process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, stdout=subprocess.PIPE)
-    stdout = b''
-    with process.stdout:
-        for line in iter(process.stdout.readline, b''):
+    # reasons for setting process group: http://stackoverflow.com/a/4791612
+    process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, 
+                               stdout=subprocess.PIPE, preexec_fn=os.setsid)
+
+
+    def consume_stdout(stdout, queue):
+        with stdout:
+            for line in iter(stdout.readline, b''):
+                queue.put(line)
+
+    q = Queue()
+    
+    t = Thread(target=consume_stdout, args=(process.stdout, q))
+    t.daemon = True
+    t.start()
+
+    stdout = b""
+    process_timeout_killed = False
+    while t.isAlive():
+        try: 
+            line = q.get_nowait()
             stdout += line
             logger.info(line)
-
-    # TODO(shivaram): It looks like the deadlock warning in subprocess should not apply here
-    # as we drain the stdout before calling wait ?
-    process.wait()
+        except Empty:
+            time.sleep(PROCESS_STDOUT_SLEEP_SECS )
+        total_runtime = time.time() - start_time
+        if total_runtime > job_max_runtime:
+            logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
+            # Send the signal to all the process groups
+            os.killpg(os.getpgid(process.pid), signal.SIGTERM)  
+            process_timeout_killed = True
+            # create dummy file for upload
+            
+            
     logger.info("command execution finished")
 
     s3.meta.client.upload_file(output_filename, output_key[0], 
@@ -249,6 +282,7 @@ def generic_handler(event, context_dict):
     d = { 
         'stdout' : stdout.decode("ascii"), 
         'call_id' : call_id, 
+        'process_timeout_killed' : process_timeout_killed, 
         'callset_id' : callset_id, 
         'start_time' : start_time, 
         'setup_time' : setup_time - start_time, 
