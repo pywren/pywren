@@ -35,7 +35,7 @@ install:
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest
   - source activate test-environment
   - pip install glob2
-  - python setup.py install
+  - tests/install_pywren.sh
 
 
   
