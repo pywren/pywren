@@ -17,7 +17,7 @@ setup(
     description='Run many jobs transparently on AWS Lambda and other cloud services',
     long_description="PyWren lets you transparently run your python functions on AWS cloud services, including AWS Lambda and AWS EC2.", 
     author_email='jonas@ericjonas.com',
-    packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
+    packages=find_packages(),
     install_requires=[
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 
         'enum34', 'flaky', 'glob2', 'multiprocess', 
@@ -25,7 +25,7 @@ setup(
     ],
     entry_points =
     { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli', 
-                           'pywren-server=pywren.scrirpts.standalone:server']},
+                           'pywren-server=pywren.scripts.standalone:server']},
     package_data={'pywren': ['default_config.yaml', 
                              'ec2_standalone_files/ec2standalone.cloudinit.template', 
                              'ec2_standalone_files/supervisord.conf', 
