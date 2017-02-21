@@ -10,7 +10,7 @@ try:
 except:
     import pickle
 from pywren.wrenconfig import *
-from pywren import wrenconfig, wrenutil
+from pywren import wrenconfig, wrenutil, runtime
 import enum
 from multiprocessing.pool import ThreadPool
 import time
@@ -97,7 +97,11 @@ class Executor(object):
         self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         self.job_max_runtime = job_max_runtime
-
+        
+        runtime_bucket = config['runtime']['s3_bucket']
+        runtime_key =  config['runtime']['s3_key']
+        if not runtime.runtime_key_valid(runtime_bucket, runtime_key):
+            raise Exception("The indicated runtime: s3://{}/{} is not approprite for this python version".format(runtime_bucket, runtime_key))
 
     def create_mod_data(self, mod_paths):
 
