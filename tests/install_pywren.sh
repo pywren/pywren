@@ -5,7 +5,7 @@ set -ev
 # or downloads from pypy depending on the branch name
 if [ ${TRAVIS_TAG} = "pypitest-build" ]; then
     rm -Rf pywren
-    pip install -i https://testpypi.python.org/pypi pywren
+    pip install --extra-index-url https://testpypi.python.org/pypi pywren
 else
     python setup.py install
 fi
