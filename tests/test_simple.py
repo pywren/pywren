@@ -211,18 +211,3 @@ class SerializeFutures(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x + 1)
 
-class Timeout(unittest.TestCase):
-
-    def setUp(self):
-        self.wrenexec = pywren.default_executor(job_max_runtime=40)
-
-    def test_simple(self):
-
-        def take_forever():
-            time.sleep(45)
-            return True
-
-        fut = self.wrenexec.call_async(take_forever, None)
-        with pytest.raises(Exception) as execinfo:
-            res = fut.result() 
-            

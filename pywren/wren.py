@@ -14,7 +14,7 @@ from pywren import wrenconfig, wrenutil
 import enum
 from multiprocessing.pool import ThreadPool
 import time
-from pywren import s3util
+from pywren import s3util, version
 import logging
 import botocore
 import glob2
@@ -133,7 +133,8 @@ class Executor(object):
                          s3_status_key, 
                          callset_id, call_id, extra_env, 
                          extra_meta, data_byte_range, use_cached_runtime, 
-                         host_job_meta, job_max_runtime):
+                         host_job_meta, job_max_runtime, 
+                         overwrite_invoke_args = None):
     
         arg_dict = {'func_key' : s3_func_key, 
                     'data_key' : s3_data_key, 
@@ -145,7 +146,8 @@ class Executor(object):
                     'call_id' : call_id, 
                     'use_cached_runtime' : use_cached_runtime, 
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
-                    'runtime_s3_key' : self.config['runtime']['s3_key']}    
+                    'runtime_s3_key' : self.config['runtime']['s3_key'], 
+                    'pywren_version' : version.__version__}    
         
         if extra_env is not None:
             logger.debug("Extra environment vars {}".format(extra_env))
@@ -163,6 +165,11 @@ class Executor(object):
 
         logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
         lambda_invoke_time_start = time.time()
+
+        # overwrite args
+        # this is entirely for debugging various wrenhandler errors
+        if overwrite_invoke_args is not None:
+            arg_dict.update(overwrite_invoke_args)
 
         # do the invocation
         self.invoker.invoke(arg_dict)
@@ -201,7 +208,7 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env = None, extra_meta = None, 
             invoke_pool_threads=64, data_all_as_one=True, 
-            use_cached_runtime=True):
+            use_cached_runtime=True, overwrite_invoke_args = None):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -293,7 +300,8 @@ class Executor(object):
                                          callset_id, call_id, extra_env, 
                                          extra_meta, data_byte_range, 
                                          use_cached_runtime, host_job_meta.copy(), 
-                                         self.job_max_runtime)
+                                         self.job_max_runtime, 
+                                         overwrite_invoke_args = overwrite_invoke_args)
 
         N = len(data)
         call_result_objs = []
@@ -515,7 +523,17 @@ class ResponseFuture(object):
         self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
             
-        # FIXME check if it actually worked all the way through 
+        if call_status['exception'] is not None:
+            # the wrenhandler had an exception
+            exception_str = call_status['exception']
+            print(call_status.keys())
+            exception_args = call_status['exception_args']
+            if exception_args[0] == "WRONGVERSION":
+                raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+            elif exception_args[0] == "OUTATIME":
+                raise Exception("process ran out of time")
+            else:
+                raise Exception(exception_str, *exception_args)
         
         call_output_time = time.time()
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
@@ -540,7 +558,16 @@ class ResponseFuture(object):
             self._return_val = call_invoker_result['result']
             self._state = JobState.success
         else:
-            if call_status['process_timeout_killed']:
+            if call_status['exception'] is not None:
+                # the wrenhandler had an exception
+                exception_str = call_status['exception']
+                print(call_status.keys())
+                exception_args = call_status['exception_args']
+                if exception_args[0] == "VERSIONERROR":
+                    raise Exception("Pywren version mismatch: Handler expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                elif exception_args[0] == "OUTATIME":
+                    raise Exception("process ran out of time")
+
                 raise Exception("Process timeout: exceeded max runtime")
             self._exception = call_invoker_result['result']
             self._traceback = (call_invoker_result['exc_type'], 
