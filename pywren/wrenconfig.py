@@ -21,9 +21,6 @@ FUNCTION_NAME = "pywren1"
 
 MAX_AGG_DATA_SIZE = 4e6
 
-DEFAULT_PYTHON2_RUNTIME="pywren.runtime/pywren_runtime-2-default_2.tar.gz"
-DEFAULT_PYTHON3_RUNTIME="pywren.runtime/pywren_runtime-3-default_3.tar.gz"
-
 default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz", 
                    '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz", 
                    '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
