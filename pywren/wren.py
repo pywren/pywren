@@ -166,8 +166,7 @@ class Executor(object):
         logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
         lambda_invoke_time_start = time.time()
 
-        # overwrite args
-        # this is entirely for debugging various wrenhandler errors
+        # overwrite explicit args, mostly used for testing via injection
         if overwrite_invoke_args is not None:
             arg_dict.update(overwrite_invoke_args)
 
@@ -558,17 +557,6 @@ class ResponseFuture(object):
             self._return_val = call_invoker_result['result']
             self._state = JobState.success
         else:
-            if call_status['exception'] is not None:
-                # the wrenhandler had an exception
-                exception_str = call_status['exception']
-                print(call_status.keys())
-                exception_args = call_status['exception_args']
-                if exception_args[0] == "VERSIONERROR":
-                    raise Exception("Pywren version mismatch: Handler expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
-                elif exception_args[0] == "OUTATIME":
-                    raise Exception("process ran out of time")
-
-                raise Exception("Process timeout: exceeded max runtime")
             self._exception = call_invoker_result['result']
             self._traceback = (call_invoker_result['exc_type'], 
                                call_invoker_result['exc_value'], 
