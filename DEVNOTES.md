@@ -124,6 +124,11 @@ for final releases.
 python setup.py register -r pypitest
 python setup.py sdist upload -r pypitest
 ```
+4. Test the pypitest build by updating the tag `pypitest-build` to the current build
+
+```
+git push -f origin :refs/heads/pypitest-build
+```
 
 4. Create a github release via the gui
 
