@@ -119,12 +119,18 @@ for final releases.
 2. Make sure everything is passing on travis
 
 3. push to pypitest
-
+First make sure you are setup
 ```
 python setup.py register -r pypitest
+```
+
+```
 python setup.py sdist upload -r pypitest
 ```
 4. Test the pypitest build by updating the tag `pypitest-build` to the current build
+
+5. Kickoff the travis build for this version by deleting and reupdating the tag. I know
+this is a bit of a hack, but it works. 
 
 ```
 # delete the remote tag
