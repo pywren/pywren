@@ -26,7 +26,7 @@ setup(
     entry_points =
     { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli', 
                            'pywren-server=pywren.scrirpts.standalone:server']},
-    package_data={'pywren': ['config_default.yaml', 
+    package_data={'pywren': ['default_config.yaml', 
                              'ec2_standalone_files/ec2standalone.cloudinit.template', 
                              'ec2_standalone_files/supervisord.conf', 
                              'ec2_standalone_files/supervisord.init', 
