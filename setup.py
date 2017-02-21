@@ -12,8 +12,10 @@ exec(open('pywren/version.py').read())
 setup(
     name='pywren',
     version=__version__,
-    url='https://github.com/ericmjonas/github',
+    url='https://github.com/ericmjonas/pywren',
     author='Eric Jonas',
+    description='Run many jobs transparently on AWS Lambda and other cloud services',
+    long_description="PyWren lets you transparently run your python functions on AWS cloud services, including AWS Lambda and AWS EC2.", 
     author_email='jonas@ericjonas.com',
     packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
     install_requires=[
@@ -23,8 +25,8 @@ setup(
     ],
     entry_points =
     { 'console_scripts' : ['pywren=pywren.scripts.pywrencli:cli', 
-                           'pywren-server=pywren.scripts.standalone:server']},
-    package_data={'pywren': ['default_config.yaml', 
+                           'pywren-server=pywren.scrirpts.standalone:server']},
+    package_data={'pywren': ['config_default.yaml', 
                              'ec2_standalone_files/ec2standalone.cloudinit.template', 
                              'ec2_standalone_files/supervisord.conf', 
                              'ec2_standalone_files/supervisord.init', 
