@@ -7,7 +7,7 @@ from setuptools import setup, find_packages
 # http://stackoverflow.com/questions/6344076/differences-between-distribute-distutils-setuptools-and-distutils2
 
 # how to get version info into the project
-execfile('pywren/version.py')
+exec(open('pywren/version.py').read())
 
 setup(
     name='pywren',
