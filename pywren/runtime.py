@@ -11,7 +11,7 @@ def get_runtime_info(bucket, key):
     runtime_meta_key = key.replace(".tar.gz", ".meta.json")
     
     json_str = s3.meta.client.get_object(Bucket=bucket, Key=runtime_meta_key)['Body'].read()
-    runtime_meta = json.loads(json_str)
+    runtime_meta = json.loads(json_str.decode("ascii"))
 
     return runtime_meta
 
