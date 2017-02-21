@@ -127,7 +127,14 @@ python setup.py sdist upload -r pypitest
 4. Test the pypitest build by updating the tag `pypitest-build` to the current build
 
 ```
-git push -f origin :refs/heads/pypitest-build
+# delete the remote tag
+git push -f origin :refs/tags/pypitest-build
+# delete local 
+git tag -d pypitest-build
+# create tag
+git tag pypitest-build
+# push
+git push origin --tags
 ```
 
 4. Create a github release via the gui
