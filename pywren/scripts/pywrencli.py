@@ -5,6 +5,7 @@ import boto3
 import click
 import shutil
 import os
+import sys
 import json
 import zipfile
 import glob2
@@ -42,7 +43,7 @@ SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
               help='ec2 standalone server name and profile name')
 @click.option('--force', is_flag=True, default=False, 
               help='force overwrite an existing file')
-@click.option('--pythonver', default="2.7", 
+@click.option('--pythonver', default=pywren.runtime.version_str(sys.version_info), 
               help="Python version to use for runtime")
 def create_config(filename, force, lambda_role, function_name, bucket_name, 
                   sqs_queue, standalone_name, pythonver):
@@ -67,6 +68,10 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
     default_yaml = default_yaml.replace('pywren-queue', sqs_queue)
     default_yaml = default_yaml.replace('pywren-standalone', standalone_name)
+    if pythonver not in pywren.wrenconfig.default_runtime:
+        print('No matching runtime package for python version ', pythonver)
+        print('Python 2.7 runtime will be used for remote.')
+        pythonver = '2.7'
     k = pywren.wrenconfig.default_runtime[pythonver]
     default_yaml = default_yaml.replace("RUNTIME_KEY", k)
 
