@@ -46,13 +46,13 @@ except Exception as e:
     # fails
 
     try:
-        with  open(out_filename, 'wb'), -1) as fid:
+        with  open(out_filename, 'wb') as fid:
             pickle.dump({'result' : e, 
                          'exc_type' : exc_type, 
                          'exc_value' : exc_value, 
                          'exc_traceback' : exc_traceback, 
                          'sys.path' : sys.path, 
-                         'success' : False}, fid)
+                         'success' : False}, fid, -1)
 
         # this is just to make sure they can be unpickled
         pickle.load(open(out_filename, 'rb'))
