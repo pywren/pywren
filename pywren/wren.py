@@ -556,28 +556,34 @@ class ResponseFuture(object):
 
         self._call_invoker_result = call_invoker_result
 
+        self.run_status = call_status # this is the remote status information
+        self.invoke_status = self._invoke_metadata # local status information
+
+
         if call_success:
 
             self._return_val = call_invoker_result['result']
             self._state = JobState.success
-        else:
+            return self._return_val
+        
+        elif throw_except:
+            
             self._exception = call_invoker_result['result']
             self._traceback = (call_invoker_result['exc_type'], 
                                call_invoker_result['exc_value'], 
                                call_invoker_result['exc_traceback'])
 
             self._state = JobState.error
+            if call_invoker_result.get('pickle_fail', False):
+                logging.warning("there was an error pickling. The original exception: {}\n The pickling exception: {}".format(call_invoker_result['exc_value'], str(call_invoker_result['pickle_exception'])))
 
-
-
-        self.run_status = call_status # this is the remote status information
-        self.invoke_status = self._invoke_metadata # local status information
-
-        if call_success:
-            return self._return_val
-        elif call_success == False and throw_except:
-            reraise(*self._traceback)
-        return None
+                reraise(Exception, call_invoker_result['exc_value'], 
+                        call_invoker_result['exc_traceback'])
+            else:
+                # reraise the exception
+                reraise(*self._traceback)
+        else:
+            return None  # nothing, don't raise, no value
             
     def exception(self, timeout = None):
         raise NotImplementedError()

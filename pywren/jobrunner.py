@@ -38,11 +38,35 @@ try:
 except Exception as e:
     exc_type, exc_value, exc_traceback = sys.exc_info()
     traceback.print_tb(exc_traceback)
-    pickle.dump({'result' : e, 
-                 'exc_type' : exc_type, 
-                 'exc_value' : exc_value, 
-                 'exc_traceback' : exc_traceback, 
-                 'sys.path' : sys.path, 
-                 'success' : False}, 
-                open(out_filename, 'wb'), -1)
+
+    # Shockingly often, modules like subprocess don't properly 
+    # call the base Exception.__init__, which results in them 
+    # being unpickleable. As a result, we actually wrap this in a try/catch block
+    # and more-carefully handle the exceptions if any part of this save / test-reload
+    # fails
+
+    try:
+        with  open(out_filename, 'wb') as fid:
+            pickle.dump({'result' : e, 
+                         'exc_type' : exc_type, 
+                         'exc_value' : exc_value, 
+                         'exc_traceback' : exc_traceback, 
+                         'sys.path' : sys.path, 
+                         'success' : False}, fid, -1)
+
+        # this is just to make sure they can be unpickled
+        pickle.load(open(out_filename, 'rb'))
+
+    except Exception as pickle_exception:
+        pickle.dump({'result' : str(e), 
+                     'exc_type' : str(exc_type), 
+                     'exc_value' : str(exc_value), 
+                     'exc_traceback' : exc_traceback, 
+                     'exc_traceback_str' : str(exc_traceback), 
+                     'sys.path' : sys.path, 
+                     'pickle_fail' : True, 
+                     'pickle_exception' : pickle_exception, 
+                     'success' : False}, 
+                    open(out_filename, 'wb'), -1)
+        
     
