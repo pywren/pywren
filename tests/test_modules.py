@@ -90,7 +90,7 @@ class SerializeTest(unittest.TestCase):
         serializer = serialize.SerializeIndependent()
         func_and_data_ser, mod_paths = serializer([func] + data)
         for m in mod_paths:
-            print m
+            print(m)
 
         config =  pywren.wrenconfig.default()
 
@@ -99,5 +99,5 @@ class SerializeTest(unittest.TestCase):
         info = runtime.get_runtime_info(runtime_bucket, runtime_key)
         print(info.keys())
         for f in info['pkg_ver_list']:
-            print f[0]
+            print(f[0])
 
