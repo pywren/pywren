@@ -193,8 +193,8 @@ def generic_handler(event, context_dict):
 
         # now split
         d = json.load(open(func_filename, 'r'))
-        shutil.rmtree("/tmp/pymodules", True) # delete old modules
-        os.mkdir("/tmp/pymodules")
+        shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
+        os.mkdir(PYTHON_MODULE_PATH)
         # get modules and save
         for m_filename, m_text in d['module_data'].items():
             m_path = os.path.dirname(m_filename)
