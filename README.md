@@ -17,7 +17,7 @@ as necessary.
 ```python
 def foo(b):
     x = np.random.normal(0, b, 1024)
-    A = np.random.normal(0, b, (1024, 124))
+    A = np.random.normal(0, b, (1024, 1024))
     return np.dot(A, x)
 
 pwex = pywren.default_executor()
