@@ -68,7 +68,7 @@ http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/EC2NewInstanceCWL.html
 ## How to release with PyPi:
 I am mostly following http://peterdowns.com/posts/first-time-with-pypi.html . I had
 been using twine but it looks like, with the latest versions of python, 
-twine is unnessary. 
+twine is unnecessary. 
 
 Make sure you create a `~/.pypirc` file. 
 
@@ -114,7 +114,10 @@ The runtime is a tremendous challenge
 We use a release versioning scheme of 0.1rc0 for dev releases and 0.1
 for final releases.
 
-1. Tag the release, via magit you can do this via the tags popup. Push the tags to github via `P` `t` from the `magit status buffer`
+1. Tag the release. If you are an animal, you can do this via `git tag
+   v0.2` followed by `git push origin --tags` should work. Via magit
+   you can do this via the tags popup. Push the tags to github via `P`
+   `t` from the `magit status buffer`
 
 2. Make sure everything is passing on travis
 
