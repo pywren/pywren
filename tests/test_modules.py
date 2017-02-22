@@ -3,15 +3,9 @@ Test our ability to import other modules
 
 """
 
-import pytest
-import time
-import boto3 
-import uuid
 import numpy as np
-import time
 import pywren
 import subprocess
-import logging
 import unittest
 import numpy as np
 import extmodule
@@ -31,3 +25,25 @@ class SimpleAsync(unittest.TestCase):
 
         res = fut.result() 
         self.assertEqual(res, 2.0)
+
+    def test_utf8_module(self):
+        pass
+
+class DummyExecutorImport(unittest.TestCase):
+
+    def setUp(self):
+        self.wrenexec = pywren.dummy_executor()
+
+    def test_simple(self):
+
+        def sum_list(x):
+            print("running sumlist")
+            return np.sum(x)
+
+        x = np.arange(10)
+        fut = self.wrenexec.call_async(sum_list, x)
+        
+        self.wrenexec.invoker.run_jobs()
+
+        res = fut.result() 
+        self.assertEqual(res, np.sum(x))
