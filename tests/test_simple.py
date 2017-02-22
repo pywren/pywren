@@ -5,6 +5,7 @@ import uuid
 import numpy as np
 import time
 import pywren
+import pywren.runtime
 import subprocess
 import logging
 from six.moves import cPickle as pickle
@@ -211,3 +212,20 @@ class SerializeFutures(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x + 1)
 
+
+class ConfigErrors(unittest.TestCase):
+    def test_version_mismatch(self):
+
+        my_version_str = pywren.runtime.version_str(sys.version_info)
+        for supported_version in pywren.wrenconfig.default_runtime.keys():
+            if my_version_str != supported_version:
+                wrong_version = supported_version
+            
+                config = pywren.wrenconfig.default()
+                config['runtime']['s3_key'] = pywren.wrenconfig.default_runtime[wrong_version]
+                
+                    
+                with pytest.raises(Exception) as excinfo:
+                    pywren.lambda_executor(config)
+                assert 'python version' in str(excinfo.value)
+                        
