@@ -85,7 +85,7 @@ class SerializeTest(unittest.TestCase):
 
         def func(x):
             return x + 1
-        data = range(5)
+        data = list(range(5))
 
         serializer = serialize.SerializeIndependent()
         func_and_data_ser, mod_paths = serializer([func] + data)
