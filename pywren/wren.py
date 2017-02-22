@@ -565,9 +565,9 @@ class ResponseFuture(object):
             self._return_val = call_invoker_result['result']
             self._state = JobState.success
             return self._return_val
-
+        
         elif throw_except:
-
+            
             self._exception = call_invoker_result['result']
             self._traceback = (call_invoker_result['exc_type'], 
                                call_invoker_result['exc_value'], 
@@ -575,7 +575,7 @@ class ResponseFuture(object):
 
             self._state = JobState.error
             if call_invoker_result.get('pickle_fail', False):
-                logging.warning("there was an error pickling. The original exception: {}\n The pickling exception: {}".format(call_invoker_result['exc_value'], str(call_invoker_result['pickle_exception'])
+                logging.warning("there was an error pickling. The original exception: {}\n The pickling exception: {}".format(call_invoker_result['exc_value'], str(call_invoker_result['pickle_exception'])))
 
                 reraise(Exception, call_invoker_result['exc_value'], 
                         call_invoker_result['exc_traceback'])
