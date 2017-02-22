@@ -43,7 +43,7 @@ before_script:
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
   - echo CLEAN BUILD ID IS $BUILD_GUID
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID --pythonver=$TRAVIS_PYTHON_VERSION
+  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
   - pywren create_role
   - pywren create_instance_profile
   - pywren create_queue
