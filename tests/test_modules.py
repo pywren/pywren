@@ -28,7 +28,29 @@ class SimpleAsync(unittest.TestCase):
         self.assertEqual(res, 2.0)
 
     def test_utf8_module(self):
-        pass
+        def foo(x):
+            return extmoduleutf8.foo_add(x)
+
+        x = 1.0
+        fut = self.wrenexec.call_async(foo, x)
+        
+        self.wrenexec.invoker.run_jobs()
+
+        res = fut.result() 
+        self.assertEqual(res, 2.0)
+
+    def test_utf8_string(self):
+        def foo(x):
+            return extmoduleutf8.unicode_str(x)
+
+        x = 1.0
+        fut = self.wrenexec.call_async(foo, x)
+        
+        self.wrenexec.invoker.run_jobs()
+
+        res = fut.result() 
+        self.assertEqual(res, extmoduleutf8.TEST_STR)
+
 
 class DummyExecutorImport(unittest.TestCase):
 
@@ -39,7 +61,6 @@ class DummyExecutorImport(unittest.TestCase):
 
         def foo(x):
             return extmoduleutf8.foo_add(x)
-
 
         x = 1.0
         fut = self.wrenexec.call_async(foo, x)
