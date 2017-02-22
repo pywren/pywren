@@ -316,5 +316,6 @@ modules = [
 ('scipy', False), 
 ('sklearn', False), 
 ('cvxpy', False), 
-('cvxopt', False)
+('cvxopt', False),
+('future', False)
 ]
