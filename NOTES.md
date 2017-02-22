@@ -101,12 +101,4 @@ Since it seems like lambda nodes are recycled, we can download the runtime and t
 then write a sentinel should it complete successfully. 
 
 
-###
-0. Why is it called "lambda.pickle" [issue filed]
-1. Why the heck is future and so much crap like that being shuffled along to the remote? 
-2. Why are we encoding the modules in json instead of pickling them? 
-3. Why are we failing to decode  "/Users/jonas/anaconda/lib/python2.7/email/message.py" ?
-4. Why is it being sent in the first place? 
-5. Create a test where we serialize a python module that's in UTF-8 and extended ascii
-
 
