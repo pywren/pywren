@@ -43,6 +43,9 @@ class SimpleAsync(unittest.TestCase):
         self.assertEqual(res, np.sum(x))
 
     def test_exception(self):
+        """
+        Simple exception test
+        """
         def throwexcept(x):
             raise Exception("Throw me out!")
 
@@ -53,14 +56,6 @@ class SimpleAsync(unittest.TestCase):
             res = fut.result() 
         assert 'Throw me out!' in str(execinfo.value)
 
-
-    def test_subprocess(self):
-        def uname(x):
-            return subprocess.check_output("uname -a", shell=True)
-        
-        fut = self.wrenexec.call_async(uname, None)
-
-        res = fut.result() 
 
     def test_exception2(self):
         """
@@ -229,3 +224,4 @@ class ConfigErrors(unittest.TestCase):
                     pywren.lambda_executor(config)
                 assert 'python version' in str(excinfo.value)
                         
+
