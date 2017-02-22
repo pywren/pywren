@@ -9,6 +9,7 @@ import subprocess
 import unittest
 import numpy as np
 import extmodule
+import extmoduleutf8
 
 class SimpleAsync(unittest.TestCase):
 
@@ -36,14 +37,14 @@ class DummyExecutorImport(unittest.TestCase):
 
     def test_simple(self):
 
-        def sum_list(x):
-            print("running sumlist")
-            return np.sum(x)
+        def foo(x):
+            return extmoduleutf8.foo_add(x)
 
-        x = np.arange(10)
-        fut = self.wrenexec.call_async(sum_list, x)
+
+        x = 1.0
+        fut = self.wrenexec.call_async(foo, x)
         
         self.wrenexec.invoker.run_jobs()
 
         res = fut.result() 
-        self.assertEqual(res, np.sum(x))
+        self.assertEqual(res, 2.0)
