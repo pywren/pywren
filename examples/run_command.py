@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 def run_command(x):
-    subprocess.check_output(x, shell=True).decode('ascii')
+    return subprocess.check_output(x, shell=True).decode('ascii')
 
 if __name__ == "__main__":
     cmd = " ".join(sys.argv[1:])
