@@ -317,5 +317,10 @@ modules = [
 ('sklearn', False), 
 ('cvxpy', False), 
 ('cvxopt', False),
-('future', False)
+('future', False), 
+('six', False), 
+('glob2', False), 
+('tblib', False),
+('dill', False),
+('multiprocess', False),
 ]
