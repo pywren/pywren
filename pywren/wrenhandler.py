@@ -212,8 +212,8 @@ def generic_handler(event, context_dict):
                     raise e
             full_filename = os.path.join(to_make, os.path.basename(m_filename))
             #print "creating", full_filename
-            fid = open(full_filename, 'w')
-            fid.write(m_text)
+            fid = open(full_filename, 'wb')
+            fid.write(m_text.encode('utf-8'))
             fid.close()
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
         logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
