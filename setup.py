@@ -12,10 +12,12 @@ exec(open('pywren/version.py').read())
 setup(
     name='pywren',
     version=__version__,
-    url='https://github.com/ericmjonas/github',
+    url='https://github.com/ericmjonas/pywren',
     author='Eric Jonas',
+    description='Run many jobs transparently on AWS Lambda and other cloud services',
+    long_description="PyWren lets you transparently run your python functions on AWS cloud services, including AWS Lambda and AWS EC2.", 
     author_email='jonas@ericjonas.com',
-    packages=['pywren', 'pywren.scripts', 'pywren.cloudpickle'],
+    packages=find_packages(),
     install_requires=[
         'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 
         'enum34', 'flaky', 'glob2', 'multiprocess', 

@@ -66,10 +66,23 @@ http://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/EC2NewInstanceCWL.html
 
 
 ## How to release with PyPi:
+I am mostly following http://peterdowns.com/posts/first-time-with-pypi.html . I had
+been using twine but it looks like, with the latest versions of python, 
+twine is unnecessary. 
+
+Make sure you create a `~/.pypirc` file. 
+
+First register
 ```
-python setup.py bdist_wheel
-twine register dist/
+python setup.py register -r pypitest
 ```
+
+Test on pypi-test
+```
+python setup.py sdist upload -r pypitest
+```
+
+
 
 note that travis has support for auto-releasing this, which we should investigate
 
@@ -95,3 +108,50 @@ pip install -e pywren
 
 ## The runtime
 The runtime is a tremendous challenge
+
+## How to release:
+
+We use a release versioning scheme of 0.1rc0 for dev releases and 0.1
+for final releases.
+
+1. Tag the release. If you are an animal, you can do this via `git tag
+   v0.2` followed by `git push origin --tags` should work. Via magit
+   you can do this via the tags popup. Push the tags to github via `P`
+   `t` from the `magit status buffer`
+
+2. Make sure everything is passing on travis
+
+3. push to pypitest
+First make sure you are setup
+```
+python setup.py register -r pypitest
+```
+
+```
+python setup.py sdist upload -r pypitest
+```
+4. Test the pypitest build by updating the tag `pypitest-build` to the current build
+
+5. Kickoff the travis build for this version by deleting and reupdating the tag. I know
+this is a bit of a hack, but it works. 
+
+```
+# delete the remote tag
+git push -f origin :refs/tags/pypitest-build
+# delete local 
+git tag -d pypitest-build
+# create tag
+git tag pypitest-build
+# push
+git push origin --tags
+```
+
+4. Create a github release via the gui
+
+5. push to pypi
+
+```
+python setup.py register -r pypi
+python setup.py sdist upload -r pypi
+```
+

@@ -1,2 +1,6 @@
 include README.md
-include default_config.yaml
+include pywren/default_config.yaml
+include pywren/ec2_standalone_files/ec2standalone.cloudinit.template
+include pywren/ec2_standalone_files/supervisord.conf
+include pywren/ec2_standalone_files/supervisord.init
+include pywren/ec2_standalone_files/cloudwatch-agent.config
