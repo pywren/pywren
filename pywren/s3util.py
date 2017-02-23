@@ -24,7 +24,7 @@ def create_keys(bucket, prefix, callset_id, call_id):
     return data_key, output_key, status_key
 
 def create_func_key(bucket, prefix, callset_id):
-    func_key = (bucket, os.path.join(prefix, callset_id, "lambda.pickle"))
+    func_key = (bucket, os.path.join(prefix, callset_id, "func.json"))
     return func_key
 
 def create_agg_data_key(bucket, prefix, callset_id):

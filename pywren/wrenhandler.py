@@ -66,7 +66,10 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
-        if os.path.exists(CONDA_RUNTIME_DIR):
+        if os.path.exists(CONDA_RUNTIME_DIR) :
+            if not os.path.islink(CONDA_RUNTIME_DIR):
+                raise Exception("{} is not a symbolic link, your runtime config is broken".format(CONDA_RUNTIME_DIR))
+
             existing_link = os.readlink(CONDA_RUNTIME_DIR)
             if existing_link == expected_target:
                 logger.debug("found existing {}, not re-downloading".format(ETag))
@@ -190,8 +193,8 @@ def generic_handler(event, context_dict):
 
         # now split
         d = json.load(open(func_filename, 'r'))
-        shutil.rmtree("/tmp/pymodules", True) # delete old modules
-        os.mkdir("/tmp/pymodules")
+        shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
+        os.mkdir(PYTHON_MODULE_PATH)
         # get modules and save
         for m_filename, m_text in d['module_data'].items():
             m_path = os.path.dirname(m_filename)
@@ -209,14 +212,16 @@ def generic_handler(event, context_dict):
                     raise e
             full_filename = os.path.join(to_make, os.path.basename(m_filename))
             #print "creating", full_filename
-            fid = open(full_filename, 'w')
-            fid.write(m_text)
+            fid = open(full_filename, 'wb')
+            fid.write(m_text.encode('utf-8'))
             fid.close()
+        logger.info("Finished writing {} module files".format(len(d['module_data'])))
         logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
         logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
-
+        
         runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket, 
                                                        runtime_s3_key)
+        logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
 
         cwd = os.getcwd()

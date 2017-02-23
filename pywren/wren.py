@@ -116,8 +116,8 @@ class Executor(object):
                 files = [m]
             for f in files:
                 dest_filename = f[len(pkg_root)+1:]
-
-                module_data[f[len(pkg_root)+1:]] = open(f, 'r').read()
+                mod_str = open(f, 'rb').read()
+                module_data[f[len(pkg_root)+1:]] = mod_str.decode('utf-8')
 
         return module_data
 
