@@ -111,5 +111,3 @@ via
 ```
 pywren log_url
 ```
-
-
