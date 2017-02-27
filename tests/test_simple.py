@@ -224,8 +224,6 @@ class ConfigErrors(unittest.TestCase):
                     pywren.lambda_executor(config)
                 assert 'python version' in str(excinfo.value)
 
-# skipping those tests in CI because of stability concerns
-@pytest.mark.skip                    
 class WaitTest(unittest.TestCase):
     # FIXME: for stability, we should proabbly use the local dummy executor,
     # but currently the dummy invoker impl does not support wait()
@@ -247,6 +245,7 @@ class WaitTest(unittest.TestCase):
         res =np.array([f.result() for f in fs_dones])
         np.testing.assert_array_equal(res, x+1)
 
+    @flaky(max_runs=3)
     def test_any_complete(self):
         def wait_10x_sec_and_plus_one(x):
             time.sleep(10*x)
