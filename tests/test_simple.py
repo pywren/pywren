@@ -126,6 +126,17 @@ class SimpleMap(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x + 1)
 
+    def test_get_all_results(self):
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures = self.wrenexec.map(plus_one, x)
+
+        res = np.array(pywren.get_all_results(futures))
+        np.testing.assert_array_equal(res, x + 1)
+
 class SimpleReduce(unittest.TestCase):
 
     def setUp(self):
@@ -261,3 +272,4 @@ class WaitTest(unittest.TestCase):
             self.assertTrue(len(fs_dones) > 0)
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x+1)
+
