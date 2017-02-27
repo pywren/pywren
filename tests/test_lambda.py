@@ -39,3 +39,14 @@ class Timeout(unittest.TestCase):
         with pytest.raises(Exception) as execinfo:
             res = fut.result() 
             
+    @lamb
+    def test_we_dont_raise(self):
+
+        def take_forever():
+            time.sleep(45)
+            return True
+
+        fut = self.wrenexec.call_async(take_forever, None)
+        res = fut.result(throw_except=False)
+
+            

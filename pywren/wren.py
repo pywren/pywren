@@ -525,6 +525,9 @@ class ResponseFuture(object):
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
+
+        self.run_status = call_status # this is the remote status information
+        self.invoke_status = self._invoke_metadata # local status information
             
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
@@ -532,11 +535,17 @@ class ResponseFuture(object):
             print(call_status.keys())
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
-                raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                if throw_except:
+                    raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                return None
             elif exception_args[0] == "OUTATIME":
-                raise Exception("process ran out of time")
+                if throw_except:
+                    raise Exception("process ran out of time")
+                return None
             else:
-                raise Exception(exception_str, *exception_args)
+                if throw_except:
+                    raise Exception(exception_str, *exception_args)
+                return None
         
         call_output_time = time.time()
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
@@ -556,8 +565,6 @@ class ResponseFuture(object):
 
         self._call_invoker_result = call_invoker_result
 
-        self.run_status = call_status # this is the remote status information
-        self.invoke_status = self._invoke_metadata # local status information
 
 
         if call_success:
