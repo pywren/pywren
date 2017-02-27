@@ -244,7 +244,7 @@ def generic_handler(event, context_dict):
                                          output_filename)
 
         setup_time = time.time()
-
+        response_status['setup_time'] = setup_time - start_time
 
         local_env = os.environ.copy()
 
@@ -296,7 +296,7 @@ def generic_handler(event, context_dict):
 
         response_status['stdout'] = stdout.decode("ascii")
 
-        response_status['setup_time'] = setup_time - start_time
+
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
 
