@@ -700,3 +700,15 @@ def _wait(fs, THREADPOOL_SIZE):
     
 def log_test():
     logger.info("logging from pywren.wren")
+
+
+def get_all_results(fs):
+    """
+    Take in a list of futures and block until they are repeated, 
+    call result on each one individually, and return those
+    results. 
+    
+    Will throw an exception if any future threw an exception
+    """
+    wait(fs, return_when=ALL_COMPLETED)
+    return [f.result() for f in fs]

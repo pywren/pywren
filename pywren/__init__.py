@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from pywren.wren import default_executor, wait, lambda_executor, dummy_executor, remote_executor
+from pywren.wren import default_executor, wait, lambda_executor, dummy_executor, remote_executor, get_all_results
 from pywren import wrenlogging
 from pywren.version import __version__
 import logging
