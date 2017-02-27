@@ -174,8 +174,10 @@ def generic_handler(event, context_dict):
         # get the input and save to disk 
         # FIXME here is we where we would attach the "canceled" metadata
         s3.meta.client.download_file(func_key[0], func_key[1], func_filename)
-        func_download_time = time.time()
-        logger.info("func download complete")
+        func_download_time = time.time() - start_time
+        response_status['func_download_time'] = func_download_time
+
+        logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
 
         if data_byte_range is None:
             s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
@@ -187,9 +189,9 @@ def generic_handler(event, context_dict):
             data_fid.write(dres['Body'].read())
             data_fid.close()
 
-        input_download_time = time.time()
-
-        logger.info("input data download complete")
+        data_download_time = time.time() - start_time
+        logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
+        response_status['data_download_time'] = data_download_time
 
         # now split
         d = json.load(open(func_filename, 'r'))
@@ -223,6 +225,7 @@ def generic_handler(event, context_dict):
                                                        runtime_s3_key)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
+        
 
         cwd = os.getcwd()
         jobrunner_path = os.path.join(cwd, "jobrunner.py")
