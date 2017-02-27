@@ -633,7 +633,14 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
                 time.sleep(WAIT_DUR_SEC)
 
     elif return_when == ANY_COMPLETED:
-        raise NotImplementedError()
+        while True:
+            fs_dones, fs_notdones = _wait(fs, THREADPOOL_SIZE)
+
+            if len(fs_dones) != 0:
+                return fs_dones, fs_notdones
+            else:
+                time.sleep(WAIT_DUR_SEC)
+
     elif return_when == ALWAYS:
         return _wait(fs, THREADPOOL_SIZE)
     else:

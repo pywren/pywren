@@ -223,5 +223,41 @@ class ConfigErrors(unittest.TestCase):
                 with pytest.raises(Exception) as excinfo:
                     pywren.lambda_executor(config)
                 assert 'python version' in str(excinfo.value)
-                        
 
+class WaitTest(unittest.TestCase):
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_all_complete(self):
+        def wait_x_sec_and_plus_one(x):
+            time.sleep(x)
+            return x + 1
+
+        N = 10
+        x = np.arange(N)
+
+        futures = pywren.default_executor().map(wait_x_sec_and_plus_one, x)
+
+        fs_dones, fs_notdones = pywren.wait(futures,
+                                        return_when=pywren.wren.ALL_COMPLETED)
+        res = np.array([f.result() for f in fs_dones])
+        np.testing.assert_array_equal(res, x+1)
+
+    def test_any_complete(self):
+        def wait_x_sec_and_plus_one(x):
+            time.sleep(x)
+            return x + 1
+
+        N = 10
+        x = np.arange(N)
+
+        futures = pywren.default_executor().map(wait_x_sec_and_plus_one, x)
+
+        fs_notdones = futures
+        while (len(fs_notdones) > 0):
+            fs_dones, fs_notdones = pywren.wait(fs_notdones,
+                                            return_when=pywren.wren.ANY_COMPLETED,
+                                            WAIT_DUR_SEC=1)
+            self.assertTrue(len(fs_dones) > 0)
+        res = np.array([f.result() for f in futures])
+        np.testing.assert_array_equal(res, x+1)
