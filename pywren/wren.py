@@ -501,7 +501,10 @@ class ResponseFuture(object):
             return self._return_val
             
         if self._state == JobState.error:
-            raise self._exception
+            if throw_except:
+                raise self._exception
+            else:
+                return None
 
         
         call_status = get_call_status(self.callset_id, self.call_id, 
