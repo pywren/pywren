@@ -126,3 +126,6 @@ def hash_s3_key(s):
     DIGEST_LEN = 6
     digest = md5.md5(s).hexdigest()
     return "{}-{}".format(digest[:DIGEST_LEN], s)
+
+def get_s3_shard(key, shard_num):
+    return "{}.{:04d}".format(key, shard_num)
