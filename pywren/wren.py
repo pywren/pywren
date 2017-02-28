@@ -45,7 +45,7 @@ def default_executor(**kwargs):
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)
     return lambda_executor(**kwargs)
-        
+
 def lambda_executor(config= None, job_max_runtime=280):
 
     if config is None:
@@ -335,7 +335,35 @@ class Executor(object):
         # note these are just the invocation futures
 
         return res
-    
+
+    def map_sync_with_rate(self, func, iterdata, rate = 100, extra_env = None, extra_meta = None,
+                invoke_pool_threads=64, data_all_as_one=True,
+                use_cached_runtime=True, overwrite_invoke_args = None):
+        assert rate > 0
+
+        iterdata_left = iterdata
+        num_available_workers = rate
+        fs_notdones = []
+        res = []
+        while len(iterdata_left) > 0:
+            if num_available_workers > 0:
+                num_calls_to_invoke = min(num_available_workers, len(iterdata_left))
+                # invoke according to the order
+                invoked = self.map(func, [iterdata_left[:num_calls_to_invoke]], extra_env,
+                              extra_meta, invoke_pool_threads, data_all_as_one, use_cached_runtime,
+                              overwrite_invoke_args)
+                res += invoked
+                fs_notdones += invoked
+                iterdata_left = iterdata_left[num_calls_to_invoke:]
+                num_available_workers -= num_calls_to_invoke
+            else:
+                fs_dones, fs_notdones = wait(fs_notdones, return_when=ANY_COMPLETED)
+                num_available_workers += len(fs_dones)
+        # finally wait until all work finish
+        wait(fs_notdones, return_when=ALL_COMPLETED)
+
+        return res
+
     def reduce(self, function, list_of_futures, 
                extra_env = None, extra_meta = None):
         """
