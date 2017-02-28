@@ -110,6 +110,20 @@ class SimpleMap(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x + 1)
 
+    def test_map_with_rate(self):
+
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures = self.wrenexec.map_sync_with_rate(plus_one, x, rate=2)
+
+        [self.assertTrue(f.done()) for f in futures]
+        
+        res = np.array([f.result() for f in futures])
+        np.testing.assert_array_equal(res, x + 1)
+
     def test_map_doublewait(self):
         """
         Make sure we can call wait on a list of futures twice

@@ -45,7 +45,7 @@ def default_executor(**kwargs):
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)
     return lambda_executor(**kwargs)
-        
+
 def lambda_executor(config= None, job_max_runtime=280):
 
     if config is None:
@@ -211,7 +211,8 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env = None, extra_meta = None, 
             invoke_pool_threads=64, data_all_as_one=True, 
-            use_cached_runtime=True, overwrite_invoke_args = None):
+            use_cached_runtime=True, overwrite_invoke_args = None,
+            callset_id = s3util.create_callset_id(), custom_ids = []):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -225,7 +226,6 @@ class Executor(object):
         host_job_meta = {}
 
         pool = ThreadPool(invoke_pool_threads)
-        callset_id = s3util.create_callset_id()
         data = list(iterdata)
 
         ### pickle func and all data (to capture module dependencies
@@ -309,7 +309,10 @@ class Executor(object):
         N = len(data)
         call_result_objs = []
         for i in range(N):
-            call_id = "{:05d}".format(i)
+            if i < len(custom_ids):
+                call_id = "{:05d}".format(custom_ids[i])
+            else:
+                call_id = "{:05d}".format(i)
 
             data_byte_range = None
             if s3_agg_data_key is not None:
@@ -335,7 +338,40 @@ class Executor(object):
         # note these are just the invocation futures
 
         return res
-    
+
+    def map_sync_with_rate(self, func, iterdata, rate = 100, extra_env = None, extra_meta = None,
+                invoke_pool_threads=64, data_all_as_one=True,
+                use_cached_runtime=True, overwrite_invoke_args = None):
+        assert rate > 0
+
+        callset_id = s3util.create_callset_id()
+        iterdata_left = iterdata
+        num_available_workers = rate
+        fs_notdones = []
+        res = []
+
+        while len(iterdata_left) > 0:
+            # invoking more calls
+            if num_available_workers > 0:
+                num_calls_to_invoke = min(num_available_workers, len(iterdata_left))
+                # invoke according to the order
+                custom_ids = range(len(res), (len(res) + num_calls_to_invoke))
+                invoked = self.map(func, list(iterdata_left[:num_calls_to_invoke]), extra_env,
+                              extra_meta, invoke_pool_threads, data_all_as_one, use_cached_runtime,
+                              overwrite_invoke_args, callset_id=callset_id, custom_ids=custom_ids)
+                res += invoked
+                fs_notdones += invoked
+                iterdata_left = iterdata_left[num_calls_to_invoke:]
+                num_available_workers -= num_calls_to_invoke
+            # wait for available slots
+            else:
+                fs_dones, fs_notdones = wait(fs_notdones, return_when=ANY_COMPLETED)
+                num_available_workers += len(fs_dones)
+
+        # finally wait until all work finish
+        wait(fs_notdones, return_when=ALL_COMPLETED)
+        return res
+
     def reduce(self, function, list_of_futures, 
                extra_env = None, extra_meta = None):
         """
@@ -666,7 +702,7 @@ def _wait(fs, THREADPOOL_SIZE):
 
     # get the list of all objects in this callset
     callset_id = present_callsets.pop() # FIXME assume only one
-    f0 = not_done_futures[0] # This is a hack too 
+    f0 = not_done_futures[0] # This is a hack too
 
     callids_done = s3util.get_callset_done(f0.s3_bucket, 
                                            f0.s3_prefix,
