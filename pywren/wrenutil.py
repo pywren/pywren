@@ -125,7 +125,7 @@ def hash_s3_key(s):
     """
     DIGEST_LEN = 6
     m = hashlib.md5()
-    m.update(s)
+    m.update(s.encode('ascii'))
     digest = m.hexdigest()
     return "{}-{}".format(digest[:DIGEST_LEN], s)
 
