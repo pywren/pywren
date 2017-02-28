@@ -3,6 +3,7 @@ import os
 import shutil
 import base64
 import glob
+import md5
 
 def uuid_str():
     return str(uuid.uuid4())
@@ -107,3 +108,21 @@ def b64str_to_bytes(str_data):
     byte_data= base64.b64decode(str_ascii)
     return byte_data
 
+def split_s3_url(s3_url):
+    if s3_url[:5] != "s3://":
+        raise ValueError("URL {} is not valid".format(s3_url))
+    
+    
+    splits = s3_url[5:].split("/")
+    bucket_name = splits[0]
+    key = "/".join(splits[1:])
+    return bucket_name, key
+
+def hash_s3_key(s):
+    """
+    MD5-hash the contents of an S3 key to enable good partitioning. 
+    used for sharding the runtimes
+    """
+    DIGEST_LEN = 6
+    digest = md5.md5(s).hexdigest()
+    return "{}-{}".format(digest[:DIGEST_LEN], s)
