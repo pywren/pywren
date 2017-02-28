@@ -19,8 +19,7 @@ class S3HashingTest(unittest.TestCase):
             
     def test_hash(self):
         
-        key = b'testkey'
+        key = 'testkey'.encode('ascii')
         hashed_key = pywren.wrenutil.hash_s3_key(key)
-        
         self.assertEqual(hashed_key[-len(key):], key)
         self.assertNotEqual(hashed_key, key)
