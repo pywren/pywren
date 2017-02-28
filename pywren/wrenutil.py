@@ -3,7 +3,7 @@ import os
 import shutil
 import base64
 import glob
-import md5
+import hashlib
 
 def uuid_str():
     return str(uuid.uuid4())
@@ -124,7 +124,9 @@ def hash_s3_key(s):
     used for sharding the runtimes
     """
     DIGEST_LEN = 6
-    digest = md5.md5(s).hexdigest()
+    m = hashlib.md5()
+    m.update(s)
+    digest = m.hexdigest()
     return "{}-{}".format(digest[:DIGEST_LEN], s)
 
 def get_s3_shard(key, shard_num):
