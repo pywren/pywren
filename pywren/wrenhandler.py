@@ -12,17 +12,20 @@ import shutil
 import sys
 from threading import Thread
 import signal
+import random
 
 if (sys.version_info > (3, 0)):
     from . import wrenutil
     from . import s3util
     from . import version
+    from . import wrenconfig
     from queue import Queue, Empty
 
 else:
     import wrenutil
     import s3util
     import version
+    import wrenconfig
     from Queue import Queue, Empty
 
 
@@ -151,6 +154,14 @@ def generic_handler(event, context_dict):
 
         runtime_s3_bucket = event['runtime_s3_bucket']
         runtime_s3_key = event['runtime_s3_key']
+        if event.get('shard_runtime_key', False):
+            random.seed()
+            shard = random.randrange(wrenconfig.MAX_S3_RUNTIME_SHARDS)
+            key_shard = wrenutil.get_s3_shard(runtime_s3_key, shard)
+            runtime_s3_key_used = wrenutil.hash_s3_key(key_shard)
+        else:
+            runtime_s3_key_used = runtime_s3_key
+
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
         response_status['func_key'] = func_key
@@ -174,8 +185,10 @@ def generic_handler(event, context_dict):
         # get the input and save to disk 
         # FIXME here is we where we would attach the "canceled" metadata
         s3.meta.client.download_file(func_key[0], func_key[1], func_filename)
-        func_download_time = time.time()
-        logger.info("func download complete")
+        func_download_time = time.time() - start_time
+        response_status['func_download_time'] = func_download_time
+
+        logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
 
         if data_byte_range is None:
             s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
@@ -187,9 +200,9 @@ def generic_handler(event, context_dict):
             data_fid.write(dres['Body'].read())
             data_fid.close()
 
-        input_download_time = time.time()
-
-        logger.info("input data download complete")
+        data_download_time = time.time() - start_time
+        logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
+        response_status['data_download_time'] = data_download_time
 
         # now split
         d = json.load(open(func_filename, 'r'))
@@ -218,9 +231,11 @@ def generic_handler(event, context_dict):
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
         logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
         logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+
+        response_status['runtime_s3_key_used'] = runtime_s3_key_used
         
         runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket, 
-                                                       runtime_s3_key)
+                                                       runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
 
@@ -244,7 +259,7 @@ def generic_handler(event, context_dict):
                                          output_filename)
 
         setup_time = time.time()
-
+        response_status['setup_time'] = setup_time - start_time
 
         local_env = os.environ.copy()
 
@@ -296,7 +311,7 @@ def generic_handler(event, context_dict):
 
         response_status['stdout'] = stdout.decode("ascii")
 
-        response_status['setup_time'] = setup_time - start_time
+
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
 

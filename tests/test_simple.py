@@ -273,3 +273,36 @@ class WaitTest(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x+1)
 
+
+class RuntimeSharding(unittest.TestCase):
+    """
+    The purpose of runtime sharding is to increase simultaneous
+    throughput for reading the runtimes, thus it's
+    hard to test in a unit test case. But we can test
+    that the metadata propagates properly and we actually
+    download the real key
+    """
+    def test_no_shard(self):
+        wrenexec = pywren.default_executor(shard_runtime=False)
+
+        def test_func(x):
+            return x + 1
+
+        future = wrenexec.call_async(test_func, 7)
+        result = future.result()
+        base_runtime_key = wrenexec.config['runtime']['s3_key']
+        self.assertEqual(future.run_status['runtime_s3_key_used'], 
+                         base_runtime_key)
+
+    def test_shard(self):
+        wrenexec = pywren.default_executor(shard_runtime=True)
+
+        def test_func(x):
+            return x + 1
+
+        base_runtime_key = wrenexec.config['runtime']['s3_key']
+
+        future = wrenexec.call_async(test_func, 7)
+        result = future.result()
+        self.assertNotEqual(future.run_status['runtime_s3_key_used'], 
+                         base_runtime_key)

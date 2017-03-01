@@ -46,7 +46,7 @@ def default_executor(**kwargs):
         return dummy_executor(**kwargs)
     return lambda_executor(**kwargs)
         
-def lambda_executor(config= None, job_max_runtime=280):
+def lambda_executor(config= None, job_max_runtime=280, shard_runtime=False):
 
     if config is None:
         config = wrenconfig.default()
@@ -58,18 +58,19 @@ def lambda_executor(config= None, job_max_runtime=280):
     
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
-                    job_max_runtime)
+                    job_max_runtime, shard_runtime=shard_runtime)
 
-def dummy_executor():
+def dummy_executor(shard_runtime=False):
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
-                    100)
+                    100, shard_runtime=shard_runtime)
     
-def remote_executor(config= None, job_max_runtime=3600):
+def remote_executor(config= None, job_max_runtime=3600, 
+                    shard_runtime=False):
     if config is None:
         config = wrenconfig.default()
 
@@ -79,7 +80,7 @@ def remote_executor(config= None, job_max_runtime=3600):
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
-                    job_max_runtime)
+                    job_max_runtime, shard_runtime=shard_runtime)
     
 class Executor(object):
     """
@@ -87,7 +88,7 @@ class Executor(object):
     """
 
     def __init__(self, aws_region, s3_bucket, s3_prefix, 
-                 invoker, config, job_max_runtime):
+                 invoker, config, job_max_runtime, shard_runtime=False):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
@@ -97,7 +98,8 @@ class Executor(object):
         self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         self.job_max_runtime = job_max_runtime
-        
+        self.shard_runtime = shard_runtime
+
         runtime_bucket = config['runtime']['s3_bucket']
         runtime_key =  config['runtime']['s3_key']
         if not runtime.runtime_key_valid(runtime_bucket, runtime_key):
@@ -151,7 +153,8 @@ class Executor(object):
                     'use_cached_runtime' : use_cached_runtime, 
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'], 
                     'runtime_s3_key' : self.config['runtime']['s3_key'], 
-                    'pywren_version' : version.__version__}    
+                    'pywren_version' : version.__version__, 
+                    'shard_runtime_key' : self.shard_runtime}    
         
         if extra_env is not None:
             logger.debug("Extra environment vars {}".format(extra_env))
@@ -498,7 +501,10 @@ class ResponseFuture(object):
             return self._return_val
             
         if self._state == JobState.error:
-            raise self._exception
+            if throw_except:
+                raise self._exception
+            else:
+                return None
 
         
         call_status = get_call_status(self.callset_id, self.call_id, 
@@ -525,6 +531,9 @@ class ResponseFuture(object):
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
+
+        self.run_status = call_status # this is the remote status information
+        self.invoke_status = self._invoke_metadata # local status information
             
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
@@ -532,11 +541,17 @@ class ResponseFuture(object):
             print(call_status.keys())
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
-                raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                if throw_except:
+                    raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                return None
             elif exception_args[0] == "OUTATIME":
-                raise Exception("process ran out of time")
+                if throw_except:
+                    raise Exception("process ran out of time")
+                return None
             else:
-                raise Exception(exception_str, *exception_args)
+                if throw_except:
+                    raise Exception(exception_str, *exception_args)
+                return None
         
         call_output_time = time.time()
         call_invoker_result = get_call_output(self.callset_id, self.call_id, 
@@ -556,8 +571,6 @@ class ResponseFuture(object):
 
         self._call_invoker_result = call_invoker_result
 
-        self.run_status = call_status # this is the remote status information
-        self.invoke_status = self._invoke_metadata # local status information
 
 
         if call_success:

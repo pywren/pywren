@@ -21,6 +21,7 @@ FUNCTION_NAME = "pywren1"
 
 MAX_AGG_DATA_SIZE = 4e6
 
+MAX_S3_RUNTIME_SHARDS=50
 default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz", 
                    '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz", 
                    '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
