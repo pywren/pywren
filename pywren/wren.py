@@ -209,85 +209,81 @@ class Executor(object):
             pos += l
         return b"".join(data_strs), ranges
 
-    def map(self, func, iterdata, extra_env = None, extra_meta = None, 
-            invoke_pool_threads=64, data_all_as_one=True, 
-            use_cached_runtime=True, overwrite_invoke_args = None,
-            callset_id = s3util.create_callset_id(), custom_ids = []):
-        """
-        # FIXME work with an actual iterable instead of just a list
-
-        data_all_as_one : upload the data as a single s3 object; fewer
-        tcp transactions (good) but potentially higher latency for workers (bad)
-
-        use_cached_runtime : if runtime has been cached, use that. When set
-        to False, redownloads runtime.
-        """
-
+    def prepare(self, func, iterdata, data_all_as_one=True):
         host_job_meta = {}
 
-        pool = ThreadPool(invoke_pool_threads)
         data = list(iterdata)
 
         ### pickle func and all data (to capture module dependencies
         serializer = serialize.SerializeIndependent()
         func_and_data_ser, mod_paths = serializer([func] + data)
-        
+
+        callset_id = s3util.create_callset_id()
+
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
         data_size_bytes = sum(len(x) for x in data_strs)
         s3_agg_data_key = None
         host_job_meta['aggregated_data_in_s3'] = False
         host_job_meta['data_size_bytes'] =  data_size_bytes
-        
+
         if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE and data_all_as_one:
-            s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket, 
-                                                      self.s3_prefix, callset_id)
+            s3_agg_data_key = s3util.create_agg_data_key(self.s3_bucket,
+                                                         self.s3_prefix, callset_id)
             agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
             agg_upload_time = time.time()
-            self.s3client.put_object(Bucket = s3_agg_data_key[0], 
-                                     Key = s3_agg_data_key[1], 
+            self.s3client.put_object(Bucket = s3_agg_data_key[0],
+                                     Key = s3_agg_data_key[1],
                                      Body = agg_data_bytes)
             host_job_meta['agg_data_in_s3'] = True
             host_job_meta['data_upload_time'] = time.time() - agg_upload_time
             host_job_meta['data_upload_timestamp'] = time.time()
         else:
-            # FIXME add warning that you wanted data all as one but 
-            # it exceeded max data size 
+            # FIXME add warning that you wanted data all as one but
+            # it exceeded max data size
             pass
-            
+
 
         module_data = self.create_mod_data(mod_paths)
         func_str_encoded = wrenutil.bytes_to_b64str(func_str)
-        #debug_foo = {'func' : func_str_encoded, 
+        #debug_foo = {'func' : func_str_encoded,
         #             'module_data' : module_data}
 
         #pickle.dump(debug_foo, open("/tmp/py35.debug.pickle", 'wb'))
-        ### Create func and upload 
-        func_module_str = json.dumps({'func' : func_str_encoded, 
+        ### Create func and upload
+        func_module_str = json.dumps({'func' : func_str_encoded,
                                       'module_data' : module_data})
         host_job_meta['func_module_str_len'] = len(func_module_str)
 
         func_upload_time = time.time()
-        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix, 
+        s3_func_key = s3util.create_func_key(self.s3_bucket, self.s3_prefix,
                                              callset_id)
-        self.s3client.put_object(Bucket = s3_func_key[0], 
-                                 Key = s3_func_key[1], 
+        self.s3client.put_object(Bucket = s3_func_key[0],
+                                 Key = s3_func_key[1],
                                  Body = func_module_str)
         host_job_meta['func_upload_time'] = time.time() - func_upload_time
         host_job_meta['func_upload_timestamp'] = time.time()
-        def invoke(data_str, callset_id, call_id, s3_func_key, 
-                   host_job_meta, 
+
+        return callset_id, s3_agg_data_key, s3_func_key, data_strs, host_job_meta, agg_data_ranges
+
+
+    def invoke_calls(self, callset_id, call_indices, s3_agg_data_key, s3_func_key, data_strs,
+                     host_job_meta, agg_data_ranges, extra_env = None, extra_meta = None,
+                     invoke_pool_threads=64, use_cached_runtime=True, overwrite_invoke_args = None):
+
+        def invoke(data_str, callset_id, call_id, s3_func_key,
+                   host_job_meta,
                    s3_agg_data_key = None, data_byte_range=None ):
             s3_data_key, s3_output_key, s3_status_key \
                 = s3util.create_keys(self.s3_bucket,
-                                     self.s3_prefix, 
+                                     self.s3_prefix,
                                      callset_id, call_id)
 
             host_job_meta['job_invoke_timestamp'] = time.time()
 
             if s3_agg_data_key is None:
                 data_upload_time = time.time()
-                self.put_data(s3_data_key, data_str, 
+                self.put_data(s3_data_key, data_str,
                               callset_id, call_id)
                 data_upload_time = time.time() - data_upload_time
                 host_job_meta['data_upload_time'] = data_upload_time
@@ -297,47 +293,66 @@ class Executor(object):
             else:
                 data_key = s3_agg_data_key
 
-            return self.invoke_with_keys(s3_func_key, data_key, 
-                                         s3_output_key, 
-                                         s3_status_key, 
-                                         callset_id, call_id, extra_env, 
-                                         extra_meta, data_byte_range, 
-                                         use_cached_runtime, host_job_meta.copy(), 
-                                         self.job_max_runtime, 
+            return self.invoke_with_keys(s3_func_key, data_key,
+                                         s3_output_key,
+                                         s3_status_key,
+                                         callset_id, call_id, extra_env,
+                                         extra_meta, data_byte_range,
+                                         use_cached_runtime, host_job_meta.copy(),
+                                         self.job_max_runtime,
                                          overwrite_invoke_args = overwrite_invoke_args)
 
-        N = len(data)
+        pool = ThreadPool(min(invoke_pool_threads, len(call_indices)))
         call_result_objs = []
-        for i in range(N):
-            if i < len(custom_ids):
-                call_id = "{:05d}".format(custom_ids[i])
-            else:
-                call_id = "{:05d}".format(i)
+        for i in call_indices:
+            call_id = "{:05d}".format(i)
 
             data_byte_range = None
             if s3_agg_data_key is not None:
                 data_byte_range = agg_data_ranges[i]
 
-            cb = pool.apply_async(invoke, (data_strs[i], callset_id, 
-                                           call_id, s3_func_key, 
-                                           host_job_meta.copy(), 
-                                           s3_agg_data_key, 
+            cb = pool.apply_async(invoke, (data_strs[i], callset_id,
+                                           call_id, s3_func_key,
+                                           host_job_meta.copy(),
+                                           s3_agg_data_key,
                                            data_byte_range))
 
             logger.info("map {} {} apply async".format(callset_id, call_id))
 
             call_result_objs.append(cb)
 
-        res =  [c.get() for c in call_result_objs]
+        res = [c.get() for c in call_result_objs]
         pool.close()
         pool.join()
         logger.info("map invoked {} {} pool join".format(callset_id, call_id))
 
-        # FIXME take advantage of the callset to return a lot of these 
+        # FIXME take advantage of the callset to return a lot of these
 
         # note these are just the invocation futures
 
         return res
+
+
+    def map(self, func, iterdata, extra_env = None, extra_meta = None,
+            invoke_pool_threads=64, data_all_as_one=True,
+            use_cached_runtime=True, overwrite_invoke_args = None):
+        """
+        # FIXME work with an actual iterable instead of just a list
+
+        data_all_as_one : upload the data as a single s3 object; fewer
+        tcp transactions (good) but potentially higher latency for workers (bad)
+
+        use_cached_runtime : if runtime has been cached, use that. When set
+        to False, redownloads runtime.
+        """
+        callset_id, s3_agg_data_key, s3_func_key, data_strs, host_job_meta, agg_data_ranges \
+            = self.prepare(func, iterdata, data_all_as_one)
+
+        return self.invoke_calls(callset_id, range(len(list(iterdata))), s3_agg_data_key,
+                                 s3_func_key, data_strs, host_job_meta, agg_data_ranges,
+                                 extra_env, extra_meta, invoke_pool_threads, use_cached_runtime,
+                                 overwrite_invoke_args)
+
 
     def map_sync_with_rate(self, func, iterdata, rate = 100, extra_env = None, extra_meta = None,
                 invoke_pool_threads=64, data_all_as_one=True,
@@ -350,15 +365,20 @@ class Executor(object):
         fs_notdones = []
         res = []
 
+        callset_id, s3_agg_data_key, s3_func_key, data_strs, host_job_meta, agg_data_ranges \
+            = self.prepare(func, iterdata)
+
         while len(iterdata_left) > 0:
             # invoking more calls
             if num_available_workers > 0:
                 num_calls_to_invoke = min(num_available_workers, len(iterdata_left))
                 # invoke according to the order
                 custom_ids = range(len(res), (len(res) + num_calls_to_invoke))
-                invoked = self.map(func, list(iterdata_left[:num_calls_to_invoke]), extra_env,
-                              extra_meta, invoke_pool_threads, data_all_as_one, use_cached_runtime,
-                              overwrite_invoke_args, callset_id=callset_id, custom_ids=custom_ids)
+
+                invoked = self.invoke_calls(callset_id, custom_ids, s3_agg_data_key,
+                                     s3_func_key, data_strs, host_job_meta, agg_data_ranges,
+                                     extra_env, extra_meta, invoke_pool_threads, use_cached_runtime,
+                                     overwrite_invoke_args)
                 res += invoked
                 fs_notdones += invoked
                 iterdata_left = iterdata_left[num_calls_to_invoke:]

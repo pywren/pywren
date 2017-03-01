@@ -117,7 +117,7 @@ class SimpleMap(unittest.TestCase):
         N = 10
 
         x = np.arange(N)
-        futures = self.wrenexec.map_sync_with_rate(plus_one, x, rate=2)
+        futures = self.wrenexec.map_sync_with_rate(plus_one, x, rate=5)
 
         [self.assertTrue(f.done()) for f in futures]
         
