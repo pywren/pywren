@@ -271,8 +271,7 @@ class Executor(object):
                      host_job_meta, agg_data_ranges, extra_env = None, extra_meta = None,
                      invoke_pool_threads=64, use_cached_runtime=True, overwrite_invoke_args = None):
 
-        def invoke(data_str, callset_id, call_id, s3_func_key,
-                   host_job_meta,
+        def invoke(data_str, callset_id, call_id, s3_func_key, host_job_meta,
                    s3_agg_data_key = None, data_byte_range=None ):
             s3_data_key, s3_output_key, s3_status_key \
                 = s3util.create_keys(self.s3_bucket,
@@ -359,19 +358,18 @@ class Executor(object):
                 use_cached_runtime=True, overwrite_invoke_args = None):
         assert rate > 0
 
-        callset_id = s3util.create_callset_id()
-        iterdata_left = iterdata
+        calls_left = len(list(iterdata))
         num_available_workers = rate
         fs_notdones = []
         res = []
 
         callset_id, s3_agg_data_key, s3_func_key, data_strs, host_job_meta, agg_data_ranges \
-            = self.prepare(func, iterdata)
+            = self.prepare(func, iterdata, data_all_as_one)
 
-        while len(iterdata_left) > 0:
+        while calls_left > 0:
             # invoking more calls
             if num_available_workers > 0:
-                num_calls_to_invoke = min(num_available_workers, len(iterdata_left))
+                num_calls_to_invoke = min(num_available_workers, calls_left)
                 # invoke according to the order
                 custom_ids = range(len(res), (len(res) + num_calls_to_invoke))
 
@@ -381,7 +379,7 @@ class Executor(object):
                                      overwrite_invoke_args)
                 res += invoked
                 fs_notdones += invoked
-                iterdata_left = iterdata_left[num_calls_to_invoke:]
+                calls_left -= len(invoked)
                 num_available_workers -= num_calls_to_invoke
             # wait for available slots
             else:
