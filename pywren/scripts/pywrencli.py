@@ -141,7 +141,7 @@ def create_bucket():
     """
     config = pywren.wrenconfig.default()
     s3 = boto3.client("s3")
-    s3.create_bucket(Bucket=config['s3']['s3_bucket'], 
+    s3.create_bucket(Bucket=config['s3']['bucket'], 
                      location=config['aws_region'])
 
 @click.command()
@@ -445,7 +445,7 @@ def delete_bucket():
     config = pywren.wrenconfig.default()
     s3 = boto3.client("s3")
 
-    bucket = s3.Bucket(config['s3']['s3_bucket'])
+    bucket = s3.Bucket(config['s3']['bucket'])
     bucket.delete()
 
 
