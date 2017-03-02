@@ -43,8 +43,10 @@ before_script:
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
   - echo CLEAN BUILD ID IS $BUILD_GUID
   - pywren test_config
-  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=jonas-testbucket2 --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
+  - pywren get_aws_account_id
+  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=pywren_travis_$BUILD_GUID --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
   - pywren create_role
+  - pywren create_bucket
   - pywren create_instance_profile
   - pywren create_queue
   - sleep 10
@@ -62,6 +64,7 @@ after_script:
   - pywren delete_lambda
   - pywren delete_instance_profile
   - pywren delete_role
+  - pywren delete_bucket
   - pywren standalone terminate_instances
 
 after_failure:
