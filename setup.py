@@ -32,6 +32,6 @@ setup(
                              'ec2_standalone_files/supervisord.init', 
                              'ec2_standalone_files/cloudwatch-agent.config', 
     ]},
-    dependency_links=['https://github.com/kislyuk/watchtower.git#egg=watchtower-0.3.4'],
+    dependency_links=['https://github.com/kislyuk/watchtower/tarball/master#egg=watchtower-0.3.4'],
     include_package_data=True
 )
