@@ -8,5 +8,5 @@ PyWren -- it's like a mini condor, in the cloud, for often-complex calls. You ca
 
 ![Benchmark](https://raw.githubusercontent.com/pywren/pywren/master/pywren.gflops.png)
 
-This is the development site. Learn more at [pywren.io](http://pywren.io)`. 
+This is the development site. Learn more at [pywren.io](http://pywren.io). 
 
