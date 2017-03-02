@@ -141,8 +141,10 @@ def create_bucket():
     """
     config = pywren.wrenconfig.default()
     s3 = boto3.client("s3")
+    region = config['account']['aws_region']
     s3.create_bucket(Bucket=config['s3']['bucket'], 
-                     location=config['account']['aws_region'])
+                     CreateBucketConfiguration={
+                         'LocationConstraint': region})
 
 @click.command()
 def create_instance_profile():
