@@ -89,6 +89,7 @@ modules = [
 ('bz2', False),
 ('cProfile', False),
 ('calendar', False),
+('certifi', False),
 ('cgi', False),
 ('cgitb', False),
 ('chunk', False),
