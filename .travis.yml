@@ -43,6 +43,7 @@ before_script:
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
   - echo CLEAN BUILD ID IS $BUILD_GUID
   - export BUCKET_NAME=`echo pywren_travis_$BUILD_GUID | sed 's/_/-/g'`
+  - echo $BUCKET_NAME
   - pywren test_config
   - pywren get_aws_account_id
   
