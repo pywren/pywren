@@ -42,11 +42,12 @@ install:
 before_script:
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
   - echo CLEAN BUILD ID IS $BUILD_GUID
+  - export BUCKET_NAME=`echo pywren_travis_$BUILD_GUID | sed 's/_/-/g'`
   - pywren test_config
   - pywren get_aws_account_id
   
 script:
-  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=pywren_travis_$BUILD_GUID --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
+  - pywren create_config --lambda_role=pywren_travis_test_$BUILD_GUID --function_name=pywren_travis_$BUILD_GUID --bucket_name=$BUCKET_NAME --sqs_queue=pywren_travis_$BUILD_GUID --standalone_name=pywren_travis_$BUILD_GUID
   - pywren create_role
   - pywren create_bucket
   - pywren create_instance_profile
