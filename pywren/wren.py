@@ -81,7 +81,9 @@ def remote_executor(config= None, job_max_runtime=3600,
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
                     job_max_runtime, shard_runtime=shard_runtime)
-    
+
+standalone_executor = remote_executor
+
 class Executor(object):
     """
     Theoretically will allow for cross-AZ invocations
