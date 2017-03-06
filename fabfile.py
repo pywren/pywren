@@ -319,10 +319,12 @@ def cleanup_travis_leftovers():
             for r in p.roles:
                 p.remove_role(RoleName=r.name)
             p.delete()
-
+    removed_role_count = 0
     for r in iam.roles.all():
         if 'pywren_travis_test_' in r.name:
             for p in r.policies.all():
                 r.detach_policy(p)
                 p.delete()
             r.delete()
+            removed_role_count += 1
+    print("removed {} roles".format(removed_role_count))
