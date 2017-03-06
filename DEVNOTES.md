@@ -31,11 +31,6 @@ results.
 Each worker checks its uptime and the queue status and self-terminates
 after a certain amount of time. 
 
-Todo: 
-[ ] Refactor wrenhandler to be more platform-agnostic. 
-[ ] refactor Wren to let us invoke via non-Lambda mechanisms
-
-
 
 
 Supervisord notes:
