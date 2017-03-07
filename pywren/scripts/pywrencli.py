@@ -456,14 +456,14 @@ def delete_bucket():
         if response['KeyCount'] > 0:
             keys = [c['Key'] for c in response['Contents']]
             objects = [{'Key' : k} for k in keys]
-            print "deleting", len(keys), "keys"
+            print("deleting", len(keys), "keys")
             client.delete_objects(Bucket=bucket.name,
                                   Delete={'Objects' : objects})
         else:
             break
     #for obj in bucket.objects.all():
 
-    print "deleting", bucket.name
+    print("deleting", bucket.name)
     bucket.delete()
 
 
