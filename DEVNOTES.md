@@ -31,11 +31,6 @@ results.
 Each worker checks its uptime and the queue status and self-terminates
 after a certain amount of time. 
 
-Todo: 
-[ ] Refactor wrenhandler to be more platform-agnostic. 
-[ ] refactor Wren to let us invoke via non-Lambda mechanisms
-
-
 
 
 Supervisord notes:
@@ -130,9 +125,8 @@ python setup.py register -r pypitest
 ```
 python setup.py sdist upload -r pypitest
 ```
-4. Test the pypitest build by updating the tag `pypitest-build` to the current build
 
-5. Kickoff the travis build for this version by deleting and reupdating the tag. I know
+4. Kickoff the travis build for this version by deleting and reupdating the tag. I know
 this is a bit of a hack, but it works. 
 
 ```

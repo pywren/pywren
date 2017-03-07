@@ -29,13 +29,26 @@ def standalone():
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 
 @click.command()
+def get_aws_account_id(verbose=True):
+    """
+    Check to make sure boto is working and get the AWS ACCONT ID
+    """
+    client = boto3.client("sts")
+    account_id = client.get_caller_identity()["Account"]
+    if verbose:
+        click.echo("Your AWS account ID is {}".format(account_id))
+    return account_id
+
+            
+
+@click.command()
 @click.option('--filename', default=pywren.wrenconfig.get_default_home_filename(), 
               help='create a default config and populate with sane values')
 @click.option('--lambda_role', default='pywren_exec_role', 
               help='name of the IAM role we are creating')
 @click.option('--function_name', default='pywren1', 
               help='lambda function name')
-@click.option('--bucket_name', default='BUCKET_NAME', 
+@click.option('--bucket_name', default='pywren-bucket', 
               help='s3 bucket name for intermediates')
 @click.option('--sqs_queue', default='pywren-queue', 
               help='sqs queue name for standalone execution')
@@ -121,6 +134,17 @@ def create_role():
     iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)
 
+@click.command()
+def create_bucket():
+    """
+    
+    """
+    config = pywren.wrenconfig.default()
+    s3 = boto3.client("s3")
+    region = config['account']['aws_region']
+    s3.create_bucket(Bucket=config['s3']['bucket'], 
+                     CreateBucketConfiguration={
+                         'LocationConstraint': region})
 
 @click.command()
 def create_instance_profile():
@@ -292,14 +316,21 @@ def delete_queue():
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
     queue.delete()
 
-
-def test_lambda():
+@click.command()
+def test_function():
     """
     Simple single-function test
     """
 
-    config = pywren.wrenconfig.default()
+    wrenexec = pywren.default_executor()
+    def hello_world(x):
+        return "Hello world"
 
+
+    fut = wrenexec.call_async(hello_world, None)
+
+    res = fut.result() 
+    click.echo("function returned: {}".format(res))
 
 @click.command()
 def print_latest_logs():
@@ -408,9 +439,40 @@ def standalone_terminate_instances():
     ec2standalone.terminate_instances(inst_list)
 
 
+@click.command()
+def delete_bucket():
+    """
+    Warning this will also delete all keys inside a bucket
+
+    """
+    config = pywren.wrenconfig.default()
+    #s3 = boto3.client("s3")
+    s3 = boto3.resource('s3')
+    client = boto3.client('s3')
+    bucket = s3.Bucket(config['s3']['bucket'])
+    while True:
+        response = client.list_objects_v2(Bucket=bucket.name, 
+                                          MaxKeys=1000)
+        if response['KeyCount'] > 0:
+            keys = [c['Key'] for c in response['Contents']]
+            objects = [{'Key' : k} for k in keys]
+            print("deleting", len(keys), "keys")
+            client.delete_objects(Bucket=bucket.name,
+                                  Delete={'Objects' : objects})
+        else:
+            break
+    #for obj in bucket.objects.all():
+
+    print("deleting", bucket.name)
+    bucket.delete()
+
+
 cli.add_command(create_config)
 cli.add_command(test_config)
+cli.add_command(test_function)
+cli.add_command(get_aws_account_id)
 cli.add_command(create_role)
+cli.add_command(create_bucket)
 cli.add_command(create_instance_profile)
 cli.add_command(delete_instance_profile)
 cli.add_command(deploy_lambda)
@@ -418,6 +480,7 @@ cli.add_command(delete_lambda)
 cli.add_command(delete_role)
 cli.add_command(create_queue)
 cli.add_command(delete_queue)
+cli.add_command(delete_bucket)
 cli.add_command(print_latest_logs)
 cli.add_command(log_url)
 cli.add_command(standalone)

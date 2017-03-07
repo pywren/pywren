@@ -12,7 +12,7 @@ exec(open('pywren/version.py').read())
 setup(
     name='pywren',
     version=__version__,
-    url='https://github.com/ericmjonas/pywren',
+    url='http://pywren.io',
     author='Eric Jonas',
     description='Run many jobs transparently on AWS Lambda and other cloud services',
     long_description="PyWren lets you transparently run your python functions on AWS cloud services, including AWS Lambda and AWS EC2.", 
@@ -32,7 +32,6 @@ setup(
                              'ec2_standalone_files/supervisord.init', 
                              'ec2_standalone_files/cloudwatch-agent.config', 
     ]},
-    dependency_links=['http://github.com/ericmjonas/watchtower/tarball/master#egg=watchtower-1.0jonas'],
-
+    dependency_links=['https://github.com/kislyuk/watchtower/tarball/master#egg=watchtower-0.3.4'],
     include_package_data=True
 )
