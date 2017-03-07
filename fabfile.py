@@ -328,3 +328,33 @@ def cleanup_travis_leftovers():
             r.delete()
             removed_role_count += 1
     print("removed {} roles".format(removed_role_count))
+
+@task 
+def cleanup_leftover_buckets():
+    """
+    Delete all buckets with pywren-travis in the name
+    """
+
+    config = pywren.wrenconfig.default()
+    s3 = boto3.resource('s3')
+    client = boto3.client('s3')
+
+    for bucket in s3.buckets.all():
+        if 'pywren-travis-' in bucket.name:
+            while True:
+                response = client.list_objects_v2(Bucket=bucket.name, 
+                                                  MaxKeys=1000)
+                if response['KeyCount'] > 0:
+
+                    keys = [c['Key'] for c in response['Contents']]
+                    objects = [{'Key' : k} for k in keys]
+                    print "deleting", len(keys), "keys"
+                    client.delete_objects(Bucket=bucket.name,
+                                          Delete={'Objects' : objects})
+                else:
+                    break
+            #for obj in bucket.objects.all():
+                
+            print "deleting", bucket.name
+            bucket.delete()
+            

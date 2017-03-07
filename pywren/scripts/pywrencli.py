@@ -442,12 +442,28 @@ def standalone_terminate_instances():
 @click.command()
 def delete_bucket():
     """
-    
+    Warning this will also delete all keys inside a bucket
+
     """
     config = pywren.wrenconfig.default()
-    s3 = boto3.client("s3")
-
+    #s3 = boto3.client("s3")
+    s3 = boto3.resource('s3')
+    client = boto3.client('s3')
     bucket = s3.Bucket(config['s3']['bucket'])
+    while True:
+        response = client.list_objects_v2(Bucket=bucket.name, 
+                                          MaxKeys=1000)
+        if response['KeyCount'] > 0:
+            keys = [c['Key'] for c in response['Contents']]
+            objects = [{'Key' : k} for k in keys]
+            print "deleting", len(keys), "keys"
+            client.delete_objects(Bucket=bucket.name,
+                                  Delete={'Objects' : objects})
+        else:
+            break
+    #for obj in bucket.objects.all():
+
+    print "deleting", bucket.name
     bucket.delete()
 
 
