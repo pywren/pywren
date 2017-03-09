@@ -12,6 +12,7 @@ import extmodule
 import extmoduleutf8
 from pywren.cloudpickle import serialize
 from pywren import wrenconfig, wrenutil, runtime
+import os
 
 class SimpleAsync(unittest.TestCase):
 
@@ -100,4 +101,16 @@ class SerializeTest(unittest.TestCase):
         print(info.keys())
         for f in info['pkg_ver_list']:
             print(f[0])
+
+class InteractiveTest(unittest.TestCase):
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_simple(self):
+        ret = os.system("python -c \"import pywren;import extmodule;pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
+        self.assertEqual(ret, 0)
+
+
+
+
 
