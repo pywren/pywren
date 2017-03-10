@@ -19,16 +19,12 @@ if (sys.version_info > (3, 0)):
     from . import wrenutil
     from . import s3util
     from . import version
-    from . import wrenconfig
-    from . import wrenlogging
     from queue import Queue, Empty
 
 else:
     import wrenutil
     import s3util
     import version
-    import wrenconfig
-    import wrenlogging
     from Queue import Queue, Empty
 
 
