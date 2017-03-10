@@ -296,8 +296,8 @@ class RuntimeSharding(unittest.TestCase):
 
     def test_shard(self):
         config = pywren.wrenconfig.default()
-        config['runtime']['num_shards'] = 5
-        wrenexec = pywren.default_executor()
+        config['runtime']['num_shards'] = 10
+        wrenexec = pywren.default_executor(config=config)
 
         def test_func(x):
             return x + 1
