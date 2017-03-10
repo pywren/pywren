@@ -30,7 +30,8 @@ def default_executor(**kwargs):
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)
     return lambda_executor(**kwargs)
-        
+
+
 def lambda_executor(config= None, job_max_runtime=280):
 
     if config is None:
@@ -45,6 +46,7 @@ def lambda_executor(config= None, job_max_runtime=280):
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
                     job_max_runtime)
 
+
 def dummy_executor():
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
@@ -53,7 +55,8 @@ def dummy_executor():
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
                     100)
-    
+
+
 def remote_executor(config= None, job_max_runtime=3600):
     if config is None:
         config = wrenconfig.default()
@@ -67,6 +70,7 @@ def remote_executor(config= None, job_max_runtime=3600):
                     job_max_runtime)
 
 standalone_executor = remote_executor
+
 
 def get_all_results(fs):
     """
