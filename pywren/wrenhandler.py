@@ -10,6 +10,7 @@ import uuid
 import json
 import shutil
 import sys
+import traceback
 from threading import Thread
 import signal
 import random
@@ -323,6 +324,7 @@ def generic_handler(event, context_dict):
         # internal runtime exceptions
         response_status['exception'] = str(e)
         response_status['exception_args'] = e.args
+        response_status['exception_traceback'] = traceback.format_exc()
     finally:
 
         s3.meta.client.put_object(Bucket=status_key[0], Key=status_key[1], 

@@ -525,7 +525,7 @@ class ResponseFuture(object):
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
-            call_status = get_call_status(self.callset_id, self.call_id, 
+            call_status = get_call_status(self.callset_id, self.call_id,
                                           AWS_S3_BUCKET = self.s3_bucket, 
                                           AWS_S3_PREFIX = self.s3_prefix, 
                                           AWS_REGION = self.aws_region)
@@ -540,7 +540,7 @@ class ResponseFuture(object):
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
             exception_str = call_status['exception']
-            print(call_status.keys())
+            # print(call_status.keys())
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
                 if throw_except:
@@ -552,6 +552,7 @@ class ResponseFuture(object):
                 return None
             else:
                 if throw_except:
+                    logger.error("\nRemote " + call_status['exception_traceback'])
                     raise Exception(exception_str, *exception_args)
                 return None
         
