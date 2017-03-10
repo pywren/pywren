@@ -283,7 +283,7 @@ class RuntimeSharding(unittest.TestCase):
     download the real key
     """
     def test_no_shard(self):
-        wrenexec = pywren.default_executor(shard_runtime=False)
+        wrenexec = pywren.default_executor()
 
         def test_func(x):
             return x + 1
@@ -295,7 +295,9 @@ class RuntimeSharding(unittest.TestCase):
                          base_runtime_key)
 
     def test_shard(self):
-        wrenexec = pywren.default_executor(shard_runtime=True)
+        config = pywren.wrenconfig.default()
+        config['runtime']['num_shards'] = 5
+        wrenexec = pywren.default_executor()
 
         def test_func(x):
             return x + 1

@@ -145,9 +145,9 @@ def generic_handler(event, context_dict):
 
         runtime_s3_bucket = event['runtime_s3_bucket']
         runtime_s3_key = event['runtime_s3_key']
-        if event.get('shard_runtime_key', False):
+        if event.get('runtime_num_shards', 1) > 1:
             random.seed()
-            shard = random.randrange(wrenconfig.MAX_S3_RUNTIME_SHARDS)
+            shard = random.randrange(event['runtime_num_shards'])
             key_shard = wrenutil.get_s3_shard(runtime_s3_key, shard)
             runtime_s3_key_used = wrenutil.hash_s3_key(key_shard)
         else:
