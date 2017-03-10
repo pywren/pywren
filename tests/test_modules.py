@@ -107,7 +107,7 @@ class InteractiveTest(unittest.TestCase):
         self.wrenexec = pywren.default_executor()
 
     def test_simple(self):
-        ret = os.system("python -c \"import pywren;import extmodule;pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
+        ret = os.system("python -c \"import pywren; import sys; sys.path.append(\'tests\'); import extmodule; pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
         self.assertEqual(ret, 0)
 
 
