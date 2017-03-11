@@ -10,7 +10,6 @@ else:
     import wrenutil
     import wrenconfig
 
-
 def create_callset_id():
     return wrenutil.uuid_str()
 
@@ -34,7 +33,6 @@ def create_agg_data_key(bucket, prefix, callset_id):
 
 def key_size(bucket, key):
     try:
-
         s3 = boto3.resource('s3')
         a = s3.meta.client.head_object(Bucket=bucket, Key=key)
         return a['ContentLength']
@@ -47,8 +45,8 @@ def key_size(bucket, key):
 
 def get_callset_done(bucket, prefix, callset_id):
     key_prefix = os.path.join(prefix, callset_id)
-    s3 = boto3.resource('s3', region_name=wrenconfig.AWS_REGION)
-    s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
+    s3_client = boto3.client('s3')
+    s3res = s3_client.list_objects_v2(Bucket=bucket, Prefix=key_prefix,
                                            MaxKeys=1000)
     
     status_keys = []
@@ -60,13 +58,43 @@ def get_callset_done(bucket, prefix, callset_id):
 
         if 'NextContinuationToken' in s3res:
             continuation_token = s3res['NextContinuationToken']
-            s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
-                                                   MaxKeys=1000, 
-                                                   ContinuationToken = continuation_token)
+            s3res = s3_client.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix,
+                                                       MaxKeys=1000,
+                                                       ContinuationToken = continuation_token)
         else:
             break
 
     call_ids = [k[len(key_prefix)+1:].split("/")[0] for k in status_keys]
     return call_ids
-        
-        
+
+def get_call_status(callset_id, call_id,
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET,
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX):
+    s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
+                                                            AWS_S3_PREFIX,
+                                                            callset_id, call_id)
+    s3_client = boto3.client('s3')
+
+    try:
+        r = s3_client.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
+        result_json = r['Body'].read()
+        return json.loads(result_json.decode('ascii'))
+
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "NoSuchKey":
+            return None
+        else:
+            raise e
+
+
+def get_call_output(callset_id, call_id,
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET,
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX):
+    s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET,
+                                                                   AWS_S3_PREFIX,
+                                                                   callset_id, call_id)
+
+    s3_client = boto3.client('s3')
+
+    r = s3_client.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
+    return pickle.loads(r['Body'].read())

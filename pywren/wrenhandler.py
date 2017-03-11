@@ -36,19 +36,6 @@ logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
-def key_size(bucket, key):
-    try:
-
-        s3 = boto3.resource('s3')
-        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
-        return a['ContentLength']
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return None
-        else:
-            raise e
-
-
 def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
     Download the runtime if necessary
