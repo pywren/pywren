@@ -6,6 +6,9 @@ except:
     import pickle
 from tblib import pickling_support
 import logging
+import botocore
+import glob2
+import random
 import os
 pickling_support.install()
 
@@ -70,6 +73,7 @@ def remote_executor(config= None, job_max_runtime=3600):
                     job_max_runtime)
 
 standalone_executor = remote_executor
+
 
 def get_all_results(fs):
     """

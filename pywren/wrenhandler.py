@@ -13,7 +13,6 @@ import sys
 import traceback
 from threading import Thread
 import signal
-import random
 
 if (sys.version_info > (3, 0)):
     from . import wrenutil
@@ -141,15 +140,9 @@ def generic_handler(event, context_dict):
 
         runtime_s3_bucket = event['runtime_s3_bucket']
         runtime_s3_key = event['runtime_s3_key']
-        # TODO(shivaram): All the lambdas will hit the same metadata. Check if this is a
-        # bottleneck ?
-        runtime_meta_info = runtimes.get_runtime_info(runtime_s3_bucket, runtime_s3_key)
-        if 'urls' in runtime_meta_info and isinstance(runtime_meta_info['urls'], list) and len(runtime_meta_info['urls']) > 1:
-            random.seed()
-            url_used = random.choice(runtime_meta_info['urls'])
+        if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
-            runtime_s3_bucket_used, runtime_s3_key_used =
-              wrenutil.split_s3_url(url_used)
+            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(event['runtime_url'])
         else:
             runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
