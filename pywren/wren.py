@@ -71,7 +71,6 @@ def remote_executor(config= None, job_max_runtime=3600):
 
 standalone_executor = remote_executor
 
-
 def get_all_results(fs):
     """
     Take in a list of futures and block until they are repeated, 

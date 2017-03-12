@@ -141,12 +141,17 @@ def generic_handler(event, context_dict):
 
         runtime_s3_bucket = event['runtime_s3_bucket']
         runtime_s3_key = event['runtime_s3_key']
-        if event.get('runtime_num_shards', 1) > 1:
+        # TODO(shivaram): All the lambdas will hit the same metadata. Check if this is a
+        # bottleneck ?
+        runtime_meta_info = runtimes.get_runtime_info(runtime_s3_bucket, runtime_s3_key)
+        if 'urls' in runtime_meta_info and isinstance(runtime_meta_info['urls'], list) and len(runtime_meta_info['urls']) > 1:
             random.seed()
-            shard = random.randrange(event['runtime_num_shards'])
-            key_shard = wrenutil.get_s3_shard(runtime_s3_key, shard)
-            runtime_s3_key_used = wrenutil.hash_s3_key(key_shard)
+            url_used = random.choice(runtime_meta_info['urls'])
+            # NOTE(shivaram): Right now we only support S3 urls.
+            runtime_s3_bucket_used, runtime_s3_key_used =
+              wrenutil.split_s3_url(url_used)
         else:
+            runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
 
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
@@ -220,8 +225,9 @@ def generic_handler(event, context_dict):
         logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
+        response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
         
-        runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket, 
+        runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket_used,
                                                        runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached

@@ -117,17 +117,3 @@ def split_s3_url(s3_url):
     bucket_name = splits[0]
     key = "/".join(splits[1:])
     return bucket_name, key
-
-def hash_s3_key(s):
-    """
-    MD5-hash the contents of an S3 key to enable good partitioning. 
-    used for sharding the runtimes
-    """
-    DIGEST_LEN = 6
-    m = hashlib.md5()
-    m.update(s.encode('ascii'))
-    digest = m.hexdigest()
-    return "{}-{}".format(digest[:DIGEST_LEN], s)
-
-def get_s3_shard(key, shard_num):
-    return "{}.{:04d}".format(key, shard_num)
