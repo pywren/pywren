@@ -4,6 +4,7 @@ import boto3
 import uuid
 import numpy as np
 import time
+import os
 import pywren
 import pywren.runtime
 import subprocess
