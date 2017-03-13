@@ -26,6 +26,12 @@ questions = {'region' : None,
              'advanced' : None, 
              'standalone' : None}
 
+
+cmdtest = pytest.mark.skipif(
+    not pytest.config.getoption("--runcmdtest"),
+    reason="need --cmdtest option to run"
+)
+
 def default_questions():
     return questions.copy()
 
@@ -54,7 +60,7 @@ def questions_to_string(q):
 def config_exists(filename):
     return os.path.exists(os.path.expanduser(filename))
     
-    
+@cmdtest    
 class InteractiveCMDDryrun(unittest.TestCase):
     """
     Dryrun tests to make sure that we catch common input
@@ -112,6 +118,7 @@ class InteractiveCMDDryrun(unittest.TestCase):
     def test_invalid_s3_prefix(self):
         pass
 
+@cmdtest    
 class InteractiveCMD(unittest.TestCase):
     """
     Tests that actually check things with AWS. Executes everything
