@@ -400,7 +400,7 @@ class Executor(object):
         return this_events_logs
 
 # this really should not be a global singleton FIXME
-global_s3_client = boto3.client('s3') # , region_name = AWS_REGION)
+global_s3_client = boto3.client('s3') 
     
 def get_call_status(callset_id, call_id, 
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT, 

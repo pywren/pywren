@@ -34,9 +34,9 @@ def create_agg_data_key(bucket, prefix, callset_id):
 
 def key_size(bucket, key):
     try:
+        client = boto3.client('s3')
 
-        s3 = boto3.resource('s3')
-        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
+        a = client.head_object(Bucket=bucket, Key=key)
         return a['ContentLength']
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "404":
@@ -47,8 +47,8 @@ def key_size(bucket, key):
 
 def get_callset_done(bucket, prefix, callset_id):
     key_prefix = os.path.join(prefix, callset_id)
-    s3 = boto3.resource('s3', region_name=wrenconfig.AWS_REGION)
-    s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
+    client = boto3.client('s3')
+    s3res = client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
                                            MaxKeys=1000)
     
     status_keys = []
@@ -60,9 +60,9 @@ def get_callset_done(bucket, prefix, callset_id):
 
         if 'NextContinuationToken' in s3res:
             continuation_token = s3res['NextContinuationToken']
-            s3res = s3.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
-                                                   MaxKeys=1000, 
-                                                   ContinuationToken = continuation_token)
+            s3res = client.list_objects_v2(Bucket=bucket, Prefix=key_prefix, 
+                                           MaxKeys=1000, 
+                                           ContinuationToken = continuation_token)
         else:
             break
 
