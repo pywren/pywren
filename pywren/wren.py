@@ -403,9 +403,9 @@ class Executor(object):
 global_s3_client = boto3.client('s3') # , region_name = AWS_REGION)
     
 def get_call_status(callset_id, call_id, 
-                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-                    AWS_REGION = wrenconfig.AWS_REGION, s3=None):
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT, 
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT, 
+                    AWS_REGION = wrenconfig.AWS_REGION_DEFAULT, s3=None):
     s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)
@@ -425,9 +425,9 @@ def get_call_status(callset_id, call_id,
 
 
 def get_call_output(callset_id, call_id,
-                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET, 
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX, 
-                    AWS_REGION = wrenconfig.AWS_REGION, s3=None):
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT, 
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT, 
+                    AWS_REGION = wrenconfig.AWS_REGION_DEFAULT, s3=None):
     s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET, 
                                                                     AWS_S3_PREFIX, 
                                                                     callset_id, call_id)

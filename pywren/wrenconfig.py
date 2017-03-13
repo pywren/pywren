@@ -1,7 +1,7 @@
 import os
 
 
-FUNCTION_NAME = "pywren1"
+
 GENERIC_HANDLER_NAME = "wrenhandler.generic_handler"
 AWS_LAMBDA_HANDLER_NAME = "wrenhandler.aws_lambda_handler"
 
@@ -14,10 +14,12 @@ AWS_ROLE = "helloworld_exec_role"
 
 ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_ROLE)
 
-AWS_REGION ='us-west-2'
-AWS_S3_BUCKET = "jonas-testbucket2"
-AWS_S3_PREFIX = "pywren.jobs"
-FUNCTION_NAME = "pywren1"
+AWS_REGION_DEFAULT ='us-west-2'
+AWS_S3_BUCKET_DEFAULT = "pywren.data"
+AWS_S3_PREFIX_DEFAULT = "pywren.jobs"
+AWS_LAMBDA_ROLE_DEFAULT = 'pywren_exec_role'
+AWS_LAMBDA_FUNCTION_NAME_DEFAULT = 'pywren1'
+AWS_SQS_QUEUE_DEFAULT='pywren-jobs'
 
 MAX_AGG_DATA_SIZE = 4e6
 
@@ -39,14 +41,12 @@ def get_default_home_filename():
     return default_home_filename
 
 
-def default():
+def get_default_config_filename():
     """
     First checks .pywren_config
     then checks PYWREN_CONFIG_FILE environment variable
     then ~/.pywren_config
     """
-    default_home_filename = get_default_home_filename()
-
     if 'PYWREN_CONFIG_FILE' in os.environ:
         config_filename = os.environ['PYWREN_CONFIG_FILE']
         # FIXME log this
@@ -54,9 +54,19 @@ def default():
     elif os.path.exists(".pywren_config"):
         config_filename = os.path.abspath('.pywren_config')
 
-    elif os.path.exists(default_home_filename):
-        config_filename = default_home_filename
     else:
+        config_filename = get_default_home_filename()
+    
+    return config_filename
+
+def default():
+    """
+    First checks .pywren_config
+    then checks PYWREN_CONFIG_FILE environment variable
+    then ~/.pywren_config
+    """
+    config_filename = get_default_config_filename()
+    if config_filename is None:
         raise ValueError("could not find configuration file")
 
     config_data = load(config_filename)
