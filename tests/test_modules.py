@@ -12,6 +12,7 @@ import extmodule
 import extmoduleutf8
 from pywren.cloudpickle import serialize
 from pywren import wrenconfig, wrenutil, runtime
+import os
 
 class SimpleAsync(unittest.TestCase):
 
@@ -100,4 +101,20 @@ class SerializeTest(unittest.TestCase):
         print(info.keys())
         for f in info['pkg_ver_list']:
             print(f[0])
+
+class InteractiveTest(unittest.TestCase):
+
+    ''' pywren handles module serialization slightly differently in interactive mode vs regular script mode
+        this is important because prior to f7a900f0a3aa185406abce2af3a1697759f464da module imports were failing 
+        in interactive mode, thus the common usecase of launching pywren in an jupyter notebook would fail.
+        This is a (somewhat brittle) test that simulates an interactive python session using the -c flag
+    '''
+
+    def test_simple(self):
+        ret = os.system("python -c \"import pywren; import sys; sys.path.append(\'tests\'); import extmodule; pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
+        self.assertEqual(ret, 0)
+
+
+
+
 

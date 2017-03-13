@@ -17,6 +17,7 @@ from pywren.wait import *
 
 logger = logging.getLogger(__name__)
 
+
 def default_executor(**kwargs):
     executor_str = 'lambda'
     if 'PYWREN_EXECUTOR' in os.environ:
@@ -54,6 +55,7 @@ def dummy_executor(shard_runtime=False):
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
                     100, shard_runtime=shard_runtime)
+
 
 def remote_executor(config= None, job_max_runtime=3600,
                     shard_runtime=False):
