@@ -183,8 +183,7 @@ def deploy_lambda(update_if_exists = True):
     # FIXME see if role exists
     files = glob2.glob(os.path.join(SOURCE_DIR, "../**/*.py"))
     for f in files:
-        print f
-        a = os.path.relpath(f, SOURCE_DIR + "/..") 
+        a = os.path.relpath(f, SOURCE_DIR + "/..")
                             
         zipfile_obj.write(f, arcname=a)
     zipfile_obj.close()
