@@ -5,7 +5,7 @@ import json
 import shutil
 import glob2
 import os
-from pywren import wrenhandler, wrenutil, local
+from pywren import local
 from pywren.queues import SQSInvoker
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
