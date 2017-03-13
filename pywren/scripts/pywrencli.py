@@ -531,7 +531,6 @@ def cleanup_all(ctx, force):
     config file. 
 
     """
-    print "CLEANING UP ALL"
     for func in [delete_queue, 
                  delete_lambda,
                  delete_instance_profile, 
