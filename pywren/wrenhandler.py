@@ -10,6 +10,7 @@ import uuid
 import json
 import shutil
 import sys
+import traceback
 from threading import Thread
 import signal
 import random
@@ -19,6 +20,7 @@ if (sys.version_info > (3, 0)):
     from . import s3util
     from . import version
     from . import wrenconfig
+    from . import wrenlogging
     from queue import Queue, Empty
 
 else:
@@ -26,12 +28,15 @@ else:
     import s3util
     import version
     import wrenconfig
+    import wrenlogging
     from Queue import Queue, Empty
 
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
+
+wrenlogging.default_config('DEBUG')
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
@@ -310,6 +315,7 @@ def generic_handler(event, context_dict):
         # internal runtime exceptions
         response_status['exception'] = str(e)
         response_status['exception_args'] = e.args
+        response_status['exception_traceback'] = traceback.format_exc()
     finally:
 
         s3.meta.client.put_object(Bucket=status_key[0], Key=status_key[1], 

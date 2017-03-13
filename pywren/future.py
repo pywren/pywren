@@ -105,10 +105,9 @@ class ResponseFuture(object):
                 return None
 
 
-        call_status = get_call_status(self.callset_id, self.call_id,
+        call_status = s3util.get_call_status(self.callset_id, self.call_id,
                                       AWS_S3_BUCKET = self.s3_bucket,
-                                      AWS_S3_PREFIX = self.s3_prefix,
-                                      AWS_REGION = self.aws_region)
+                                      AWS_S3_PREFIX = self.s3_prefix)
 
         self.status_query_count += 1
 
@@ -121,10 +120,9 @@ class ResponseFuture(object):
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
-            call_status = get_call_status(self.callset_id, self.call_id,
+            call_status = s3util.get_call_status(self.callset_id, self.call_id,
                                           AWS_S3_BUCKET = self.s3_bucket,
-                                          AWS_S3_PREFIX = self.s3_prefix,
-                                          AWS_REGION = self.aws_region)
+                                          AWS_S3_PREFIX = self.s3_prefix)
 
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
@@ -136,7 +134,7 @@ class ResponseFuture(object):
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
             exception_str = call_status['exception']
-            print(call_status.keys())
+            print(call_status)
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
                 if throw_except:
@@ -148,16 +146,18 @@ class ResponseFuture(object):
                 return None
             else:
                 if throw_except:
+                    if 'exception_traceback' in call_status:
+                        logger.error(call_status['exception_traceback'])
                     raise Exception(exception_str, *exception_args)
                 return None
 
         call_output_time = time.time()
-        call_invoker_result = get_call_output(self.callset_id, self.call_id,
-                                              AWS_S3_BUCKET = self.s3_bucket,
-                                              AWS_S3_PREFIX = self.s3_prefix,
-                                              AWS_REGION = self.aws_region)
+        call_invoker_result = pickle.loads(s3util.get_call_output(self.callset_id,
+                                                                  self.call_id,
+                                                                  AWS_S3_BUCKET = self.s3_bucket,
+                                                                  AWS_S3_PREFIX = self.s3_prefix))
         call_output_time_done = time.time()
-        self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time_done
+        self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
 
         self._invoke_metadata['download_output_timestamp'] = call_output_time_done
         call_success = call_invoker_result['success']

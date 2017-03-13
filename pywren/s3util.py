@@ -1,6 +1,7 @@
 import boto3
 import os
 import botocore
+import json
 import sys
 
 if (sys.version_info > (3, 0)):
@@ -90,11 +91,11 @@ def get_call_status(callset_id, call_id,
 def get_call_output(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET,
                     AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX):
-    s3_data_key, s3_output_key, s3_status_key = s3util.create_keys(AWS_S3_BUCKET,
+    s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
                                                                    AWS_S3_PREFIX,
                                                                    callset_id, call_id)
 
     s3_client = boto3.client('s3')
 
     r = s3_client.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
-    return pickle.loads(r['Body'].read())
+    return r['Body'].read()

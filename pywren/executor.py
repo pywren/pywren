@@ -19,7 +19,8 @@ import pywren.wrenconfig as wrenconfig
 import pywren.wrenutil as wrenutil
 import pywren.runtime as runtime
 from pywren.cloudpickle import serialize
-from pywren.future import ResponseFuture
+from pywren.future import ResponseFuture, JobState
+from pywren.wait import *
 
 logger = logging.getLogger(__name__)
 
