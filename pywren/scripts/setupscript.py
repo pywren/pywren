@@ -26,7 +26,6 @@ def click_validate_prompt(message, default, validate_func,
             if attempt_num >= max_attempts:
                 raise Exception("Too many invalid answers")
             if fail_msg != "":
-                print "fail_msg=", fail_msg
                 click.echo(fail_msg.format(res))
 
 def get_lambda_regions():
