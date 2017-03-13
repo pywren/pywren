@@ -29,7 +29,7 @@ questions = {'region' : None,
 
 cmdtest = pytest.mark.skipif(
     not pytest.config.getoption("--runcmdtest"),
-    reason="need --cmdtest option to run"
+    reason="need --runcmdtest option to run"
 )
 
 def default_questions():
