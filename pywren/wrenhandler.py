@@ -36,7 +36,6 @@ PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 
-wrenlogging.default_config('DEBUG')
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
