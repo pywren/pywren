@@ -5,7 +5,7 @@ if [ "$RUN_COMMANDLINE" != "true" ]; then
     exit 0;
 fi
 
-pytest -v tests/cmdline_tests.py
+pytest -v tests/test_cmdline.py
 RESULT=$?
 exit $RESULT
 
