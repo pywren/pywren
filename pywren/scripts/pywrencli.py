@@ -19,8 +19,7 @@ from pywren import ec2standalone
 @click.option('--filename', default=pywren.wrenconfig.get_default_config_filename())
 @click.pass_context
 def cli(ctx, filename):
-    click.echo("filename={}".format(filename))
-    ctx.obj['config_filename'] = filename
+    ctx.obj = {'config_filename' : filename}
 
 @click.group("standalone")
 def standalone():
@@ -108,7 +107,6 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
     open(filename, 'w').write(default_yaml)
     click.echo("new default file created in {}".format(filename))
     click.echo("lambda role is {}".format(lambda_role))
-    click.echo("remember to set your s3 bucket and preferred AWS region")
 
 
 @click.command()
@@ -300,7 +298,7 @@ def delete_role(ctx):
     iamclient.delete_role_policy(RoleName = role_name, 
                                  PolicyName = '{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName = role_name)
-
+    print("deleted role{}".format(role_name))
 @click.command("delete_instance_profile")
 @click.pass_context
 @click.argument('name', default="", type=str)
@@ -523,6 +521,31 @@ def delete_bucket(ctx):
     print("deleting", bucket.name)
     bucket.delete()
 
+@click.command()
+@click.option('--force', is_flag=True, default=False, 
+              help='dont error')
+@click.pass_context
+def cleanup_all(ctx, force):
+    """
+    Delete every service and object listed in the indicated
+    config file. 
+
+    """
+    print "CLEANING UP ALL"
+    for func in [delete_queue, 
+                 delete_lambda,
+                 delete_instance_profile, 
+                 delete_role, 
+                 delete_bucket]:
+        try:
+            ctx.invoke(func)
+        except Exception as e:
+            if force:
+                print("{} was raised, ignoring".format(e))
+            else:
+                raise
+        
+        
 
 cli.add_command(create_config)
 cli.add_command(test_config)
@@ -538,6 +561,7 @@ cli.add_command(delete_role)
 cli.add_command(create_queue)
 cli.add_command(delete_queue)
 cli.add_command(delete_bucket)
+cli.add_command(cleanup_all)
 cli.add_command(print_latest_logs)
 cli.add_command(log_url)
 cli.add_command(standalone)

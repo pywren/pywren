@@ -17,9 +17,9 @@ ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_ROLE)
 AWS_REGION_DEFAULT ='us-west-2'
 AWS_S3_BUCKET_DEFAULT = "pywren.data"
 AWS_S3_PREFIX_DEFAULT = "pywren.jobs"
-AWS_LAMBDA_ROLE_DEFAULT = 'pywren_exec_role'
-AWS_LAMBDA_FUNCTION_NAME_DEFAULT = 'pywren1'
-AWS_SQS_QUEUE_DEFAULT='pywren-jobs'
+AWS_LAMBDA_ROLE_DEFAULT = 'pywren_exec_role_1'
+AWS_LAMBDA_FUNCTION_NAME_DEFAULT = 'pywren_1'
+AWS_SQS_QUEUE_DEFAULT='pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 

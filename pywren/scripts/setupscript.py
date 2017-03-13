@@ -11,22 +11,32 @@ import time
 def get_username():
     return pwd.getpwuid( os.getuid() )[ 0 ]
 
-def click_validate_prompt(message, default, validate_func, fail_msg =""):
+def click_validate_prompt(message, default, validate_func, 
+                          fail_msg ="", max_attempts=5):
     """
     Click wrapper that repeats prompt until acceptable answer
     """
+    attempt_num = 0
     while True:
         res = click.prompt(message, default)
         if validate_func(res):
             return res
         else:
+            attempt_num +=1
+            if attempt_num >= max_attempts:
+                raise Exception("Too many invalid answers")
             if fail_msg != "":
+                print "fail_msg=", fail_msg
                 click.echo(fail_msg.format(res))
 
+def get_lambda_regions():
+    s = boto3.session.Session()
+    regions = s.get_available_regions("lambda")
+
+    return regions
+
 def check_aws_region_valid(aws_region_str):
-    if aws_region_str in ['us-west-2']:
-        return True
-    return False
+    return aws_region_str in get_lambda_regions()
 
 def check_overwrite_function(filename):
     filename = os.path.expanduser(filename)
@@ -77,8 +87,10 @@ def validate_lambda_role_name(role_name):
     return True
 
 @click.command()
+@click.option('--dryrun', default=False, is_flag=True, type=bool, 
+              help='create config file but take no actions')
 @click.pass_context
-def interactive_setup(ctx):
+def interactive_setup(ctx, dryrun):
 
     click.echo("This is the pywren interactive setup script")
     try:
@@ -96,7 +108,9 @@ def interactive_setup(ctx):
     aws_region = click_validate_prompt("What is your default aws region?", 
                                  default=pywren.wrenconfig.AWS_REGION_DEFAULT, 
                                  validate_func = check_aws_region_valid, 
-                                 fail_msg = "{} not a valid aws region")
+                                 fail_msg = "{} not a valid aws region"
+                                       "valid regions are " + \
+                                       " ".join(get_lambda_regions()))
     # FIXME make sure this is a valid region
     
     
@@ -143,6 +157,10 @@ def interactive_setup(ctx):
                function_name = function_name,
                bucket_prefix= bucket_pywren_prefix, 
                force=True)
+    if dryrun:
+        click.echo("dryrun is set, not manipulating cloud state")
+        return 
+
     if create_bucket:
         click.echo("Creating bucket {}".format(s3_bucket))
         ctx.invoke(pywrencli.create_bucket)

@@ -85,3 +85,4 @@ env:
     - RUN_STANDALONE=true
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
+    - RUN_COMMANDLINE=true
