@@ -1,9 +1,9 @@
-import pywrencli
 import click
 import os
 import boto3
 import botocore
 import pywren.wrenconfig
+from pywren.scripts import pywrencli
 import pwd
 import random
 import time
