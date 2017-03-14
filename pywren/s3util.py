@@ -59,7 +59,7 @@ def get_callset_done(bucket, prefix, callset_id):
 
         if 'NextContinuationToken' in s3res:
             continuation_token = s3res['NextContinuationToken']
-            s3res = s3_client.meta.client.list_objects_v2(Bucket=bucket, Prefix=key_prefix,
+            s3res = s3_client.list_objects_v2(Bucket=bucket, Prefix=key_prefix,
                                                        MaxKeys=1000,
                                                        ContinuationToken = continuation_token)
         else:
