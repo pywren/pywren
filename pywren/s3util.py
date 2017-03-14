@@ -47,16 +47,17 @@ def key_size(bucket, key):
 def get_callset_done(bucket, prefix, callset_id):
     key_prefix = os.path.join(prefix, callset_id)
     s3_client = boto3.client('s3')
-    paginator = s3_client.get_paginator('list_objects')
+    paginator = s3_client.get_paginator('list_objects_v2')
     operation_parameters = {'Bucket': bucket,
                             'Prefix': key_prefix}
     page_iterator = paginator.paginate(**operation_parameters)
 
     status_keys = []
     for page in page_iterator:
-        object_name = page['Contents']['Key']
-        if "status.json" in object_name:
-            status_keys.append(object_name)
+        for item in page['Contents']:
+            object_name = item['Key']
+            if "status.json" in object_name:
+                status_keys.append(object_name)
 
     call_ids = [k[len(key_prefix)+1:].split("/")[0] for k in status_keys]
     return call_ids
