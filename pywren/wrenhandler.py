@@ -20,6 +20,7 @@ if (sys.version_info > (3, 0)):
     from . import s3util
     from . import version
     from . import wrenconfig
+    from . import wrenlogging
     from queue import Queue, Empty
 
 else:
@@ -27,28 +28,17 @@ else:
     import s3util
     import version
     import wrenconfig
+    import wrenlogging
     from Queue import Queue, Empty
 
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
+
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
-
-def key_size(bucket, key):
-    try:
-
-        s3 = boto3.resource('s3')
-        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
-        return a['ContentLength']
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return None
-        else:
-            raise e
-
 
 def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
