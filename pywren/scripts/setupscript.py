@@ -85,6 +85,15 @@ def validate_lambda_role_name(role_name):
     # FIXME
     return True
 
+def ds(key):
+    """
+    Debug suffix for defaults. For automated testing, 
+    automatically adds a suffix to each default
+    """
+    env_var =  'PYWREN_SETUP_INTERACTIVE_DEBUG_SUFFIX'
+    suffix = os.environ.get(env_var, "")
+    return "{}{}".format(key, suffix)
+
 @click.command()
 @click.option('--dryrun', default=False, is_flag=True, type=bool, 
               help='create config file but take no actions')
@@ -120,7 +129,8 @@ def interactive_setup(ctx, dryrun):
     config_filename = os.path.expanduser(config_filename)
 
     s3_bucket = click_validate_prompt("pywren requires an s3 bucket to store intermediate data. What s3 bucket would you like to use?", 
-                                      default=create_unique_bucket_name(), validate_func=check_valid_bucket_name)
+                                      default=create_unique_bucket_name(), 
+                                      validate_func=check_valid_bucket_name)
     create_bucket = False
     if not check_bucket_exists(s3_bucket):                                        
         create_bucket = click.confirm("Bucket does not currently exist, would you like to create it?", default=True)
@@ -131,18 +141,18 @@ def interactive_setup(ctx, dryrun):
                                                  validate_func=validate_s3_prefix)
 
     lambda_config_advanced = click.confirm("Would you like to configure advanced PyWren properties?", default=False)
-    lambda_role = pywren.wrenconfig.AWS_LAMBDA_ROLE_DEFAULT
-    function_name = pywren.wrenconfig.AWS_LAMBDA_FUNCTION_NAME_DEFAULT
+    lambda_role = ds(pywren.wrenconfig.AWS_LAMBDA_ROLE_DEFAULT)
+    function_name = ds(pywren.wrenconfig.AWS_LAMBDA_FUNCTION_NAME_DEFAULT)
 
     if lambda_config_advanced:
         lambda_role = click_validate_prompt("Each lambda function runs as a particular"
                                           "IAM role. What is the name of the role you"
                                           "would like created for your lambda", 
-                                          default=pywren.wrenconfig.AWS_LAMBDA_ROLE_DEFAULT, 
+                                          default=lambda_role, 
                                           validate_func = validate_lambda_role_name)
-        function_name = click_validate_prompt("Each lambda function has a particular"
-                                              "What would you like to name yours?",
-                                              default=pywren.wrenconfig.AWS_LAMBDA_FUNCTION_NAME_DEFAULT, 
+        function_name = click_validate_prompt("Each lambda function has a particular function name."
+                                              "What is your function name?",
+                                              default=function_name, 
                                               validate_func = validate_lambda_function_name)
     click.echo("pywren standalone mode uses dedicated AWS instances to run pywren tasks. This is more flexible, but more expensive with fewer simultaneous workers.")
     use_standalone = click.confirm("Would you like to enable pywren standalone mode?")
