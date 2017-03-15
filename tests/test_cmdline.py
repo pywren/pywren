@@ -18,6 +18,8 @@ from click.testing import CliRunner
 from pywren.scripts.setupscript import interactive_setup
 import random
 from pywren.scripts import pywrencli
+from six import string_types
+
 
 questions = {'region' : None, 
              'config_file' : None, 
@@ -49,7 +51,7 @@ def questions_to_string(q):
             # default
             append_str = "\n"
         else:
-            if isinstance(action, basestring):
+            if isinstance(action, string_types):
                 append_str = action + "\n"
             else:
                 # assume action is a list of strings
