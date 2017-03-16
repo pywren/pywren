@@ -18,8 +18,7 @@ def get_runtime_info(bucket, key):
 def version_str(version_info):
     return "{}.{}".format(version_info[0], version_info[1])
 
-def runtime_key_valid(bucket, key):
-    runtime_meta = get_runtime_info(bucket, key)
+def runtime_key_valid(runtime_meta):
     return runtime_valid(runtime_meta)
 
 def runtime_valid(runtime_meta):

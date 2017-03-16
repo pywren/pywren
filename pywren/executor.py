@@ -8,6 +8,7 @@ except:
     import pickle
 from multiprocessing.pool import ThreadPool
 import time
+import random
 import logging
 import botocore
 import glob2
@@ -31,7 +32,7 @@ class Executor(object):
     """
 
     def __init__(self, aws_region, s3_bucket, s3_prefix,
-                 invoker, config, job_max_runtime, shard_runtime=False):
+                 invoker, config, job_max_runtime):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
@@ -41,11 +42,11 @@ class Executor(object):
         self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         self.job_max_runtime = job_max_runtime
-        self.shard_runtime = shard_runtime
 
         runtime_bucket = config['runtime']['s3_bucket']
         runtime_key =  config['runtime']['s3_key']
-        if not runtime.runtime_key_valid(runtime_bucket, runtime_key):
+        self.runtime_meta_info = runtime.get_runtime_info(runtime_bucket, runtime_key)
+        if not runtime.runtime_key_valid(self.runtime_meta_info):
             raise Exception("The indicated runtime: s3://{}/{} is not approprite for this python version".format(runtime_bucket, runtime_key))
 
     def create_mod_data(self, mod_paths):
@@ -85,6 +86,18 @@ class Executor(object):
                          host_job_meta, job_max_runtime,
                          overwrite_invoke_args = None):
 
+        # Pick a runtime url if we have shards. If not the handler will construct it
+        # using s3_bucket and s3_key
+        runtime_url = ""
+        if ('urls' in self.runtime_meta_info and
+                isinstance(self.runtime_meta_info['urls'], list) and
+                    len(self.runtime_meta_info['urls']) > 1):
+            num_shards = len(self.runtime_meta_info['urls'])
+            logger.debug("Runtime is sharded, choosing from {} copies.".format(num_shards))
+            random.seed()
+            runtime_url = random.choice(self.runtime_meta_info['urls'])
+
+
         arg_dict = {'func_key' : s3_func_key,
                     'data_key' : s3_data_key,
                     'output_key' : s3_output_key,
@@ -97,7 +110,7 @@ class Executor(object):
                     'runtime_s3_bucket' : self.config['runtime']['s3_bucket'],
                     'runtime_s3_key' : self.config['runtime']['s3_key'],
                     'pywren_version' : version.__version__,
-                    'shard_runtime_key' : self.shard_runtime}
+                    'runtime_url' : runtime_url }
 
         if extra_env is not None:
             logger.debug("Extra environment vars {}".format(extra_env))

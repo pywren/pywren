@@ -4,6 +4,7 @@ import boto3
 import uuid
 import numpy as np
 import time
+import os
 import pywren
 import pywren.runtime
 import subprocess
@@ -283,7 +284,12 @@ class RuntimeSharding(unittest.TestCase):
     download the real key
     """
     def test_no_shard(self):
-        wrenexec = pywren.default_executor(shard_runtime=False)
+        config = pywren.wrenconfig.default()
+        old_key = config['runtime']['s3_key']
+        prefix, tar_gz = os.path.split(old_key)
+        # Use the staging key to test as it doesn't have shards
+        config['runtime']['s3_key'] = os.path.join("pywren.runtime.staging", tar_gz)
+        wrenexec = pywren.default_executor(config=config)
 
         def test_func(x):
             return x + 1
@@ -291,11 +297,16 @@ class RuntimeSharding(unittest.TestCase):
         future = wrenexec.call_async(test_func, 7)
         result = future.result()
         base_runtime_key = wrenexec.config['runtime']['s3_key']
-        self.assertEqual(future.run_status['runtime_s3_key_used'], 
+        self.assertEqual(future.run_status['runtime_s3_key_used'],
                          base_runtime_key)
 
     def test_shard(self):
-        wrenexec = pywren.default_executor(shard_runtime=True)
+        config = pywren.wrenconfig.default()
+        old_key = config['runtime']['s3_key']
+        prefix, tar_gz = os.path.split(old_key)
+        # Use a runtime that has shards
+        config['runtime']['s3_key'] = os.path.join("pywren.runtime", tar_gz)
+        wrenexec = pywren.default_executor(config=config)
 
         def test_func(x):
             return x + 1
@@ -304,5 +315,6 @@ class RuntimeSharding(unittest.TestCase):
 
         future = wrenexec.call_async(test_func, 7)
         result = future.result()
+        # NOTE: There is some probability we will hit the base key ? 
         self.assertNotEqual(future.run_status['runtime_s3_key_used'], 
                          base_runtime_key)

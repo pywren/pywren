@@ -6,6 +6,9 @@ except:
     import pickle
 from tblib import pickling_support
 import logging
+import botocore
+import glob2
+import random
 import os
 pickling_support.install()
 
@@ -32,7 +35,7 @@ def default_executor(**kwargs):
     return lambda_executor(**kwargs)
 
 
-def lambda_executor(config= None, job_max_runtime=280, shard_runtime=False):
+def lambda_executor(config=None, job_max_runtime=280):
 
     if config is None:
         config = wrenconfig.default()
@@ -43,22 +46,21 @@ def lambda_executor(config= None, job_max_runtime=280, shard_runtime=False):
     S3_PREFIX = config['s3']['pywren_prefix']
 
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
-                    job_max_runtime, shard_runtime=shard_runtime)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
+                    job_max_runtime)
 
 
-def dummy_executor(shard_runtime=False):
+def dummy_executor():
     config = wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
-                    100, shard_runtime=shard_runtime)
+                    100)
 
 
-def remote_executor(config= None, job_max_runtime=3600,
-                    shard_runtime=False):
+def remote_executor(config= None, job_max_runtime=3600):
     if config is None:
         config = wrenconfig.default()
 
@@ -68,7 +70,9 @@ def remote_executor(config= None, job_max_runtime=3600,
     S3_PREFIX = config['s3']['pywren_prefix']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
-                    job_max_runtime, shard_runtime=shard_runtime)
+                    job_max_runtime)
+
+standalone_executor = remote_executor
 
 
 def get_all_results(fs):

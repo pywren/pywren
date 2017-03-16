@@ -13,22 +13,17 @@ import sys
 import traceback
 from threading import Thread
 import signal
-import random
 
 if (sys.version_info > (3, 0)):
     from . import wrenutil
     from . import s3util
     from . import version
-    from . import wrenconfig
-    from . import wrenlogging
     from queue import Queue, Empty
 
 else:
     import wrenutil
     import s3util
     import version
-    import wrenconfig
-    import wrenlogging
     from Queue import Queue, Empty
 
 
@@ -145,12 +140,11 @@ def generic_handler(event, context_dict):
 
         runtime_s3_bucket = event['runtime_s3_bucket']
         runtime_s3_key = event['runtime_s3_key']
-        if event.get('shard_runtime_key', False):
-            random.seed()
-            shard = random.randrange(wrenconfig.MAX_S3_RUNTIME_SHARDS)
-            key_shard = wrenutil.get_s3_shard(runtime_s3_key, shard)
-            runtime_s3_key_used = wrenutil.hash_s3_key(key_shard)
+        if event.get('runtime_url'):
+            # NOTE(shivaram): Right now we only support S3 urls.
+            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(event['runtime_url'])
         else:
+            runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
 
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
@@ -224,8 +218,9 @@ def generic_handler(event, context_dict):
         logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
+        response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
         
-        runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket, 
+        runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket_used,
                                                        runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached

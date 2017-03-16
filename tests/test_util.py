@@ -16,11 +16,3 @@ class S3HashingTest(unittest.TestCase):
         with pytest.raises(ValueError) as excinfo:
             bad_s3_url = "notS3://foo/bar"
             bucket, key = pywren.wrenutil.split_s3_url(bad_s3_url)
-            
-    def test_hash(self):
-        
-        key = 'testkey'
-        hashed_key = pywren.wrenutil.hash_s3_key(key)
-        print(hashed_key)
-        self.assertEqual(hashed_key[-len(key):], key)
-        self.assertNotEqual(hashed_key, key)
