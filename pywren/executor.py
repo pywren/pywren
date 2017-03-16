@@ -92,6 +92,8 @@ class Executor(object):
         if ('urls' in self.runtime_meta_info and
                 isinstance(self.runtime_meta_info['urls'], list) and
                     len(self.runtime_meta_info['urls']) > 1):
+            num_shards = len(self.runtime_meta_info['urls'])
+            logger.debug("Runtime is sharded, choosing from {} copies.".format(num_shards))
             random.seed()
             runtime_url = random.choice(self.runtime_meta_info['urls'])
 

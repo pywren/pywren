@@ -300,13 +300,12 @@ class RuntimeSharding(unittest.TestCase):
         self.assertEqual(future.run_status['runtime_s3_key_used'],
                          base_runtime_key)
 
-    @pytest.mark.skip(reason="enable this once we had a runtime with urls field in it")
     def test_shard(self):
         config = pywren.wrenconfig.default()
         old_key = config['runtime']['s3_key']
         prefix, tar_gz = os.path.split(old_key)
         # Use a runtime that has shards
-        config['runtime']['s3_key'] = os.path.join("pywren.runtime.sharded", tar_gz)
+        config['runtime']['s3_key'] = os.path.join("pywren.runtime", tar_gz)
         wrenexec = pywren.default_executor(config=config)
 
         def test_func(x):
