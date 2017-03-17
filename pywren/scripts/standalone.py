@@ -11,7 +11,7 @@ from glob2 import glob
 import io
 import time 
 import botocore
-from multiprocess import Process
+from multiprocessing import Process
 from pywren import wrenhandler
 import logging
 import watchtower

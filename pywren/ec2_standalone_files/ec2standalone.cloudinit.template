@@ -20,7 +20,7 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/tmp/miniconda.sh -b -p  /home/ec2-user/anaconda"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/conda install -q -y numpy boto3 boto"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install multiprocess supervisor"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install supervisor"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install git+https://github.com/ericmjonas/watchtower.git"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/head:refs/remotes/origin/pr/*"]
