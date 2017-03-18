@@ -32,22 +32,21 @@ class Executor(object):
     """
 
     def __init__(self, aws_region, s3_bucket, s3_prefix,
-                 invoker, config, job_max_runtime):
+                 invoker, runtime_s3_bucket, runtime_s3_key, job_max_runtime):
         self.aws_region = aws_region
         self.s3_bucket = s3_bucket
         self.s3_prefix = s3_prefix
-        self.config = config
 
         self.session = botocore.session.get_session()
         self.invoker = invoker
         self.s3client = self.session.create_client('s3', region_name = aws_region)
         self.job_max_runtime = job_max_runtime
 
-        runtime_bucket = config['runtime']['s3_bucket']
-        runtime_key =  config['runtime']['s3_key']
-        self.runtime_meta_info = runtime.get_runtime_info(runtime_bucket, runtime_key)
+        self.runtime_bucket = runtime_s3_bucket
+        self.runtime_key = runtime_s3_key
+        self.runtime_meta_info = runtime.get_runtime_info(runtime_s3_bucket, runtime_s3_key)
         if not runtime.runtime_key_valid(self.runtime_meta_info):
-            raise Exception("The indicated runtime: s3://{}/{} is not approprite for this python version".format(runtime_bucket, runtime_key))
+            raise Exception("The indicated runtime: s3://{}/{} is not approprite for this python version".format(runtime_s3_bucket, runtime_s3_key))
 
     def create_mod_data(self, mod_paths):
 
@@ -107,8 +106,8 @@ class Executor(object):
                     'data_byte_range' : data_byte_range,
                     'call_id' : call_id,
                     'use_cached_runtime' : use_cached_runtime,
-                    'runtime_s3_bucket' : self.config['runtime']['s3_bucket'],
-                    'runtime_s3_key' : self.config['runtime']['s3_key'],
+                    'runtime_s3_bucket' : self.runtime_bucket,
+                    'runtime_s3_key' : self.runtime_key,
                     'pywren_version' : version.__version__,
                     'runtime_url' : runtime_url }
 
