@@ -20,7 +20,6 @@ import logging
 import botocore
 import glob2
 import os
-from pywren.cloudpickle import serialize
 from pywren import invokers
 from tblib import pickling_support
 pickling_support.install()
