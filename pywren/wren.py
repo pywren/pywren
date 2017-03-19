@@ -36,7 +36,6 @@ def default_executor(**kwargs):
 
 
 def lambda_executor(config=None, job_max_runtime=280):
-
     if config is None:
         config = wrenconfig.default()
 
@@ -44,23 +43,29 @@ def lambda_executor(config=None, job_max_runtime=280):
     FUNCTION_NAME = config['lambda']['function_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
+    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
+    RUNTIME_S3_KEY = config['runtime']['s3_key']
 
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config, 
-                    job_max_runtime)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, 
+                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
 
 
-def dummy_executor():
-    config = wrenconfig.default()
+def dummy_executor(config=None, job_max_runtime=100):
+    if config is None:
+        config = wrenconfig.default()
+
     AWS_REGION = config['account']['aws_region']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
+    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
+    RUNTIME_S3_KEY = config['runtime']['s3_key']
     invoker = invokers.DummyInvoker()
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
-                    100)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
+                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
 
 
-def remote_executor(config= None, job_max_runtime=3600):
+def remote_executor(config=None, job_max_runtime=3600):
     if config is None:
         config = wrenconfig.default()
 
@@ -68,9 +73,11 @@ def remote_executor(config= None, job_max_runtime=3600):
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
+    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
+    RUNTIME_S3_KEY = config['runtime']['s3_key']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, config,
-                    job_max_runtime)
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
+                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
 
 standalone_executor = remote_executor
 
