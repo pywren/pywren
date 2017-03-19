@@ -4,6 +4,12 @@ Generic utility functions for serialization
 
 import os
 import glob2
+import base64
+
+def bytes_to_b64str(byte_data):
+    byte_data_64 = base64.b64encode(byte_data)
+    byte_data_64_ascii = byte_data_64.decode('ascii')
+    return byte_data_64_ascii
 
 def create_mod_data(mod_paths):
 
@@ -19,6 +25,6 @@ def create_mod_data(mod_paths):
         for f in files:
             dest_filename = f[len(pkg_root)+1:]
             mod_str = open(f, 'rb').read()
-            module_data[f[len(pkg_root)+1:]] = mod_str.decode('utf-8')
+            module_data[f[len(pkg_root)+1:]] = bytes_to_b64str(mod_str)
 
     return module_data
