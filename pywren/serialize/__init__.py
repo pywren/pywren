@@ -1,2 +1,2 @@
-from serialize import SerializeIndependent
-from util import create_mod_data
+from pywren.serialize.serialize import SerializeIndependent
+from pywren.serialize.util import create_mod_data

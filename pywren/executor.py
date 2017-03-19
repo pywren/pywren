@@ -51,8 +51,6 @@ class Executor(object):
             raise Exception("The indicated runtime: s3://{}/{} is not approprite for this python version".format(runtime_bucket, runtime_key))
 
         if 'preinstalls' in self.runtime_meta_info:
-            # FIXME DEBUG
-            pickle.dump(self.runtime_meta_info, open("debug.pickle", 'w'))
             logger.info("using serializer with meta-supplied preinstalls")
             self.serializer = serialize.SerializeIndependent(self.runtime_meta_info['preinstalls'])
         else:
