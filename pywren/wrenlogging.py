@@ -19,7 +19,7 @@ def default_config(log_level='INFO'):
         },
         'handlers': {
             'default': {
-                'level':'INFO',
+                'level':log_level, # 'INFO',
                 'class':'logging.StreamHandler',
                 'formatter' : 'standard'
             },
