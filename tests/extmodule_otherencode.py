@@ -1,0 +1,9 @@
+# coding: iso-8859-5
+# (Unlikely to be the default encoding for most testers.)
+# ±¶ÿאבגדהוזחטיךכלםמן <- Cyrillic characters
+u = '®גנÄ'
+
+def foo_add(x):
+    a_string = '®גנÄ'
+
+    return x + 1
