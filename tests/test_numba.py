@@ -1,12 +1,13 @@
 import pywren
 from numba import jit
 import time
+from six.moves import range
 
 import unittest
 
 def foo(N):
     x = 0.0
-    for i in xrange(N):
+    for i in range(N):
         x += 1.0
         x = x * 3.0
     return x
@@ -14,7 +15,7 @@ def foo(N):
 @jit
 def bar(N):
     x = 0.0
-    for i in xrange(N):
+    for i in range(N):
         x += 1.0
         x = x * 3.0
     return x
