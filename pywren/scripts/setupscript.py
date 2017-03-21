@@ -85,22 +85,24 @@ def validate_lambda_role_name(role_name):
     # FIXME
     return True
 
-def ds(key):
-    """
-    Debug suffix for defaults. For automated testing, 
-    automatically adds a suffix to each default
-    """
-    env_var =  'PYWREN_SETUP_INTERACTIVE_DEBUG_SUFFIX'
-    suffix = os.environ.get(env_var, "")
-    return "{}{}".format(key, suffix)
-
 @click.command()
 @click.option('--dryrun', default=False, is_flag=True, type=bool, 
               help='create config file but take no actions')
+@click.option('--suffix', default="", type=str, 
+              help="suffix to use for all automatically-generated named entities, useful for helping with IAM roles, and automated testing")
 @click.pass_context
-def interactive_setup(ctx, dryrun):
+def interactive_setup(ctx, dryrun, suffix):
 
-    click.echo("This is the pywren interactive setup script")
+
+    def ds(key):
+        """
+        Debug suffix for defaults. For automated testing, 
+        automatically adds a suffix to each default
+        """
+        return "{}{}".format(key, suffix)
+
+
+    click.echo("This is the PyWren interactive setup script")
     try:
         #first we will try and make sure AWS is set up
 
@@ -109,8 +111,8 @@ def interactive_setup(ctx, dryrun):
     except Exception as e:
         raise
 
-    click.echo("This interactive script will set up your initial pywren configuration.")
-    click.echo("If this is your first time using pywren then accepting the defaults should be fine")
+    click.echo("This interactive script will set up your initial PyWren configuration.")
+    click.echo("If this is your first time using PyWren then accepting the defaults should be fine.")
     
     # first, what is your default AWS region? 
     aws_region = click_validate_prompt("What is your default aws region?", 
@@ -128,15 +130,15 @@ def interactive_setup(ctx, dryrun):
                                             validate_func=check_overwrite_function)
     config_filename = os.path.expanduser(config_filename)
 
-    s3_bucket = click_validate_prompt("pywren requires an s3 bucket to store intermediate data. What s3 bucket would you like to use?", 
+    s3_bucket = click_validate_prompt("PyWren requires an s3 bucket to store intermediate data. What s3 bucket would you like to use?", 
                                       default=create_unique_bucket_name(), 
                                       validate_func=check_valid_bucket_name)
     create_bucket = False
     if not check_bucket_exists(s3_bucket):                                        
         create_bucket = click.confirm("Bucket does not currently exist, would you like to create it?", default=True)
 
-    click.echo("Pywren prefixes every object it puts in S3 with a particular prefix")
-    bucket_pywren_prefix = click_validate_prompt("pywren s3 prefix: ", 
+    click.echo("PyWren prefixes every object it puts in S3 with a particular prefix.")
+    bucket_pywren_prefix = click_validate_prompt("PyWren s3 prefix: ", 
                                                  default=pywren.wrenconfig.AWS_S3_PREFIX_DEFAULT, 
                                                  validate_func=validate_s3_prefix)
 
@@ -154,8 +156,8 @@ def interactive_setup(ctx, dryrun):
                                               "What is your function name?",
                                               default=function_name, 
                                               validate_func = validate_lambda_function_name)
-    click.echo("pywren standalone mode uses dedicated AWS instances to run pywren tasks. This is more flexible, but more expensive with fewer simultaneous workers.")
-    use_standalone = click.confirm("Would you like to enable pywren standalone mode?")
+    click.echo("PyWren standalone mode uses dedicated AWS instances to run PyWren tasks. This is more flexible, but more expensive with fewer simultaneous workers.")
+    use_standalone = click.confirm("Would you like to enable PyWren standalone mode?")
 
     click.echo("Creating config {}".format(config_filename))
     ctx.obj = {"config_filename" : config_filename}
@@ -167,22 +169,22 @@ def interactive_setup(ctx, dryrun):
                bucket_prefix= bucket_pywren_prefix, 
                force=True)
     if dryrun:
-        click.echo("dryrun is set, not manipulating cloud state")
+        click.echo("dryrun is set, not manipulating cloud state.")
         return 
 
     if create_bucket:
-        click.echo("Creating bucket {}".format(s3_bucket))
+        click.echo("Creating bucket {}.".format(s3_bucket))
         ctx.invoke(pywrencli.create_bucket)
-    click.echo("Creating role")
+    click.echo("Creating role.")
     ctx.invoke(pywrencli.create_role)
-    click.echo("deploying lambda")
+    click.echo("Deploying lambda.")
     ctx.invoke(pywrencli.deploy_lambda)
 
     if use_standalone:
-        click.echo("setting up standalone mode")
+        click.echo("Setting up standalone mode.")
         ctx.invoke(pywrencli.create_queue)
         ctx.invoke(pywrencli.create_instance_profile)
-    click.echo("pausing for 10 sec for changes to propoagate")
+    click.echo("Pausing for 10 sec for changes to propoagate.")
     time.sleep(10)
     ctx.invoke(pywrencli.test_function)
 

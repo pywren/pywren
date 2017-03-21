@@ -62,6 +62,9 @@ def questions_to_string(q):
 def config_exists(filename):
     return os.path.exists(os.path.expanduser(filename))
     
+
+SUFFIX = os.environ.get("PYWREN_SETUP_INTERACTIVE_DEBUG_SUFFIX", "")
+
 @cmdtest    
 class InteractiveCMDDryrun(unittest.TestCase):
     """
@@ -89,7 +92,8 @@ class InteractiveCMDDryrun(unittest.TestCase):
         qs['config_file'] = self.config_filename
 
         cmd_str = questions_to_string(qs)
-        result = self.runner.invoke(interactive_setup, ['--dryrun'], 
+        result = self.runner.invoke(interactive_setup, 
+                                    ['--dryrun', '--suffix', SUFFIX], 
                                     input=cmd_str)
         print(result.output)
         assert not result.exception
@@ -102,7 +106,8 @@ class InteractiveCMDDryrun(unittest.TestCase):
                         'ap-northeast-2']
 
         cmd_str = questions_to_string(qs)
-        result = self.runner.invoke(interactive_setup, ['--dryrun'], 
+        result = self.runner.invoke(interactive_setup, 
+                                    ['--dryrun', '--suffix', SUFFIX], 
                                     input=cmd_str)
         print(result.output)
         assert not result.exception
@@ -146,6 +151,7 @@ class InteractiveCMD(unittest.TestCase):
 
         cmd_str = questions_to_string(qs)
         result = self.runner.invoke(interactive_setup,
+                                    args=['--suffix', SUFFIX],
                                     input=cmd_str)
         print(result.output)
         assert "Hello world" in result.output
