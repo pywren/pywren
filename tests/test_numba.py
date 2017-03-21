@@ -6,15 +6,17 @@ import unittest
 
 def foo(N):
     x = 0.0
-    for i in range(N):
+    for i in xrange(N):
         x += 1.0
+        x = x * 3.0
     return x
 
 @jit
 def bar(N):
     x = 0.0
-    for i in range(N):
+    for i in xrange(N):
         x += 1.0
+        x = x * 3.0
     return x
 
 
@@ -51,10 +53,16 @@ class NumbaTest(unittest.TestCase):
         results = self.wrenexec.map(time_foo, [N])
         pywren.wait(results)
         regular_time = results[0].result()
+        print('regular time', regular_time)
 
         results = self.wrenexec.map(time_bar, [N])
         pywren.wait(results)
         numba_time = results[0].result()
-        self.assertTrue(numba_time < regular_time / 10.0)
+        print('numba time', numba_time)
+
+
+        speed_gain = regular_time / numba_time
+
+        self.assertTrue(speed_gain > 10.0)
 
 
