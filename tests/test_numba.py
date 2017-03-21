@@ -64,6 +64,6 @@ class NumbaTest(unittest.TestCase):
 
         speed_gain = regular_time / numba_time
 
-        self.assertTrue(speed_gain > 10.0)
+        self.assertTrue(speed_gain > 8.0)
 
 
