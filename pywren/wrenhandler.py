@@ -245,7 +245,8 @@ def generic_handler(event, context_dict):
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
 
-        CONDA_PYTHON_RUNTIME = "/tmp/condaruntime/bin/python"
+        CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
+        CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
         cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
                                          jobrunner_path, 
@@ -260,6 +261,8 @@ def generic_handler(event, context_dict):
 
         local_env["OMP_NUM_THREADS"] = "1"
         local_env.update(extra_env)
+
+        local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
 
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
