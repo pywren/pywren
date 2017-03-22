@@ -63,8 +63,8 @@ def get_callset_done(bucket, prefix, callset_id):
     return call_ids
 
 def get_call_status(callset_id, call_id,
-                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET,
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX):
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT,
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT):
     s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
                                                             AWS_S3_PREFIX,
                                                             callset_id, call_id)
@@ -83,8 +83,8 @@ def get_call_status(callset_id, call_id,
 
 
 def get_call_output(callset_id, call_id,
-                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET,
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX):
+                    AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT,
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT):
     s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
                                                                    AWS_S3_PREFIX,
                                                                    callset_id, call_id)

@@ -58,6 +58,7 @@ script:
   - tests/lambda_tests.sh
   - tests/ec2_standalone_tests.sh
   - tests/ec2_macroreduce_tests.sh
+  - tests/cmdline_tests.sh
   
 
 after_script:
@@ -85,3 +86,4 @@ env:
     - RUN_STANDALONE=true
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
+    - RUN_COMMANDLINE=true
