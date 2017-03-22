@@ -120,7 +120,7 @@ class InteractiveTest(unittest.TestCase):
     '''
 
     def test_simple(self):
-        ret = os.system("python -c \"import pywren; import sys; sys.path.append(\'tests\'); import extmodule; pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
+        ret = os.system("cd tests; python -c \"import pywren; import sys; import extmodule; pwex = pywren.default_executor();results = pwex.map(extmodule.foo_add, [0]);print(results[0].result())\"")
         self.assertEqual(ret, 0)
 
 
