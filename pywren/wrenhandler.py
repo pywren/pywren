@@ -10,6 +10,8 @@ import uuid
 import json
 import shutil
 import sys
+import base64
+
 import traceback
 from threading import Thread
 import signal
@@ -86,6 +88,13 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     # final operation 
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
     return False
+
+
+def b64str_to_bytes(str_data):
+    str_ascii = str_data.encode('ascii')
+    byte_data= base64.b64decode(str_ascii)
+    return byte_data
+
 
 def aws_lambda_handler(event, context):
     logger.setLevel(logging.INFO)
@@ -194,7 +203,7 @@ def generic_handler(event, context_dict):
         shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
         os.mkdir(PYTHON_MODULE_PATH)
         # get modules and save
-        for m_filename, m_text in d['module_data'].items():
+        for m_filename, m_data in d['module_data'].items():
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
@@ -211,7 +220,7 @@ def generic_handler(event, context_dict):
             full_filename = os.path.join(to_make, os.path.basename(m_filename))
             #print "creating", full_filename
             fid = open(full_filename, 'wb')
-            fid.write(m_text.encode('utf-8'))
+            fid.write(b64str_to_bytes(m_data))
             fid.close()
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
         logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))

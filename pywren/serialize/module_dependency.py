@@ -282,18 +282,3 @@ class ModuleDependencyAnalyzer(object):
             return set()
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG)
-    mda = ModuleDependencyAnalyzer()
-    import preinstalls
-
-    mda.ignore([module for module, pkg in preinstalls.modules])
-    # mda.ignore('encodings')
-    # mda.ignore('test')
-    mda.add('tau')
-    # mda.ignore('s')
-    # mda.add('s')
-    # mda.add('numpy')
-    print('inspected modules', mda._inspected_modules)
-    print('modules to inspect', mda._modules_to_inspect)
-    print('paths to trans', mda._paths_to_transmit)
