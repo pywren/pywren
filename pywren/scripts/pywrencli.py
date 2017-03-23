@@ -204,13 +204,16 @@ def deploy_lambda(ctx, update_if_exists = True):
     zipfile_obj = zipfile.ZipFile(file_like_object, mode='w')
 
     # FIXME see if role exists
-    files = glob2.glob(os.path.join(SOURCE_DIR, "../**/*.py"))
-    for f in files:
+    module_dir = os.path.join(SOURCE_DIR, "../")
+    
+    for f in ['wrenutil.py', 'wrenconfig.py', 's3util.py', 'wrenhandler.py', 
+              'version.py', 'jobrunner.py', 'wren.py']:
+        f = os.path.abspath(os.path.join(module_dir, f))
         a = os.path.relpath(f, SOURCE_DIR + "/..")
                             
         zipfile_obj.write(f, arcname=a)
     zipfile_obj.close()
-    #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
+    open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
         
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 
