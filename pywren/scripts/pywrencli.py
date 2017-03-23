@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import pywren
 import boto3
@@ -213,7 +214,7 @@ def deploy_lambda(ctx, update_if_exists = True):
                             
         zipfile_obj.write(f, arcname=a)
     zipfile_obj.close()
-    open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
+    #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
         
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 
@@ -249,18 +250,16 @@ def deploy_lambda(ctx, update_if_exists = True):
                                            Timeout = TIMEOUT, 
                                            Role = ROLE, 
                                            Code = {'ZipFile' : file_like_object.getvalue()})
-                print("Create successful")
+                print("Successfully created function.")
                 break
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "InvalidParameterValueException":
 
-                print("attempt", retries)
                 retries += 1
 
                 # FIXME actually check for "botocore.exceptions.ClientError: An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda."
-                print("sleeping for 5")
+                print("Pausing for 5 seconds for changes to propagate.")
                 time.sleep(5)
-                print("done")
                 continue
             else:
                 raise e
