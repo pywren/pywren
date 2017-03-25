@@ -14,7 +14,6 @@ from pywren import wrenconfig, wrenutil, runtime
 import enum
 from multiprocessing.pool import ThreadPool
 import time
-from pywren import s3util
 from pywren.executor import *
 import logging
 import botocore
@@ -39,19 +38,18 @@ class ResponseFuture(object):
     """
     """
     GET_RESULT_SLEEP_SECS = 4
-    def __init__(self, call_id, callset_id, invoke_metadata,
-                 s3_bucket, s3_prefix, aws_region):
+    def __init__(self, call_id, callset_id, invoke_metadata, storage):
 
         self.call_id = call_id
         self.callset_id = callset_id
         self._state = JobState.new
-        self.s3_bucket = s3_bucket
-        self.s3_prefix = s3_prefix
-        self.aws_region = aws_region
 
         self._invoke_metadata = invoke_metadata.copy()
 
         self.status_query_count = 0
+
+        # FIXME: we now put a reference of storage in future, can we still serialize futures?
+        self.storage = storage
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -105,9 +103,7 @@ class ResponseFuture(object):
                 return None
 
 
-        call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                      AWS_S3_BUCKET = self.s3_bucket,
-                                      AWS_S3_PREFIX = self.s3_prefix)
+        call_status = self.storage.get_call_status(self.callset_id, self.call_id)
 
         self.status_query_count += 1
 
@@ -120,9 +116,7 @@ class ResponseFuture(object):
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
-            call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                          AWS_S3_BUCKET = self.s3_bucket,
-                                          AWS_S3_PREFIX = self.s3_prefix)
+            call_status = self.storage.get_call_status(self.callset_id, self.call_id)
 
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
@@ -152,10 +146,9 @@ class ResponseFuture(object):
                 return None
 
         call_output_time = time.time()
-        call_invoker_result = pickle.loads(s3util.get_call_output(self.callset_id,
-                                                                  self.call_id,
-                                                                  AWS_S3_BUCKET = self.s3_bucket,
-                                                                  AWS_S3_PREFIX = self.s3_prefix))
+        call_invoker_result = pickle.loads(self.storage.get_call_output(self.callset_id,
+                                                                  self.call_id))
+
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
 
