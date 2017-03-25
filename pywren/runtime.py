@@ -2,24 +2,27 @@ import boto3
 import json
 import sys
 
-def get_runtime_info(bucket, key):
+import pywren.storage as storage
+
+# FIXME separate runtime code with S3
+
+def get_runtime_info(config):
     """
     Download runtime information from S3 at deserialize
     """
-    s3 = boto3.resource('s3')
+    runtime_meta = storage.get_storage(config).get_runtime_info()
 
-    runtime_meta_key = key.replace(".tar.gz", ".meta.json")
-    
-    json_str = s3.meta.client.get_object(Bucket=bucket, Key=runtime_meta_key)['Body'].read()
-    runtime_meta = json.loads(json_str.decode("ascii"))
+    if not runtime_valid(runtime_meta):
+        raise Exception("The indicated runtime: {} "
+                        + "is not approprite for this python version"
+                        .format(config['runtime']))
 
     return runtime_meta
+
 
 def version_str(version_info):
     return "{}.{}".format(version_info[0], version_info[1])
 
-def runtime_key_valid(runtime_meta):
-    return runtime_valid(runtime_meta)
 
 def runtime_valid(runtime_meta):
     """

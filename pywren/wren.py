@@ -41,13 +41,14 @@ def lambda_executor(config=None, job_max_runtime=280):
 
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
+    invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
+
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
     RUNTIME_S3_KEY = config['runtime']['s3_key']
 
-    invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker, 
+    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
                     RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
 
 
@@ -60,6 +61,7 @@ def dummy_executor(config=None, job_max_runtime=100):
     S3_PREFIX = config['s3']['pywren_prefix']
     RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
     RUNTIME_S3_KEY = config['runtime']['s3_key']
+
     invoker = invokers.DummyInvoker()
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
                     RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
@@ -71,11 +73,13 @@ def remote_executor(config=None, job_max_runtime=3600):
 
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE = config['standalone']['sqs_queue_name']
+    invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
+
     S3_BUCKET = config['s3']['bucket']
     S3_PREFIX = config['s3']['pywren_prefix']
     RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
     RUNTIME_S3_KEY = config['runtime']['s3_key']
-    invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
+
     return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
                     RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
 

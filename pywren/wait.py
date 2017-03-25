@@ -10,7 +10,6 @@ from multiprocessing.pool import ThreadPool
 pickling_support.install()
 
 from pywren.future import JobState
-import pywren.s3util as s3util
 
 ALL_COMPLETED = 1
 ANY_COMPLETED = 2
@@ -85,9 +84,8 @@ def _wait(fs, THREADPOOL_SIZE):
     callset_id = present_callsets.pop() # FIXME assume only one
     f0 = not_done_futures[0] # This is a hack too
 
-    callids_done = s3util.get_callset_done(f0.s3_bucket,
-                                           f0.s3_prefix,
-                                           callset_id)
+    callids_done = f0.storage.get_callset_done(callset_id)
+
     callids_done = set(callids_done)
 
     fs_dones = []

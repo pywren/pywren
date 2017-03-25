@@ -1,4 +1,5 @@
 from six.moves import cPickle as pickle
+import botocore
 import boto3
 import tarfile
 import subprocess
@@ -18,13 +19,11 @@ import signal
 
 if (sys.version_info > (3, 0)):
     from . import wrenutil
-    from . import s3util
     from . import version
     from queue import Queue, Empty
 
 else:
     import wrenutil
-    import s3util
     import version
     from Queue import Queue, Empty
 
@@ -36,6 +35,17 @@ RUNTIME_LOC = "/tmp/runtimes"
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
+
+def get_key_size(bucket, key):
+    try:
+        s3 = boto3.resource('s3')
+        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
+        return a['ContentLength']
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return None
+        else:
+            raise e
 
 def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
@@ -164,12 +174,12 @@ def generic_handler(event, context_dict):
         response_status['status_key'] = status_key 
 
         b, k = data_key
-        KS =  s3util.key_size(b, k)
+        KS =  get_key_size(b, k)
         #logger.info("bucket=", b, "key=", k,  "status: ", KS, "bytes" )
         while KS is None:
             logger.warn("WARNING COULD NOT GET FIRST KEY" )
 
-            KS =  s3util.key_size(b, k)
+            KS =  get_key_size(b, k)
         if not event['use_cached_runtime'] :
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
