@@ -44,9 +44,12 @@ def key_size(bucket, key):
             raise e
 
 
-def get_callset_done(bucket, prefix, callset_id):
+def get_callset_done(bucket, prefix, callset_id, s3_client = None):
+
     key_prefix = os.path.join(prefix, callset_id)
-    s3_client = boto3.client('s3')
+    if s3_client is None:
+        s3_client = boto3.client('s3')
+
     paginator = s3_client.get_paginator('list_objects_v2')
     operation_parameters = {'Bucket': bucket,
                             'Prefix': key_prefix}
@@ -64,11 +67,13 @@ def get_callset_done(bucket, prefix, callset_id):
 
 def get_call_status(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT,
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT):
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT, 
+                    s3_client = None):
     s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
                                                             AWS_S3_PREFIX,
                                                             callset_id, call_id)
-    s3_client = boto3.client('s3')
+    if s3_client is None:
+        s3_client = boto3.client('s3')
 
     try:
         r = s3_client.get_object(Bucket = s3_status_key[0], Key = s3_status_key[1])
@@ -84,12 +89,14 @@ def get_call_status(callset_id, call_id,
 
 def get_call_output(callset_id, call_id,
                     AWS_S3_BUCKET = wrenconfig.AWS_S3_BUCKET_DEFAULT,
-                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT):
+                    AWS_S3_PREFIX = wrenconfig.AWS_S3_PREFIX_DEFAULT, 
+                    s3_client = None):
     s3_data_key, s3_output_key, s3_status_key = create_keys(AWS_S3_BUCKET,
                                                                    AWS_S3_PREFIX,
                                                                    callset_id, call_id)
 
-    s3_client = boto3.client('s3')
+    if s3_client is None:
+        s3_client = boto3.client('s3')
 
     r = s3_client.get_object(Bucket = s3_output_key[0], Key = s3_output_key[1])
     return r['Body'].read()

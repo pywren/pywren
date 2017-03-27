@@ -11,13 +11,17 @@ pickling_support.install()
 
 from pywren.future import JobState
 import pywren.s3util as s3util
+import logging
+import boto3
 
 ALL_COMPLETED = 1
 ANY_COMPLETED = 2
 ALWAYS = 3
 
+logger = logging.getLogger(__name__)
+
 def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
-         WAIT_DUR_SEC=5):
+         WAIT_DUR_SEC=5, s3_client=None):
     """
     this will eventually provide an optimization for checking if a large
     number of futures have completed without too much network traffic
@@ -39,10 +43,12 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
 
     if return_when==ALL_COMPLETED:
         result_count = 0
+        fs_notdones = fs
         while result_count < N:
 
-            fs_dones, fs_notdones = _wait(fs, THREADPOOL_SIZE)
-            result_count = len(fs_dones)
+            fs_dones, fs_notdones = _wait(fs_notdones, THREADPOOL_SIZE, 
+                                          s3_client=s3_client)
+            result_count += len(fs_dones)
 
             if result_count == N:
                 return fs_dones, fs_notdones
@@ -63,7 +69,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     else:
         raise ValueError()
 
-def _wait(fs, THREADPOOL_SIZE):
+def _wait(fs, THREADPOOL_SIZE, s3_client=None):
     """
     internal function that performs the majority of the WAIT task
     work.
@@ -104,12 +110,16 @@ def _wait(fs, THREADPOOL_SIZE):
                 fs_dones.append(f)
             else:
                 fs_notdones.append(f)
+
+
     def test(f):
-        f.result(throw_except=False)
+        f.result(throw_except=False, s3_client=s3_client)
     pool = ThreadPool(THREADPOOL_SIZE)
+    logger.info("_wait calling map, len(f_to_wait_on)={}".format(len(f_to_wait_on)))
     pool.map(test, f_to_wait_on)
 
     pool.close()
     pool.join()
+    logger.info("_wait map done")
 
     return fs_dones, fs_notdones

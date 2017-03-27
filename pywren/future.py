@@ -73,7 +73,8 @@ class ResponseFuture(object):
         return True
 
 
-    def result(self, timeout=None, check_only=False, throw_except=True):
+    def result(self, timeout=None, check_only=False, throw_except=True, 
+               s3_client=None):
         """
 
 
@@ -104,9 +105,14 @@ class ResponseFuture(object):
                 return None
 
 
+        logger.info("ResponseFuture.result() {} {} getting_call_status".format(self.callset_id,
+                                                                           self.call_id))
+
+
         call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                      AWS_S3_BUCKET = self.s3_bucket,
-                                      AWS_S3_PREFIX = self.s3_prefix)
+                                             AWS_S3_BUCKET = self.s3_bucket,
+                                             AWS_S3_PREFIX = self.s3_prefix, 
+                                             s3_client = s3_client)
 
         self.status_query_count += 1
 
@@ -120,10 +126,15 @@ class ResponseFuture(object):
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
             call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                          AWS_S3_BUCKET = self.s3_bucket,
-                                          AWS_S3_PREFIX = self.s3_prefix)
+                                                 AWS_S3_BUCKET = self.s3_bucket,
+                                                 AWS_S3_PREFIX = self.s3_prefix, 
+                                                 s3_client = s3_client)
 
             self.status_query_count += 1
+        logger.info("ResponseFuture.result() {} {} got call status, status_query_count={}".format(self.callset_id,
+                                                                                                  self.call_id, 
+                                                                                                  self.status_query_count))
+
         self._invoke_metadata['status_done_timestamp'] = time.time()
         self._invoke_metadata['status_query_count'] = self.status_query_count
 
@@ -150,11 +161,15 @@ class ResponseFuture(object):
                     raise Exception(exception_str, *exception_args)
                 return None
 
+        logger.info("ResponseFuture.result() {} {} getting output".format(self.callset_id,
+                                                                             self.call_id))
+
         call_output_time = time.time()
         call_invoker_result = pickle.loads(s3util.get_call_output(self.callset_id,
                                                                   self.call_id,
                                                                   AWS_S3_BUCKET = self.s3_bucket,
-                                                                  AWS_S3_PREFIX = self.s3_prefix))
+                                                                  AWS_S3_PREFIX = self.s3_prefix, 
+                                                                  s3_client = s3_client))
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
 
