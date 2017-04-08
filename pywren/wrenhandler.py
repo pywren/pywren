@@ -148,8 +148,8 @@ def generic_handler(event, context_dict):
         data_filename = "/tmp/data.pickle"
         output_filename = "/tmp/output.pickle"
 
-        runtime_s3_bucket = event['runtime_s3_bucket']
-        runtime_s3_key = event['runtime_s3_key']
+        runtime_s3_bucket = event['runtime']['s3_bucket']
+        runtime_s3_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
             runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(event['runtime_url'])

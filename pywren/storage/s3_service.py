@@ -16,6 +16,7 @@ class S3Service(object):
 
         self.runtime_bucket = config['runtime']['s3_bucket']
         self.runtime_key = config['runtime']['s3_key']
+        self.prefix = config['s3']['pywren_prefix']
 
         self.session = botocore.session.get_session()
         self.s3client = self.session.create_client('s3', region_name=self.aws_region)
@@ -24,23 +25,22 @@ class S3Service(object):
         self.s3client.put_object(Bucket=self.s3_bucket, Key=key, Body=body)
 
     def create_keys(self, callset_id, call_id):
-        data_key = os.path.join(self.prefix, callset_id, call_id, "data.pickle")
-        output_key = os.path.join(self.prefix, callset_id, call_id, "output.pickle")
-        status_key = os.path.join(self.prefix, callset_id, call_id, "status.json")
+        data_key = (self.s3_bucket, os.path.join(self.prefix, callset_id, call_id, "data.pickle"))
+        output_key = (self.s3_bucket, os.path.join(self.prefix, callset_id, call_id, "output.pickle"))
+        status_key = (self.s3_bucket, os.path.join(self.prefix, callset_id, call_id, "status.json"))
         return data_key, output_key, status_key
 
     def create_func_key(self, callset_id):
-        func_key = os.path.join(self.prefix, callset_id, "func.json")
+        func_key = (self.s3_bucket, os.path.join(self.prefix, callset_id, "func.json"))
         return func_key
 
     def create_agg_data_key(self, callset_id):
-        func_key = os.path.join(self.prefix, callset_id, "aggdata.pickle")
+        func_key = (self.s3_bucket, os.path.join(self.prefix, callset_id, "aggdata.pickle"))
         return func_key
 
     def get_callset_done(self, callset_id):
         key_prefix = os.path.join(self.prefix, callset_id)
-        s3_client = boto3.client('s3')
-        paginator = s3_client.get_paginator('list_objects_v2')
+        paginator = self.s3client.get_paginator('list_objects_v2')
         operation_parameters = {'Bucket': self.s3_bucket,
                                 'Prefix': key_prefix}
         page_iterator = paginator.paginate(**operation_parameters)
@@ -58,10 +58,9 @@ class S3Service(object):
     def get_call_status(self, callset_id, call_id):
         s3_data_key, s3_output_key, s3_status_key = self.create_keys(callset_id, call_id)
 
-        s3_client = boto3.client('s3')
 
         try:
-            r = s3_client.get_object(Bucket = self.s3_bucket, Key = s3_status_key)
+            r = self.s3client.get_object(Bucket = self.s3_bucket, Key = s3_status_key[1])
             result_json = r['Body'].read()
             return json.loads(result_json.decode('ascii'))
 
@@ -74,15 +73,14 @@ class S3Service(object):
     def get_call_output(self, callset_id, call_id):
         s3_data_key, s3_output_key, s3_status_key = self.create_keys(callset_id, call_id)
 
-        s3_client = boto3.client('s3')
 
-        r = s3_client.get_object(Bucket = self.s3_bucket, Key = s3_output_key)
+        r = self.s3client.get_object(Bucket = self.s3_bucket, Key = s3_output_key[1])
         return r['Body'].read()
 
     def get_runtime_info(self):
         runtime_meta_key = self.runtime_key.replace(".tar.gz", ".meta.json")
 
-        json_str = self.s3_client.get_object(Bucket=self.runtime_bucket,
+        json_str = self.s3client.get_object(Bucket=self.runtime_bucket,
                                              Key=runtime_meta_key)['Body'].read()
 
         runtime_meta = json.loads(json_str.decode("ascii"))
