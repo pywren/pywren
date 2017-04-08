@@ -31,10 +31,11 @@ class Executor(object):
     Theoretically will allow for cross-AZ invocations
     """
 
-    def __init__(self, config, invoker, job_max_runtime):
+    def __init__(self, invoker, config, job_max_runtime):
         self.invoker = invoker
         self.job_max_runtime = job_max_runtime
 
+        self.config = config
         self.storage = storage.get_storage(config)
         self.runtime_meta_info = runtime.get_runtime_info(config)
 
@@ -81,8 +82,7 @@ class Executor(object):
                     'data_byte_range' : data_byte_range,
                     'call_id' : call_id,
                     'use_cached_runtime' : use_cached_runtime,
-                    'runtime_s3_bucket' : self.runtime_bucket,
-                    'runtime_s3_key' : self.runtime_key,
+                    'runtime' : self.config['runtime'],
                     'pywren_version' : version.__version__,
                     'runtime_url' : runtime_url }
 
@@ -181,7 +181,7 @@ class Executor(object):
             agg_data_key = self.storage.create_agg_data_key(callset_id)
             agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
             agg_upload_time = time.time()
-            self.storage.put_object(agg_data_key, agg_data_bytes)
+            self.storage.put_object(agg_data_key[1], agg_data_bytes)
             host_job_meta['agg_data'] = True
             host_job_meta['data_upload_time'] = time.time() - agg_upload_time
             host_job_meta['data_upload_timestamp'] = time.time()
@@ -204,7 +204,7 @@ class Executor(object):
 
         func_upload_time = time.time()
         func_key = self.storage.create_func_key(callset_id)
-        self.storage.put_object(func_key, func_module_str)
+        self.storage.put_object(func_key[1], func_module_str)
         host_job_meta['func_upload_time'] = time.time() - func_upload_time
         host_job_meta['func_upload_timestamp'] = time.time()
         def invoke(data_str, callset_id, call_id, func_key,

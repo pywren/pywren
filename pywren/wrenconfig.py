@@ -69,6 +69,7 @@ def default():
         raise ValueError("could not find configuration file")
 
     config_data = load(config_filename)
+
     return config_data
 
 basic_role_policy = {

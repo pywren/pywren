@@ -48,8 +48,7 @@ def lambda_executor(config=None, job_max_runtime=280):
     RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
     RUNTIME_S3_KEY = config['runtime']['s3_key']
 
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
-                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime)
 
 
 def dummy_executor(config=None, job_max_runtime=100):
@@ -63,8 +62,7 @@ def dummy_executor(config=None, job_max_runtime=100):
     RUNTIME_S3_KEY = config['runtime']['s3_key']
 
     invoker = invokers.DummyInvoker()
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
-                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime)
 
 
 def remote_executor(config=None, job_max_runtime=3600):
@@ -80,8 +78,7 @@ def remote_executor(config=None, job_max_runtime=3600):
     RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
     RUNTIME_S3_KEY = config['runtime']['s3_key']
 
-    return Executor(AWS_REGION, S3_BUCKET, S3_PREFIX, invoker,
-                    RUNTIME_S3_BUCKET, RUNTIME_S3_KEY, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime)
 
 standalone_executor = remote_executor
 

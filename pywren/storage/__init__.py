@@ -1,4 +1,2 @@
-from __future__ import absolute_import
-
-from storage.storage import *
+from storage import *
 
