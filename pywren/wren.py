@@ -43,23 +43,12 @@ def lambda_executor(config=None, job_max_runtime=280):
     FUNCTION_NAME = config['lambda']['function_name']
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
 
-    S3_BUCKET = config['s3']['bucket']
-    S3_PREFIX = config['s3']['pywren_prefix']
-    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
-    RUNTIME_S3_KEY = config['runtime']['s3_key']
-
     return Executor(invoker, config, job_max_runtime)
 
 
 def dummy_executor(config=None, job_max_runtime=100):
     if config is None:
         config = wrenconfig.default()
-
-    AWS_REGION = config['account']['aws_region']
-    S3_BUCKET = config['s3']['bucket']
-    S3_PREFIX = config['s3']['pywren_prefix']
-    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
-    RUNTIME_S3_KEY = config['runtime']['s3_key']
 
     invoker = invokers.DummyInvoker()
     return Executor(invoker, config, job_max_runtime)
@@ -73,20 +62,25 @@ def remote_executor(config=None, job_max_runtime=3600):
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
 
-    S3_BUCKET = config['s3']['bucket']
-    S3_PREFIX = config['s3']['pywren_prefix']
-    RUNTIME_S3_BUCKET = config['runtime']['s3_bucket']
-    RUNTIME_S3_KEY = config['runtime']['s3_key']
-
     return Executor(invoker, config, job_max_runtime)
 
 standalone_executor = remote_executor
 
 
+def save_futures_to_string(futures):
+    for f in list(futures):
+        f.storage = None
+    return pickle.dumps(list(futures))
+
+
+def load_futures_from_string(fut_str):
+    return list(pickle.loads(fut_str))
+
+
 def save_futures(futures, filename):
     for f in list(futures):
         f.storage = None
-    pickle.dump(futures, open(filename, "wb"))
+    pickle.dump(list(futures), open(filename, "wb"))
 
 
 def load_futures(filename):

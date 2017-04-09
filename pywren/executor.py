@@ -38,7 +38,7 @@ class Executor(object):
         self.config = config
         self.storage_config = wrenconfig.extract_storage_config(self.config)
         self.storage = storage.Storage(self.storage_config)
-        self.runtime_meta_info = self.storage.get_runtime_info(config['runtime'])
+        self.runtime_meta_info = runtime.get_runtime_info(config['runtime'], self.storage)
 
 
         if 'preinstalls' in self.runtime_meta_info:
@@ -290,7 +290,7 @@ class Executor(object):
     def get_logs(self, future, verbose=True):
 
 
-        logclient = boto3.client('logs', region_name=self.aws_region)
+        logclient = boto3.client('logs', region_name=self.config['account']['aws_region'])
 
 
         log_group_name = future.run_status['log_group_name']

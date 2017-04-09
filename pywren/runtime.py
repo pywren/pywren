@@ -3,19 +3,24 @@ import json
 import sys
 
 import pywren.storage as storage
+import pywren.wrenconfig as wrenconfig
 
 # FIXME separate runtime code with S3
 
-def get_runtime_info(config):
+def get_runtime_info(runtime_config, storage_handler = None):
     """
     Download runtime information from S3 at deserialize
     """
-    runtime_meta = storage.Storage(config).get_runtime_info()
+    if storage_handler is None:
+        storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+        storage_handler = storage.Storage(storage_config)
+
+    runtime_meta = storage_handler.get_runtime_info(runtime_config)
 
     if not runtime_valid(runtime_meta):
         raise Exception("The indicated runtime: {} "
-                        + "is not approprite for this python version"
-                        .format(config['runtime']))
+                        + "is not approprite for this python version."
+                        .format(runtime_config))
 
     return runtime_meta
 
