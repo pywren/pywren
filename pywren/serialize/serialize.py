@@ -32,9 +32,9 @@ import time
 import logging
 import numpy as np
 
-from pywren.cloudpickle.cloudpickle import CloudPickler
-from pywren.cloudpickle.module_dependency import ModuleDependencyAnalyzer
-from pywren.cloudpickle import preinstalls
+from pywren.serialize.cloudpickle import CloudPickler
+from pywren.serialize.module_dependency import ModuleDependencyAnalyzer
+from pywren.serialize import default_preinstalls
 
 # class Serialize(object):
 #     def __init__(self):
@@ -120,9 +120,9 @@ from pywren.cloudpickle import preinstalls
         # )
 
 class SerializeIndependent(object):
-    def __init__(self):
+    def __init__(self, preinstalled_modules = default_preinstalls.modules):
         
-        pass
+        self.preinstalled_modules = preinstalled_modules
 
     def __call__(self, list_of_objs, **kwargs):
         """
@@ -130,7 +130,7 @@ class SerializeIndependent(object):
         """
         
         self._modulemgr = ModuleDependencyAnalyzer()
-        preinstalled_modules = [name for name, _ in preinstalls.modules]
+        preinstalled_modules = [name for name, _ in self.preinstalled_modules]
         self._modulemgr.ignore(preinstalled_modules)
 
         # f_kwargs = {}

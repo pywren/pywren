@@ -5,3 +5,6 @@ def pytest_addoption(parser):
 
     parser.addoption("--runlambda", action="store_true",
         help="run tests that can only be run on lambda")
+
+    parser.addoption("--runcmdtest", action="store_true",
+        help="run command line tests")

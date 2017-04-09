@@ -19,7 +19,8 @@ import pywren.wrenconfig as wrenconfig
 import pywren.wrenutil as wrenutil
 import pywren.runtime as runtime
 import pywren.storage as storage
-from pywren.cloudpickle import serialize
+from pywren.serialize import cloudpickle, serialize
+from pywren.serialize import create_mod_data
 from pywren.future import ResponseFuture, JobState
 from pywren.wait import *
 
@@ -41,23 +42,11 @@ class Executor(object):
         self.runtime_meta_info = runtime.get_runtime_info(config['runtime'], self.storage)
 
 
-    def create_mod_data(self, mod_paths):
-
-        module_data = {}
-        # load mod paths
-        for m in mod_paths:
-            if os.path.isdir(m):
-                files = glob2.glob(os.path.join(m, "**/*.py"))
-                pkg_root = os.path.dirname(m)
-            else:
-                pkg_root = os.path.dirname(m)
-                files = [m]
-            for f in files:
-                dest_filename = f[len(pkg_root)+1:]
-                mod_str = open(f, 'rb').read()
-                module_data[f[len(pkg_root)+1:]] = mod_str.decode('utf-8')
-
-        return module_data
+        if 'preinstalls' in self.runtime_meta_info:
+            logger.info("using serializer with meta-supplied preinstalls")
+            self.serializer = serialize.SerializeIndependent(self.runtime_meta_info['preinstalls'])
+        else:
+            self.serializer =  serialize.SerializeIndependent()
 
     def put_data(self, data_key, data_str,
                  callset_id, call_id):
@@ -173,8 +162,7 @@ class Executor(object):
         data = list(iterdata)
 
         ### pickle func and all data (to capture module dependencies
-        serializer = serialize.SerializeIndependent()
-        func_and_data_ser, mod_paths = serializer([func] + data)
+        func_and_data_ser, mod_paths = self.serializer([func] + data)
 
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
@@ -197,7 +185,7 @@ class Executor(object):
             pass
 
 
-        module_data = self.create_mod_data(mod_paths)
+        module_data = create_mod_data(mod_paths)
         func_str_encoded = wrenutil.bytes_to_b64str(func_str)
         #debug_foo = {'func' : func_str_encoded,
         #             'module_data' : module_data}

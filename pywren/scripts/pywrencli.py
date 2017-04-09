@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from __future__ import print_function
 
 import pywren
 import boto3
@@ -14,9 +15,12 @@ import time
 import botocore
 from pywren import ec2standalone
 
+
 @click.group()
-def cli():
-    pass
+@click.option('--filename', default=pywren.wrenconfig.get_default_config_filename())
+@click.pass_context
+def cli(ctx, filename):
+    ctx.obj = {'config_filename' : filename}
 
 @click.group("standalone")
 def standalone():
@@ -42,15 +46,20 @@ def get_aws_account_id(verbose=True):
             
 
 @click.command()
-@click.option('--filename', default=pywren.wrenconfig.get_default_home_filename(), 
-              help='create a default config and populate with sane values')
-@click.option('--lambda_role', default='pywren_exec_role', 
-              help='name of the IAM role we are creating')
-@click.option('--function_name', default='pywren1', 
-              help='lambda function name')
-@click.option('--bucket_name', default='pywren-bucket', 
+@click.pass_context
+@click.option('--aws_region', default=pywren.wrenconfig.AWS_REGION_DEFAULT, 
+              help='aws region to run in')
+@click.option('--bucket_name', default=pywren.wrenconfig.AWS_S3_BUCKET_DEFAULT,
               help='s3 bucket name for intermediates')
-@click.option('--sqs_queue', default='pywren-queue', 
+@click.option('--bucket_prefix', default=pywren.wrenconfig.AWS_S3_PREFIX_DEFAULT,
+              help='prefix for S3 keys used for input and output')
+@click.option('--lambda_role', 
+              default=pywren.wrenconfig.AWS_LAMBDA_ROLE_DEFAULT, 
+              help='name of the IAM role we are creating')
+@click.option('--function_name', 
+              default=pywren.wrenconfig.AWS_LAMBDA_FUNCTION_NAME_DEFAULT,
+              help='lambda function name')
+@click.option('--sqs_queue', default=pywren.wrenconfig.AWS_SQS_QUEUE_DEFAULT, 
               help='sqs queue name for standalone execution')
 @click.option('--standalone_name', default='pywren-standalone', 
               help='ec2 standalone server name and profile name')
@@ -58,16 +67,18 @@ def get_aws_account_id(verbose=True):
               help='force overwrite an existing file')
 @click.option('--pythonver', default=pywren.runtime.version_str(sys.version_info), 
               help="Python version to use for runtime")
-def create_config(filename, force, lambda_role, function_name, bucket_name, 
+def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_name, 
+                  bucket_prefix, 
                   sqs_queue, standalone_name, pythonver):
     """
     Create a config file initialized with the defaults, and
     put it in your ~/.pywren_config
 
     """
-    
+    filename = ctx.obj['config_filename']
     # copy default config file
 
+    # FIXME check if it exists
     default_yaml = open(os.path.join(SOURCE_DIR, "../default_config.yaml")).read()
     
     client = boto3.client("sts")
@@ -76,9 +87,11 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     # perform substitutions -- get your AWS account ID and auto-populate
 
     default_yaml = default_yaml.replace('AWS_ACCOUNT_ID', account_id)
+    default_yaml = default_yaml.replace('AWS_REGION', aws_region)
     default_yaml = default_yaml.replace('pywren_exec_role', lambda_role)
     default_yaml = default_yaml.replace('pywren1', function_name)
     default_yaml = default_yaml.replace('BUCKET_NAME', bucket_name)
+    default_yaml = default_yaml.replace('pywren.jobs', bucket_prefix)
     default_yaml = default_yaml.replace('pywren-queue', sqs_queue)
     default_yaml = default_yaml.replace('pywren-standalone', standalone_name)
     if pythonver not in pywren.wrenconfig.default_runtime:
@@ -95,11 +108,11 @@ def create_config(filename, force, lambda_role, function_name, bucket_name,
     open(filename, 'w').write(default_yaml)
     click.echo("new default file created in {}".format(filename))
     click.echo("lambda role is {}".format(lambda_role))
-    click.echo("remember to set your s3 bucket and preferred AWS region")
 
 
 @click.command()
-def test_config():
+@click.pass_context
+def test_config(ctx):
     """
     Test that you have properly filled in the necessary
     aws fields, your boto install is working correctly, your s3 bucket is
@@ -113,11 +126,13 @@ def test_config():
     #config = pywren.wrenconfig.default()
 
 @click.command()
-def create_role():
+@click.pass_context
+def create_role(ctx):
     """
     
     """
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
 
     iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
@@ -135,20 +150,27 @@ def create_role():
         PolicyDocument=more_json_policy)
 
 @click.command()
-def create_bucket():
+@click.pass_context
+def create_bucket(ctx):
     """
     
     """
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     s3 = boto3.client("s3")
     region = config['account']['aws_region']
-    s3.create_bucket(Bucket=config['s3']['bucket'], 
-                     CreateBucketConfiguration={
-                         'LocationConstraint': region})
+    kwargs = {'CreateBucketConfiguration': {'LocationConstraint': region}}
+    if region == 'us-east-1':
+        kwargs = {}
+    s3.create_bucket(Bucket=config['s3']['bucket'], **kwargs)
 
 @click.command()
-def create_instance_profile():
-    config = pywren.wrenconfig.default()
+@click.pass_context
+def create_instance_profile(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     role_name = config['account']['aws_lambda_role']
     instance_profile_name = config['standalone']['instance_profile_name']
 
@@ -163,12 +185,15 @@ def list_all_funcs(lambclient):
     return lambclient.get_paginator('list_functions').paginate().build_full_result()
 
 @click.command()    
-def deploy_lambda(update_if_exists = True):
+@click.pass_context
+def deploy_lambda(ctx, update_if_exists = True):
     """
     Package up the source code and deploy to aws. Only creates the new
     function if it doesn't already exist
     """
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
     MEMORY = config['lambda']['memory']
@@ -181,8 +206,11 @@ def deploy_lambda(update_if_exists = True):
     zipfile_obj = zipfile.ZipFile(file_like_object, mode='w')
 
     # FIXME see if role exists
-    files = glob2.glob(os.path.join(SOURCE_DIR, "../**/*.py"))
-    for f in files:
+    module_dir = os.path.join(SOURCE_DIR, "../")
+    
+    for f in ['wrenutil.py', 'wrenconfig.py', 's3util.py', 'wrenhandler.py', 
+              'version.py', 'jobrunner.py', 'wren.py']:
+        f = os.path.abspath(os.path.join(module_dir, f))
         a = os.path.relpath(f, SOURCE_DIR + "/..")
                             
         zipfile_obj.write(f, arcname=a)
@@ -223,18 +251,16 @@ def deploy_lambda(update_if_exists = True):
                                            Timeout = TIMEOUT, 
                                            Role = ROLE, 
                                            Code = {'ZipFile' : file_like_object.getvalue()})
-                print("Create successful")
+                print("Successfully created function.")
                 break
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "InvalidParameterValueException":
 
-                print("attempt", retries)
                 retries += 1
 
                 # FIXME actually check for "botocore.exceptions.ClientError: An error occurred (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for the function cannot be assumed by Lambda."
-                print("sleeping for 5")
+                print("Pausing for 5 seconds for changes to propagate.")
                 time.sleep(5)
-                print("done")
                 continue
             else:
                 raise e
@@ -243,8 +269,11 @@ def deploy_lambda(update_if_exists = True):
         
                 
 @click.command()    
-def delete_lambda():
-    config = pywren.wrenconfig.default()
+@click.pass_context
+def delete_lambda(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
 
@@ -258,23 +287,28 @@ def delete_lambda():
 
 
 @click.command()
-def delete_role():
+@click.pass_context
+def delete_role(ctx):
     """
     
     """
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
 
-    config = pywren.wrenconfig.default()
     iamclient = boto3.client('iam')
     role_name = config['account']['aws_lambda_role']
     
     iamclient.delete_role_policy(RoleName = role_name, 
                                  PolicyName = '{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName = role_name)
-
+    print("deleted role{}".format(role_name))
 @click.command("delete_instance_profile")
+@click.pass_context
 @click.argument('name', default="", type=str)
-def delete_instance_profile(name):
-    config = pywren.wrenconfig.default()
+def delete_instance_profile(ctx, name):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     role_name = config['account']['aws_lambda_role']
     instance_profile_name = config['standalone']['instance_profile_name']
 
@@ -289,10 +323,13 @@ def delete_instance_profile(name):
     
 
 @click.command()
-def create_queue():
+@click.pass_context
+def create_queue(ctx):
     """
     Create the SQS queue
     """
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
     config = pywren.wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
@@ -304,11 +341,14 @@ def create_queue():
 
 
 @click.command()
-def delete_queue():
+@click.pass_context
+def delete_queue(ctx):
     """
     Delete the SQS queue
     """
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
@@ -317,10 +357,13 @@ def delete_queue():
     queue.delete()
 
 @click.command()
-def test_function():
+@click.pass_context
+def test_function(ctx):
     """
     Simple single-function test
     """
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
 
     wrenexec = pywren.default_executor()
     def hello_world(x):
@@ -333,16 +376,16 @@ def test_function():
     click.echo("function returned: {}".format(res))
 
 @click.command()
-def print_latest_logs():
+@click.pass_context
+def print_latest_logs(ctx):
     """
     Print the latest log group and log stream. 
 
     Note this does not contain support for going back further in history, 
     use the CloudWatch Logs web GUI for that. 
     """
-
-
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
 
     logclient = boto3.client('logs', region_name=config['account']['aws_region'])
 
@@ -365,11 +408,14 @@ def print_latest_logs():
 
 
 @click.command()
-def log_url():
+@click.pass_context
+def log_url(ctx):
     """
     return the cloudwatch log URL
     """
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     function_name = config['lambda']['function_name']
     aws_region = config['account']['aws_region']
     url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
@@ -377,6 +423,7 @@ def log_url():
 
 
 @standalone.command('launch_instances')
+@click.pass_context
 @click.argument('number', default=1, type=int)
 @click.option('--max_idle_time', default=None, type=int, 
               help='instance queue idle time before checking self-termination')
@@ -386,10 +433,12 @@ def log_url():
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None, 
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
-def standalone_launch_instances(number, max_idle_time, 
+def standalone_launch_instances(ctx, number, max_idle_time, 
                                 idle_terminate_granularity, 
                                 pywren_git_branch, pywren_git_commit):
-    config = pywren.wrenconfig.default()
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     sc= config['standalone']
     aws_region = config['account']['aws_region']
 
@@ -415,8 +464,11 @@ def standalone_launch_instances(number, max_idle_time,
 
 
 @standalone.command("list_instances")
-def standalone_list_instances():
-    config = pywren.wrenconfig.default()
+@click.pass_context
+def standalone_list_instances(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     aws_region = config['account']['aws_region']
     sc= config['standalone']
     
@@ -424,12 +476,16 @@ def standalone_list_instances():
     ec2standalone.prettyprint_instances(inst_list)
 
 @standalone.command("instance_uptime")
-def standalone_instance_uptime():
+@click.pass_context
+def standalone_instance_uptime(ctx):
     pass
 
 @standalone.command("terminate_instances")
-def standalone_terminate_instances():
-    config = pywren.wrenconfig.default()
+@click.pass_context
+def standalone_terminate_instances(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     aws_region = config['account']['aws_region']
     sc= config['standalone']
     
@@ -440,13 +496,15 @@ def standalone_terminate_instances():
 
 
 @click.command()
-def delete_bucket():
+@click.pass_context
+def delete_bucket(ctx):
     """
     Warning this will also delete all keys inside a bucket
 
     """
-    config = pywren.wrenconfig.default()
-    #s3 = boto3.client("s3")
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
     s3 = boto3.resource('s3')
     client = boto3.client('s3')
     bucket = s3.Bucket(config['s3']['bucket'])
@@ -466,6 +524,30 @@ def delete_bucket():
     print("deleting", bucket.name)
     bucket.delete()
 
+@click.command()
+@click.option('--force', is_flag=True, default=False, 
+              help='dont error')
+@click.pass_context
+def cleanup_all(ctx, force):
+    """
+    Delete every service and object listed in the indicated
+    config file. 
+
+    """
+    for func in [delete_queue, 
+                 delete_lambda,
+                 delete_instance_profile, 
+                 delete_role, 
+                 delete_bucket]:
+        try:
+            ctx.invoke(func)
+        except Exception as e:
+            if force:
+                print("{} was raised, ignoring".format(e))
+            else:
+                raise
+        
+        
 
 cli.add_command(create_config)
 cli.add_command(test_config)
@@ -481,6 +563,11 @@ cli.add_command(delete_role)
 cli.add_command(create_queue)
 cli.add_command(delete_queue)
 cli.add_command(delete_bucket)
+cli.add_command(cleanup_all)
 cli.add_command(print_latest_logs)
 cli.add_command(log_url)
 cli.add_command(standalone)
+
+
+def main():
+    return cli(obj={})

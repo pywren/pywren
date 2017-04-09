@@ -318,3 +318,23 @@ class RuntimeSharding(unittest.TestCase):
         # NOTE: There is some probability we will hit the base key ? 
         self.assertNotEqual(future.run_status['runtime_s3_key_used'], 
                          base_runtime_key)
+
+class RuntimePaths(unittest.TestCase):
+    """
+    Test to make sure that we have the correct python and
+    other utils in our path at runtime
+    """
+
+    def test_paths(self):
+
+        def run_command(x):
+            return subprocess.check_output(x, shell=True).decode('ascii')
+
+        cmd = "conda info"
+        wrenexec = pywren.default_executor()
+        fut = wrenexec.call_async(run_command, cmd)
+
+        res = fut.result() 
+        assert "Current conda install" in res
+
+

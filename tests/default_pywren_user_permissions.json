@@ -1,0 +1,93 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Stmt1484783841000",
+            "Effect": "Allow",
+            "Action": [
+                "logs:GetLogEvents"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1485978122000",
+            "Effect": "Allow",
+            "Action": [
+                "sqs:*"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1486334512000",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:RunInstances",
+                "ec2:TerminateInstances",
+                "ec2:DescribeInstances",
+                "ec2:CreateTags"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1476157235000",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateInstanceProfile",
+                "iam:CreateRole",
+                "iam:PutRolePolicy",
+                "iam:PassRole",
+                "iam:DeleteRolePolicy",
+                "iam:DeleteRole",
+                "iam:AddRoleToInstanceProfile",
+                "iam:GetUser",
+                "iam:GetInstanceProfile",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:DeleteInstanceProfile"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1476157935000",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:CreateFunction",
+                "lambda:DeleteFunction",
+                "lambda:GetFunction",
+                "lambda:GetFunctionConfiguration",
+                "lambda:InvokeAsync",
+                "lambda:InvokeFunction",
+                "lambda:ListFunctions",
+                "lambda:UpdateFunctionCode"
+            ],
+            "Resource": [
+                "*"
+            ]
+        },
+        {
+            "Sid": "Stmt1476157400000",
+            "Effect": "Allow",
+            "Action": [
+                "s3:DeleteObject",
+                "s3:DeleteObjectVersion",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "s3:ListAllMyBuckets",
+                "s3:GetBucketLocation", 
+                "s3:PutObject",
+                "s3:CreateBucket",
+                "s3:DeleteBucket"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
