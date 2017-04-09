@@ -1,8 +1,12 @@
 import os
+import sys
 import json
 import copy
 
-from s3_service import S3Service
+if sys.version_info > (3, 0):
+    from .s3_service import S3Service
+else:
+    from s3_service import S3Service
 
 
 class Storage(object):
