@@ -34,10 +34,9 @@ logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
-def get_key_size(bucket, key):
+def get_key_size(s3client, bucket, key):
     try:
-        s3 = boto3.resource('s3')
-        a = s3.meta.client.head_object(Bucket=bucket, Key=key)
+        a = s3client.head_object(Bucket=bucket, Key=key)
         return a['ContentLength']
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "404":
@@ -45,7 +44,7 @@ def get_key_size(bucket, key):
         else:
             raise e
 
-def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
+def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
     Download the runtime if necessary
 
@@ -54,7 +53,7 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     """
 
     # get runtime etag
-    runtime_meta = s3conn.meta.client.head_object(Bucket=runtime_s3_bucket, 
+    runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                                   Key=runtime_s3_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
@@ -83,7 +82,7 @@ def download_runtime_if_necessary(s3conn, runtime_s3_bucket, runtime_s3_key):
     
     os.makedirs(runtime_etag_dir)
     
-    res = s3conn.meta.client.get_object(Bucket=runtime_s3_bucket, 
+    res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                     Key=runtime_s3_key)
 
     condatar = tarfile.open(mode= "r:gz", 
@@ -130,7 +129,8 @@ def generic_handler(event, context_dict):
         if event['storage_info']['service'] != 's3':
             raise NotImplementedError(("Using {} as storage service is not supported " +
                                        "yet.").format(event['storage_info']['service']))
-        s3 = boto3.resource("s3")
+        s3_client = boto3.client("s3")
+        s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
         s3_bucket = event['storage_info']['location']
         
         logger.info("invocation started")
@@ -169,29 +169,29 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key 
 
-        KS =  get_key_size(s3_bucket, data_key)
+        KS =  get_key_size(s3_client, s3_bucket, data_key)
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
         while KS is None:
             logger.warn("WARNING COULD NOT GET FIRST KEY" )
 
-            KS =  get_key_size(s3_bucket, data_key)
+            KS =  get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime'] :
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
 
         # get the input and save to disk 
         # FIXME here is we where we would attach the "canceled" metadata
-        s3.meta.client.download_file(s3_bucket, func_key, func_filename)
+        s3_transfer.download_file(s3_bucket, func_key, func_filename)
         func_download_time = time.time() - start_time
         response_status['func_download_time'] = func_download_time
 
         logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
 
         if data_byte_range is None:
-            s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
+            s3_transfer.download_file(s3_bucket, data_key, data_filename)
         else:
             range_str = 'bytes={}-{}'.format(*data_byte_range)
-            dres = s3.meta.client.get_object(Bucket=s3_bucket, Key=data_key,
+            dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
                                              Range=range_str)
             data_fid = open(data_filename, 'wb')
             data_fid.write(dres['Body'].read())
@@ -232,7 +232,7 @@ def generic_handler(event, context_dict):
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
         
-        runtime_cached = download_runtime_if_necessary(s3, runtime_s3_bucket_used,
+        runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
                                                        runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
@@ -301,7 +301,7 @@ def generic_handler(event, context_dict):
 
         logger.info("command execution finished")
 
-        s3.meta.client.upload_file(output_filename, s3_bucket,
+        s3_transfer.upload_file(output_filename, s3_bucket,
                                    output_key)
         logger.debug("output uploaded to %s %s", s3_bucket, output_key)
 
@@ -323,8 +323,8 @@ def generic_handler(event, context_dict):
         response_status['exception_args'] = e.args
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
-        logger.error(response_status)
-        s3.meta.client.put_object(Bucket=s3_bucket, Key=status_key,
+        # creating new client in case the client has not been created
+        boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
     
 

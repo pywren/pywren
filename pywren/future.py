@@ -15,6 +15,7 @@ import enum
 from multiprocessing.pool import ThreadPool
 import time
 from pywren.executor import *
+import pywren.storage as storage
 import logging
 import botocore
 import glob2
@@ -48,8 +49,10 @@ class ResponseFuture(object):
 
         self.status_query_count = 0
 
-        # FIXME: we now put a reference of storage in future, can we still serialize futures?
-        #self.storage = storage
+        self.storage_config = storage.get_storage_config()
+        # a storage object is not serializable. So set this to None before saving the futures.
+        # See wren.py::save_futures
+        self.storage = storage
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -71,6 +74,10 @@ class ResponseFuture(object):
             return False
         return True
 
+    def get_storage_handler(self):
+        if self.storage == None:
+            self.storage = storage.Storage(self.storage_config)
+        return self.storage
 
     def result(self, timeout=None, check_only=False, throw_except=True):
         """
@@ -102,8 +109,7 @@ class ResponseFuture(object):
             else:
                 return None
 
-
-        call_status = self.storage.get_call_status(self.callset_id, self.call_id)
+        call_status = self.get_storage_handler().get_call_status(self.callset_id, self.call_id)
 
         self.status_query_count += 1
 
@@ -146,8 +152,8 @@ class ResponseFuture(object):
                 return None
 
         call_output_time = time.time()
-        call_invoker_result = pickle.loads(self.storage.get_call_output(self.callset_id,
-                                                                  self.call_id))
+        call_invoker_result = pickle.loads(self.get_storage_handler().get_call_output(
+            self.callset_id, self.call_id))
 
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time

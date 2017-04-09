@@ -1,11 +1,13 @@
 import os
 import json
+import copy
 
 from s3_service import S3Service
 
 class Storage(object):
 
     def __init__(self, config):
+        self.storage_config = config
         self.prefix = config['storage_prefix']
         self.service = config['storage_service']
         if config['storage_service'] == 's3':
@@ -13,6 +15,9 @@ class Storage(object):
         else:
             raise NotImplementedError(("Using {} as storage service is" +
                                        "not supported yet").format(config['storage_service']))
+
+    def get_storage_config(self):
+        return self.storage_config
 
     def get_storage_info(self):
         info = dict()
@@ -57,11 +62,11 @@ class Storage(object):
         if runtime_config['runtime_storage'] != 's3':
             raise NotImplementedError(("Storing runtime in non-S3 storage is not " +
                                        "supported yet").format(runtime_config['runtime_storage']))
-        bucket = runtime_config['s3_bucket']
+        config = copy.deepcopy(self.storage_config['s3'])
+        config['bucket'] = runtime_config['s3_bucket']
+        handler = S3Service(config)
+
         key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
-        handler = S3Service({"bucket":bucket})
         json_str = handler.get_object(key)
         runtime_meta = json.loads(json_str.decode("ascii"))
         return runtime_meta
-
-
