@@ -104,7 +104,7 @@ class DummyExecutorImport(unittest.TestCase):
 
         config = pywren.wrenconfig.default()
 
-        info = runtime.get_runtime_info(config)
+        info = runtime.get_runtime_info(config['runtime'])
         print(info.keys())
         for f in info['pkg_ver_list']:
             print(f[0])
