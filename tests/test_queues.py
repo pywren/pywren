@@ -17,6 +17,8 @@ class SimpleAsync(unittest.TestCase):
     Test sqs dispatch but with local runner
     """
     def setUp(self):
+        config = pywren.wrenconfig.default()
+        self.aws_region = config['account']['aws_region']
         self.wrenexec = pywren.remote_executor()
 
     def test_simple(self):
@@ -26,7 +28,7 @@ class SimpleAsync(unittest.TestCase):
 
         x = np.arange(10)
         fut = self.wrenexec.call_async(sum_list, x)
-        pywren.queues.sqs_run_local(self.wrenexec.aws_region, 
+        pywren.queues.sqs_run_local(self.aws_region,
                                     self.wrenexec.invoker.sqs_queue_name)
 
         res = fut.result() 
