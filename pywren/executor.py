@@ -281,6 +281,8 @@ class Executor(object):
         """
         #if self.invoker.TIME_LIMIT:
         wait(list_of_futures, return_when=ALL_COMPLETED) # avoid race condition
+        for f in list_of_futures:
+            f.prepare_before_serialize()
 
         def reduce_func(fut_list):
             # FIXME speed this up for big reduce

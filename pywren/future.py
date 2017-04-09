@@ -200,3 +200,6 @@ class ResponseFuture(object):
 
     def add_done_callback(self, fn):
         raise NotImplementedError()
+
+    def prepare_before_serialize(self):
+        self.storage = None
