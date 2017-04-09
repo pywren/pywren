@@ -10,7 +10,7 @@ def get_runtime_info(config):
     """
     Download runtime information from S3 at deserialize
     """
-    runtime_meta = storage.get_storage(config).get_runtime_info()
+    runtime_meta = storage.Storage(config).get_runtime_info()
 
     if not runtime_valid(runtime_meta):
         raise Exception("The indicated runtime: {} "

@@ -49,7 +49,7 @@ class ResponseFuture(object):
         self.status_query_count = 0
 
         # FIXME: we now put a reference of storage in future, can we still serialize futures?
-        self.storage = storage
+        #self.storage = storage
 
     def _set_state(self, new_state):
         ## FIXME add state machine
