@@ -18,8 +18,8 @@ def get_runtime_info(runtime_config, storage_handler = None):
     runtime_meta = storage_handler.get_runtime_info(runtime_config)
 
     if not runtime_valid(runtime_meta):
-        raise Exception("The indicated runtime: {} "
-                        + "is not approprite for this python version."
+        raise Exception(("The indicated runtime: {} "
+                        + "is not approprite for this python version.")
                         .format(runtime_config))
 
     return runtime_meta
