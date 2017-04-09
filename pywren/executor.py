@@ -36,8 +36,9 @@ class Executor(object):
         self.job_max_runtime = job_max_runtime
 
         self.config = config
-        self.storage = storage.get_storage(config)
-        self.runtime_meta_info = runtime.get_runtime_info(config)
+        self.storage_config = wrenconfig.extract_storage_config(self.config)
+        self.storage = storage.Storage(self.storage_config)
+        self.runtime_meta_info = self.storage.get_runtime_info(config['runtime'])
 
 
         if 'preinstalls' in self.runtime_meta_info:
@@ -72,8 +73,8 @@ class Executor(object):
             random.seed()
             runtime_url = random.choice(self.runtime_meta_info['urls'])
 
-
-        arg_dict = {'func_key' : func_key,
+        arg_dict = {'storage_info' : self.storage.get_storage_info(),
+                    'func_key' : func_key,
                     'data_key' : data_key,
                     'output_key' : output_key,
                     'status_key' : status_key,
@@ -181,7 +182,7 @@ class Executor(object):
             agg_data_key = self.storage.create_agg_data_key(callset_id)
             agg_data_bytes, agg_data_ranges = self.agg_data(data_strs)
             agg_upload_time = time.time()
-            self.storage.put_object(agg_data_key[1], agg_data_bytes)
+            self.storage.put_object(agg_data_key, agg_data_bytes)
             host_job_meta['agg_data'] = True
             host_job_meta['data_upload_time'] = time.time() - agg_upload_time
             host_job_meta['data_upload_timestamp'] = time.time()
@@ -204,7 +205,7 @@ class Executor(object):
 
         func_upload_time = time.time()
         func_key = self.storage.create_func_key(callset_id)
-        self.storage.put_object(func_key[1], func_module_str)
+        self.storage.put_object(func_key, func_module_str)
         host_job_meta['func_upload_time'] = time.time() - func_upload_time
         host_job_meta['func_upload_timestamp'] = time.time()
         def invoke(data_str, callset_id, call_id, func_key,

@@ -135,7 +135,12 @@ def generic_handler(event, context_dict):
 
     try:
         response_status = {'exception' : None}
-        s3 = boto3.resource('s3')
+        logger.error(event)
+        if event['storage_info']['service'] != 's3':
+            raise NotImplementedError(("Using {} as storage service is not supported " +
+                                       "yet.").format(event['storage_info']['service']))
+        s3 = boto3.resource("s3")
+        s3_bucket = event['storage_info']['location']
         
         logger.info("invocation started")
 
@@ -173,22 +178,19 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key 
 
-        b, k = data_key
-        KS =  get_key_size(b, k)
-        #logger.info("bucket=", b, "key=", k,  "status: ", KS, "bytes" )
+        KS =  get_key_size(s3_bucket, data_key)
+        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
         while KS is None:
             logger.warn("WARNING COULD NOT GET FIRST KEY" )
 
-            KS =  get_key_size(b, k)
+            KS =  get_key_size(s3_bucket, data_key)
         if not event['use_cached_runtime'] :
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
 
-
-
         # get the input and save to disk 
         # FIXME here is we where we would attach the "canceled" metadata
-        s3.meta.client.download_file(func_key[0], func_key[1], func_filename)
+        s3.meta.client.download_file(s3_bucket, func_key, func_filename)
         func_download_time = time.time() - start_time
         response_status['func_download_time'] = func_download_time
 
@@ -198,7 +200,7 @@ def generic_handler(event, context_dict):
             s3.meta.client.download_file(data_key[0], data_key[1], data_filename)
         else:
             range_str = 'bytes={}-{}'.format(*data_byte_range)
-            dres = s3.meta.client.get_object(Bucket=data_key[0], Key=data_key[1], 
+            dres = s3.meta.client.get_object(Bucket=s3_bucket, Key=data_key,
                                              Range=range_str)
             data_fid = open(data_filename, 'wb')
             data_fid.write(dres['Body'].read())
@@ -311,9 +313,9 @@ def generic_handler(event, context_dict):
 
         logger.info("command execution finished")
 
-        s3.meta.client.upload_file(output_filename, output_key[0], 
-                                   output_key[1])
-        logger.debug("output uploaded to %s %s", output_key[0], output_key[1])
+        s3.meta.client.upload_file(output_filename, s3_bucket,
+                                   output_key)
+        logger.debug("output uploaded to %s %s", s3_bucket, output_key)
 
         end_time = time.time()
 
@@ -333,8 +335,8 @@ def generic_handler(event, context_dict):
         response_status['exception_args'] = e.args
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
-
-        s3.meta.client.put_object(Bucket=status_key[0], Key=status_key[1], 
+        logger.error(response_status)
+        s3.meta.client.put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
     
 
