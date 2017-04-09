@@ -84,7 +84,7 @@ def _wait(fs, THREADPOOL_SIZE):
     callset_id = present_callsets.pop() # FIXME assume only one
     f0 = not_done_futures[0] # This is a hack too
 
-    callids_done = f0.storage.get_callset_status(callset_id)
+    callids_done = f0.get_storage_handler().get_callset_status(callset_id)
 
     callids_done = set(callids_done)
 
