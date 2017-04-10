@@ -129,7 +129,7 @@ def test_config(ctx):
 @click.pass_context
 def create_role(ctx):
     """
-    
+
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
@@ -137,10 +137,10 @@ def create_role(ctx):
     iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    role = iamclient.create_role(RoleName=role_name, 
+    role = iamclient.create_role(RoleName=role_name,
                                  AssumeRolePolicyDocument=json_policy)
     more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
-    
+
     AWS_ACCOUNT_ID = config['account']['aws_account_id']
     AWS_REGION = config['account']['aws_region']
     more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
@@ -148,6 +148,25 @@ def create_role(ctx):
 
     iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)
+
+
+@click.command()
+@click.pass_context
+def create_ssh_key(ctx):
+    """
+
+    """
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
+    ec2 = boto3.client('ec2')
+    keyname = config['standalone']['ec2_ssh_key']
+    try:
+        ec2.client.describe_key_pairs(KeyNames = [keyname])
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidKeyPair.NotFound':
+            ec2.create_key_pair(KeyName = keyname)
+
 
 @click.command()
 @click.pass_context
@@ -554,6 +573,7 @@ cli.add_command(test_config)
 cli.add_command(test_function)
 cli.add_command(get_aws_account_id)
 cli.add_command(create_role)
+cli.add_command(create_ssh_key)
 cli.add_command(create_bucket)
 cli.add_command(create_instance_profile)
 cli.add_command(delete_instance_profile)
