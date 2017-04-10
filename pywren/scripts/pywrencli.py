@@ -159,7 +159,8 @@ def create_ssh_key(ctx):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    ec2 = boto3.client('ec2')
+    region = config['account']['aws_region']
+    ec2 = boto3.client('ec2', region)
     keyname = config['standalone']['ec2_ssh_key']
     try:
         ec2.describe_key_pairs(KeyNames = [keyname])
