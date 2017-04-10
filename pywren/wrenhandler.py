@@ -134,7 +134,6 @@ def generic_handler(event, context_dict):
 
     try:
         response_status = {'exception' : None}
-        logger.error(event)
         if event['storage_info']['service'] != 's3':
             raise NotImplementedError(("Using {} as storage service is not supported " +
                                        "yet.").format(event['storage_info']['service']))
