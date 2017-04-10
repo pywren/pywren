@@ -162,7 +162,7 @@ def create_ssh_key(ctx):
     ec2 = boto3.client('ec2')
     keyname = config['standalone']['ec2_ssh_key']
     try:
-        ec2.client.describe_key_pairs(KeyNames = [keyname])
+        ec2.describe_key_pairs(KeyNames = [keyname])
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == 'InvalidKeyPair.NotFound':
             ec2.create_key_pair(KeyName = keyname)
