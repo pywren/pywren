@@ -38,7 +38,7 @@ class ResponseFuture(object):
     """
     """
     GET_RESULT_SLEEP_SECS = 4
-    def __init__(self, call_id, callset_id, invoke_metadata, storage):
+    def __init__(self, call_id, callset_id, invoke_metadata, storage_config):
 
         self.call_id = call_id
         self.callset_id = callset_id
@@ -48,10 +48,7 @@ class ResponseFuture(object):
 
         self.status_query_count = 0
 
-        self.storage_config = storage.get_storage_config()
-        # a storage object is not serializable. So set this to None before saving the futures.
-        # See wren.py::save_futures
-        self.storage = storage
+        self.storage_config = storage_config
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -73,12 +70,7 @@ class ResponseFuture(object):
             return False
         return True
 
-    def get_storage_handler(self):
-        if self.storage == None:
-            self.storage = storage.Storage(self.storage_config)
-        return self.storage
-
-    def result(self, timeout=None, check_only=False, throw_except=True):
+    def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
 
 
@@ -108,7 +100,10 @@ class ResponseFuture(object):
             else:
                 return None
 
-        call_status = self.get_storage_handler().get_call_status(self.callset_id, self.call_id)
+        if storage_handler is None:
+            storage_handler = storage.Storage(self.storage_config)
+
+        call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
 
         self.status_query_count += 1
 
@@ -121,7 +116,7 @@ class ResponseFuture(object):
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
-            call_status = self.storage.get_call_status(self.callset_id, self.call_id)
+            call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
 
             self.status_query_count += 1
         self._invoke_metadata['status_done_timestamp'] = time.time()
@@ -151,7 +146,7 @@ class ResponseFuture(object):
                 return None
 
         call_output_time = time.time()
-        call_invoker_result = pickle.loads(self.get_storage_handler().get_call_output(
+        call_invoker_result = pickle.loads(storage_handler.get_call_output(
             self.callset_id, self.call_id))
 
         call_output_time_done = time.time()
@@ -199,6 +194,3 @@ class ResponseFuture(object):
 
     def add_done_callback(self, fn):
         raise NotImplementedError()
-
-    def prepare_before_serialize(self):
-        self.storage = None
