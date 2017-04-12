@@ -73,8 +73,6 @@ def save_futures_to_string(futures):
     :param futures: A list of futures to save.
     :return: A serialized string.
     """
-    for f in list(futures):
-        f.storage = None
     return pickle.dumps(list(futures))
 
 
@@ -94,8 +92,6 @@ def save_futures(futures, filename):
     :param filename: file name
     :return: None
     """
-    for f in list(futures):
-        f.storage = None
     pickle.dump(list(futures), open(filename, "wb"))
 
 
