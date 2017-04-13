@@ -53,7 +53,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                 'VolumeSize': default_volume_size,
                 'DeleteOnTermination': True,
                 'VolumeType': 'standard',
-                'SnapshotId' : 'snap-c87f35ec'
+                #'SnapshotId' : 'snap-c87f35ec'
             },
         },
     ]
