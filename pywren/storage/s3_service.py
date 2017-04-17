@@ -27,6 +27,7 @@ class S3Service(object):
         Put an object in S3.
         :param key: key of the object.
         :param data: data of the object
+        :type data: str/bytes
         :return: None
         """
         self.s3client.put_object(Bucket=self.s3_bucket, Key=key, Body=data)
@@ -36,6 +37,7 @@ class S3Service(object):
         Get object from S3 with a key.
         :param key: key of the object
         :return: Data of the object
+        :rtype: str/bytes
         """
         r = self.s3client.get_object(Bucket = self.s3_bucket, Key = key)
         data = r['Body'].read()

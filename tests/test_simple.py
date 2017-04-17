@@ -207,8 +207,8 @@ class SerializeFutures(unittest.TestCase):
 
         x = np.arange(N)
         futures_original = self.wrenexec.map(plus_one, x)
-        futures_str = pywren.save_futures_to_string(futures_original)
-        futures = pywren.load_futures_from_string(futures_str)
+        futures_str = pickle.dumps(futures_original)
+        futures = pickle.loads(futures_str)
 
         result_count = 0
         while result_count < N:
