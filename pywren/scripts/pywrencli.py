@@ -160,9 +160,10 @@ def create_bucket(ctx):
 
     s3 = boto3.client("s3")
     region = config['account']['aws_region']
-    s3.create_bucket(Bucket=config['s3']['bucket'], 
-                     CreateBucketConfiguration={
-                         'LocationConstraint': region})
+    kwargs = {'CreateBucketConfiguration': {'LocationConstraint': region}}
+    if region == 'us-east-1':
+        kwargs = {}
+    s3.create_bucket(Bucket=config['s3']['bucket'], **kwargs)
 
 @click.command()
 @click.pass_context

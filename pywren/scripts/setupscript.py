@@ -7,6 +7,7 @@ from pywren.scripts import pywrencli
 import pwd
 import random
 import time
+import re
 
 def get_username():
     return pwd.getpwuid( os.getuid() )[ 0 ]
@@ -64,14 +65,18 @@ def check_bucket_exists(s3bucket):
     return exists
 
 def create_unique_bucket_name():
-    bucket_name = "{}-pywren-{}".format(get_username(), 
+    bucket_name = "{}-pywren-{}".format(get_username().lower(), 
                                         random.randint(0, 999))
     return bucket_name
 
 def check_valid_bucket_name(bucket_name):
-    # FIXME check if it is a valid bucket name
-    # and if we can write to it and read from it
-    return True
+    # Validates bucketname
+    # Based on http://info.easydynamics.com/blog/aws-s3-bucket-name-validation-regex
+    # https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
+    bucket_regex = r"^([a-z]|(\d(?!\d{0,2}\.\d{1,3}\.\d{1,3}\.\d{1,3})))([a-z\d]|(\.(?!(\.|-)))|(-(?!\.))){1,61}[a-z\d\.]$"
+    if re.match(bucket_regex, bucket_name):
+        return True
+    return False
     
 def validate_s3_prefix(prefix):
     # FIXME
@@ -184,7 +189,7 @@ def interactive_setup(ctx, dryrun, suffix):
         click.echo("Setting up standalone mode.")
         ctx.invoke(pywrencli.create_queue)
         ctx.invoke(pywrencli.create_instance_profile)
-    click.echo("Pausing for 10 sec for changes to propoagate.")
+    click.echo("Pausing for 10 sec for changes to propagate.")
     time.sleep(10)
     ctx.invoke(pywrencli.test_function)
 

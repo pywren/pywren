@@ -6,6 +6,7 @@ import os
 import pywren
 import base64
 import logging
+import copy
 
 logger = logging.getLogger(__name__)
 
@@ -45,18 +46,18 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
 
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
+    image = ec2.Image(tgt_ami)
 
-    BlockDeviceMappings=[
-        {
-            'DeviceName': '/dev/xvda',
-            'Ebs': {
-                'VolumeSize': default_volume_size,
-                'DeleteOnTermination': True,
-                'VolumeType': 'standard',
-                'SnapshotId' : 'snap-c87f35ec'
-            },
-        },
-    ]
+    # BlockDeviceMappings=[
+    #     {
+    #         'DeviceName': '/dev/xvda',
+    #         'Ebs': {
+    #             'VolumeSize': default_volume_size,
+    #             'DeleteOnTermination': True,
+    #             'VolumeType': 'standard',
+    #         },
+    #     },
+    # ]
     template_file = sd('ec2standalone.cloudinit.template')
 
     user_data = open(template_file, 'r').read()
@@ -100,7 +101,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                      MaxCount=number,
                                      KeyName=my_aws_key, 
                                      InstanceType=instance_type, 
-                                     BlockDeviceMappings = BlockDeviceMappings,
+                                     #BlockDeviceMappings = BlockDeviceMappings,
                                      InstanceInitiatedShutdownBehavior='terminate',
                                      EbsOptimized=True, 
                                      IamInstanceProfile = instance_profile_dict, 
