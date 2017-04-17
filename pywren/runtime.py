@@ -5,11 +5,9 @@ import sys
 import pywren.storage as storage
 import pywren.wrenconfig as wrenconfig
 
-# FIXME separate runtime code with S3
-
 def get_runtime_info(runtime_config, storage_handler = None):
     """
-    Download runtime information from S3 at deserialize
+    Download runtime information from storage at deserialize
     """
     if storage_handler is None:
         storage_config = wrenconfig.extract_storage_config(wrenconfig.default())

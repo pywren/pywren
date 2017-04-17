@@ -67,43 +67,6 @@ def remote_executor(config=None, job_max_runtime=3600):
 standalone_executor = remote_executor
 
 
-def save_futures_to_string(futures):
-    """
-    Saving a list of futures to string.
-    :param futures: A list of futures to save.
-    :return: A serialized string.
-    """
-    return pickle.dumps(list(futures))
-
-
-def load_futures_from_string(fut_str):
-    """
-    Load futures from a string.
-    :param fut_str: A string.
-    :return: A list of futures.
-    """
-    return list(pickle.loads(fut_str))
-
-
-def save_futures(futures, filename):
-    """
-    Save a list of futures into a file.
-    :param futures: A list of futures
-    :param filename: file name
-    :return: None
-    """
-    pickle.dump(list(futures), open(filename, "wb"))
-
-
-def load_futures(filename):
-    """
-    Load futures from file
-    :param filename: file name to load from
-    :return: A list of futures
-    """
-    return list(pickle.load(open(filename, "rb")))
-
-
 def get_all_results(fs):
     """
     Take in a list of futures and block until they are repeated, 
