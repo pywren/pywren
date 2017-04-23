@@ -185,17 +185,20 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     run_time = time.time() - start_time
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
-        if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
+        time_since_visibility_update = time.time() - last_visibility_update_time
+        if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
+            logger.debug("{}s since last visibility update, incrementing visibility timeout by {} sec".format(, time_since_visibility_update, 
+                                                                                                              SQS_VISIBILITY_INCREMENT_SEC))
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
-            logger.debug("incrementing visibility timeout by {} sec".format(SQS_VISIBILITY_INCREMENT_SEC))
+
         if p.exitcode is not None:
             logger.debug("attempting to join process")
             # FIXME will this join ever hang? 
             p.join()
             break
         else:
-            print "sleeping"
+            print "{}s since visibility update, sleeping".format(time_since_visibility_update)
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
