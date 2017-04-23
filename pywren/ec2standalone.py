@@ -81,7 +81,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
         # use a git commit
         git_checkout_string = str(pywren_git_commit)
     else: 
-        git_checkout_string = "-b {}".format(pywren_git_branch)
+        git_checkout_string = " {}".format(pywren_git_branch)
 
     user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 
