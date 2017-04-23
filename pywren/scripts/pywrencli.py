@@ -433,9 +433,12 @@ def log_url(ctx):
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None, 
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
+@click.option('--spot_price', default=None, type=float, 
+              help='use spot instances, at this reserve price')
 def standalone_launch_instances(ctx, number, max_idle_time, 
                                 idle_terminate_granularity, 
-                                pywren_git_branch, pywren_git_commit):
+                                pywren_git_branch, pywren_git_commit, 
+                                spot_price):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
@@ -457,7 +460,8 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                sc['max_idle_time'], 
                                                idle_terminate_granularity = sc['idle_terminate_granularity'], 
                                                pywren_git_branch=pywren_git_branch, 
-                                               pywren_git_commit = pywren_git_commit)
+                                               pywren_git_commit = pywren_git_commit, 
+                                               spot_price = spot_price)
     
     print("launched:")
     ec2standalone.prettyprint_instances(inst_list)
