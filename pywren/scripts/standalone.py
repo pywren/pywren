@@ -194,6 +194,8 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     p.start()
     start_time = time.time()
     # FIXME should this be earlier? how long does .start() above take? 
+    logger.debug("initial visibility change message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
+
     response = m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
@@ -205,8 +207,9 @@ def process_message(m, local_message_i, max_run_time, run_dir,
         if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
             logger.debug("{} - {:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(message_id, time_since_visibility_update, 
                                                                                                               SQS_VISIBILITY_INCREMENT_SEC))
-            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
+            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+
 
         if p.exitcode is not None:
             logger.debug("{} - attempting to join process".format(message_id))
@@ -220,7 +223,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
         run_time = time.time() - start_time
 
     if p.exitcode is None:
-        p.terminate()  # PRINT LOTS OF ERRORS HERE
+        p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE
     logger.info("deleting message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
 
