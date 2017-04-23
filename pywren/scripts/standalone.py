@@ -17,6 +17,7 @@ import logging
 import watchtower
 import subprocess
 import math
+import platform 
 try:
     # For Python 3.0 and later
     from urllib.request import urlopen
@@ -170,6 +171,11 @@ def process_message(m, local_message_i, max_run_time, run_dir,
                     server_name, log_stream_prefix):
     event = json.loads(m.body)
     
+    extra_env_debug = event.get('extra_env', {})
+    if 'DEBUG_THROW_EXCEPTION' in extra_env_debug:
+        m.delete()
+        raise Exception("Debug exception")
+
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
     p =  Process(target=job_handler, args=(event, local_message_i, 
                                            run_dir, aws_region, server_name, 
@@ -187,7 +193,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     while run_time < max_run_time:
         time_since_visibility_update = time.time() - last_visibility_update_time
         if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            logger.debug("{}s since last visibility update, incrementing visibility timeout by {} sec".format(, time_since_visibility_update, 
+            logger.debug("{:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(time_since_visibility_update, 
                                                                                                               SQS_VISIBILITY_INCREMENT_SEC))
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
@@ -198,7 +204,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
             p.join()
             break
         else:
-            print "{}s since visibility update, sleeping".format(time_since_visibility_update)
+            logger.debug("{:3.1f}s since visibility update, sleeping".format(time_since_visibility_update))
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
@@ -292,11 +298,18 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
     
 
-    instance = get_my_ec2_instance(aws_region)
-    ec2_metadata = get_my_ec2_meta(instance)
-    server_name = ec2_metadata['Name']
+    if platform.node() != 'c65':
+        
+        instance = get_my_ec2_instance(aws_region)
+        ec2_metadata = get_my_ec2_meta(instance)
+        server_name = ec2_metadata['Name']
+        log_stream_prefix = ec2_metadata['instance_id']
+    else:
+        server_name='c65'
+        log_stream_prefix='millennium-c65'
+
     log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
-    log_stream_prefix = ec2_metadata['instance_id']
+
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
 
@@ -309,6 +322,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
     handler.setFormatter(formatter)
     logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name, 
