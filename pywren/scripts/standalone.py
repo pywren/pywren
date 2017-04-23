@@ -133,7 +133,7 @@ def server_runner(aws_region, sqs_queue_name,
         response = queue.receive_messages(WaitTimeSeconds=queue_receive_message_timeout)
         if len(response) > 0:
             m = response[0]
-            logger.info("Dispatching")
+            logger.info("Dispatching message_id={}".format(m.message_id))
             
             process_message(m, local_message_i, max_run_time, run_dir, 
                             aws_region, server_name, log_stream_prefix)
@@ -172,9 +172,12 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     event = json.loads(m.body)
     
     extra_env_debug = event.get('extra_env', {})
+
+    # FIXME this is all for debugging
     if 'DEBUG_THROW_EXCEPTION' in extra_env_debug:
         m.delete()
         raise Exception("Debug exception")
+    message_id = m.message_id
 
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
     p =  Process(target=job_handler, args=(event, local_message_i, 
@@ -193,24 +196,25 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     while run_time < max_run_time:
         time_since_visibility_update = time.time() - last_visibility_update_time
         if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            logger.debug("{:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(time_since_visibility_update, 
+            logger.debug("{}  - {:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(message_id, time_since_visibility_update, 
                                                                                                               SQS_VISIBILITY_INCREMENT_SEC))
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
 
         if p.exitcode is not None:
-            logger.debug("attempting to join process")
+            logger.debug("{} - attempting to join process".format(message_id))
             # FIXME will this join ever hang? 
             p.join()
             break
         else:
-            logger.debug("{:3.1f}s since visibility update, sleeping".format(time_since_visibility_update))
+            logger.debug("{} - {:3.1f}s since visibility update, sleeping".format(message_id, time_since_visibility_update))
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
 
     if p.exitcode is None:
         p.terminate()  # PRINT LOTS OF ERRORS HERE
+    logger.info("deleting message_id={}".format(message_id))
 
     m.delete()
 
