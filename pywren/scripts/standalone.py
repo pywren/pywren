@@ -169,9 +169,16 @@ def server_runner(aws_region, sqs_queue_name,
 def process_message(m, local_message_i, max_run_time, run_dir, 
                     aws_region, 
                     server_name, log_stream_prefix):
+
+    logger.info("processing message_id={}".format(m.message_id))
+
     event = json.loads(m.body)
-    
+    call_id = event['call_id']
+    callset_id = event['callset_id']
+
     extra_env_debug = event.get('extra_env', {})
+    unique_job_id = "{}:{}:{}".format(m.message_id, call_id, callset_id)
+    logger.info("processing message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
     # FIXME this is all for debugging
     if 'DEBUG_THROW_EXCEPTION' in extra_env_debug:
@@ -186,7 +193,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     # is thread done
     p.start()
     start_time = time.time()
-
+    # FIXME should this be earlier? how long does .start() above take? 
     response = m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
@@ -196,7 +203,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     while run_time < max_run_time:
         time_since_visibility_update = time.time() - last_visibility_update_time
         if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            logger.debug("{}  - {:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(message_id, time_since_visibility_update, 
+            logger.debug("{} - {:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(message_id, time_since_visibility_update, 
                                                                                                               SQS_VISIBILITY_INCREMENT_SEC))
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
@@ -214,7 +221,8 @@ def process_message(m, local_message_i, max_run_time, run_dir,
 
     if p.exitcode is None:
         p.terminate()  # PRINT LOTS OF ERRORS HERE
-    logger.info("deleting message_id={}".format(message_id))
+    logger.info("deleting message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
+
 
     m.delete()
 
