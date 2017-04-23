@@ -28,7 +28,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
-SQS_VISIBILITY_INCREMENT_SEC = 10
+SQS_VISIBILITY_SEC = 10
 PROCESS_SLEEP_DUR_SEC=2
 AWS_REGION_DEBUG='us-west-2'
 QUEUE_SLEEP_DUR_SEC=2
@@ -194,21 +194,18 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     p.start()
     start_time = time.time()
     # FIXME should this be earlier? how long does .start() above take? 
-    logger.debug("initial visibility change message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
-
-    response = m.change_visibility(
-        VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
     # add 10s to visibility 
     run_time = time.time() - start_time
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         time_since_visibility_update = time.time() - last_visibility_update_time
-        if (time_since_visibility_update) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            logger.debug("{} - {:3.1f}s since last visibility update, incrementing visibility timeout by {:3.1f} sec".format(message_id, time_since_visibility_update, 
-                                                                                                              SQS_VISIBILITY_INCREMENT_SEC))
+        est_visibility_left = SQS_VISIBILITY_SEC - time_since_visibility_update
+        if est_visibility_left < (PROCESS_SLEEP_DUR_SEC*1.5):
+            logger.debug("{} - {:3.1f}s since last visibility update, setting to {:3.1f} sec".format(message_id, time_since_visibility_update, 
+                                                                                                              SQS_VISIBILITY_SEC))
             last_visibility_update_time = time.time()
-            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
 
 
         if p.exitcode is not None:
