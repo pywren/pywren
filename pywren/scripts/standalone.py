@@ -12,6 +12,7 @@ import io
 import time 
 import botocore
 from multiprocessing import Process
+from threading import Thread
 from pywren import wrenhandler
 import logging
 import watchtower
@@ -187,12 +188,12 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     message_id = m.message_id
 
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
-    p =  Process(target=job_handler, args=(event, local_message_i, 
+    p =  Thread(target=job_handler, args=(event, local_message_i, 
                                            run_dir, aws_region, server_name, 
                                            log_stream_prefix))
     # is thread done
     p.start()
-    pid = p.pid
+    pid = "THREAD" # p.pid
     logger.info("processing message_id={} callset_id={} call_id={} process_pid={}".format(m.message_id, callset_id, call_id, pid))
     start_time = time.time()
 
@@ -219,9 +220,10 @@ def process_message(m, local_message_i, max_run_time, run_dir,
 
         run_time = time.time() - start_time
 
-    if p.exitcode is None:
-        p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE
-        logger.warn("{} - Had to manually terminate process ".format(message_id))
+    # if p.exitcode is None:
+    #     logger.warn("{} - attempting to manuall terminate process ".format(message_id))
+    #     p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE # FIXME does not work with thread
+    #     logger.warn("{} - Had to manually terminate process ".format(message_id)) 
     logger.info("deleting message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
 
