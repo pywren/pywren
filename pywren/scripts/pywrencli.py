@@ -177,6 +177,8 @@ def create_ssh_key(ctx, key_file_save_location=None):
                     f.write(key['KeyMaterial'])
                 f.close()
                 print("SSH private key " + keyname + " is saved to " + filename)
+        else:
+            raise e
 
 
 @click.command()

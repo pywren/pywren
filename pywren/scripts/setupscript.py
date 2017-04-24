@@ -90,6 +90,19 @@ def validate_lambda_role_name(role_name):
     # FIXME
     return True
 
+
+def check_ssh_key_exists(config, keyname):
+    region = config['account']['aws_region']
+    ec2 = boto3.client('ec2', region)
+    try:
+        ec2.describe_key_pairs(KeyNames=[keyname])
+        return True
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidKeyPair.NotFound':
+            return False
+        else:
+            raise e
+
 @click.command()
 @click.option('--dryrun', default=False, is_flag=True, type=bool, 
               help='create config file but take no actions')
@@ -187,6 +200,16 @@ def interactive_setup(ctx, dryrun, suffix):
 
     if use_standalone:
         click.echo("Setting up standalone mode.")
+        config = pywren.wrenconfig.load(config_filename)
+        keyname = config['standalone']['ec2_ssh_key']
+        if check_ssh_key_exists(config, keyname):
+            click.echo("EC2 ssh key [" + keyname + "] already exists.")
+        else:
+            click.echo("Creating EC2 ssh key [" + keyname + "]...")
+            ssh_key_location = click.prompt("Please specify location to save ssh private key:",
+                                            os.path.expanduser("~/.ssh/"))
+            ctx.invoke(pywrencli.create_ssh_key,
+                       key_file_save_location=ssh_key_location)
         ctx.invoke(pywrencli.create_queue)
         ctx.invoke(pywrencli.create_instance_profile)
     click.echo("Pausing for 10 sec for changes to propagate.")
