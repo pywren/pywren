@@ -264,7 +264,7 @@ def job_handler(job, job_i, run_dir, aws_region,
     wren_log.addHandler(handler)
 
     original_dir = os.getcwd()
-
+    debug_pid.write("added log handler\n")
     
     task_run_dir = os.path.join(run_dir, str(job_i))
     shutil.rmtree(task_run_dir, True) # delete old modules
@@ -278,12 +278,17 @@ def job_handler(job, job_i, run_dir, aws_region,
 
     os.chdir(task_run_dir)
     try:
+        debug_pid.write("invoking generic_handler\n")
+
         wrenhandler.generic_handler(job, context)
     finally:
+        debug_pid.write("generic handler finally\n")
+
         if delete_taskdir:
             shutil.rmtree(task_run_dir)
         os.chdir(original_dir)
     handler.flush()
+    debug_pid.write("done and returning\n")
 
 
 
