@@ -13,7 +13,7 @@ class S3Service(object):
         self.s3_bucket = s3config['bucket']
         self.session = botocore.session.get_session()
         self.s3client = self.session.create_client('s3',
-                            config=botocore.client.Config(max_pool_connections=50))
+                            config=botocore.client.Config(max_pool_connections=200))
 
     def get_storage_location(self):
         """
