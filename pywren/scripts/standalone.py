@@ -192,10 +192,10 @@ def process_message(m, local_message_i, max_run_time, run_dir,
                                            log_stream_prefix))
     # is thread done
     p.start()
+    pid = p.pid
+    logger.info("processing message_id={} callset_id={} call_id={} process_pid={}".format(m.message_id, callset_id, call_id, pid))
     start_time = time.time()
-    # FIXME should this be earlier? how long does .start() above take? 
 
-    # add 10s to visibility 
     run_time = time.time() - start_time
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
@@ -208,7 +208,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
 
 
-        if p.exitcode is not None:
+        if not p.is_alive():
             logger.debug("{} - attempting to join process".format(message_id))
             # FIXME will this join ever hang? 
             p.join()
@@ -221,6 +221,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
 
     if p.exitcode is None:
         p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE
+        logger.warn("{} - Had to manually terminate process ".format(message_id))
     logger.info("deleting message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
 
@@ -240,6 +241,9 @@ def job_handler(job, job_i, run_dir, aws_region,
 
     Just for debugging
     """
+    debug_pid = open("/tmp/pywren.scripts.standalone.{}.{}.log".format(os.getpid(), 
+                                                                       time.time()), 'w')
+    print "subprocess job_handler job i=", job_i, "pid=", os.getpid()
     session = boto3.session.Session(region_name=aws_region)
     # we do this here instead of in the global context 
     # because of how multiprocessing works
