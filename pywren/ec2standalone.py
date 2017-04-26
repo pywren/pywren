@@ -38,12 +38,15 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      max_idle_time=60, idle_terminate_granularity=600, 
                      pywren_git_branch='master', 
                      spot_price=None, 
+                     availability_zone = None, 
                      pywren_git_commit=None):
 
 
-    logger.info("launching {} {} instances in {}".format(number, instance_type, 
-                                                         aws_region))
-
+    logger.info("launching {} {} instances in {} (zone {}) ".format(number, 
+                                                                    instance_type, 
+                                                                    aws_region, 
+                                                                    availability_zone))
+    
     ec2 = boto3.resource('ec2', region_name=aws_region)
     image = ec2.Image(tgt_ami)
 
@@ -104,6 +107,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                   security_group_ids = [], 
                                   ebs_optimized = True, 
                                   instance_profile = instance_profile_dict, 
+                                  availability_zone = availability_zone, 
                                   user_data = user_data)
 
     
@@ -160,6 +164,7 @@ def _create_instances(num_instances,
                       security_group_ids,
                       ebs_optimized, 
                       instance_profile, 
+                      availability_zone, 
                       user_data):
 
     ''' Function graciously borrowed from Flintrock ec2 wrapper
@@ -173,19 +178,23 @@ def _create_instances(num_instances,
             print("Requesting {c} spot instances at a max price of ${p}...".format(
                 c=num_instances, p=spot_price))
             client = ec2.meta.client
+
+
+            LaunchSpecification={
+                'ImageId': ami,
+                'KeyName': key_name,
+                'InstanceType': instance_type,
+                #'BlockDeviceMappings': block_device_mappings,
+                'SecurityGroupIds': security_group_ids,
+                'EbsOptimized': ebs_optimized, 
+                'IamInstanceProfile' : instance_profile,
+                'UserData' : b64s(user_data)}
+            if availability_zone is not None:
+                LaunchSpecification['Placement'] = {"AvailabilityZone":availability_zone}
             spot_requests = client.request_spot_instances(
                 SpotPrice=str(spot_price),
                 InstanceCount=num_instances,
-                LaunchSpecification={
-                    'ImageId': ami,
-                    'KeyName': key_name,
-                    'InstanceType': instance_type,
-                    #'BlockDeviceMappings': block_device_mappings,
-                    'SecurityGroupIds': security_group_ids,
-                    'EbsOptimized': ebs_optimized, 
-                    'IamInstanceProfile' : instance_profile,
-                    #'InstanceInitiatedShutdownBehavior' : 'terminate',  # FIXME set this later
-                    'UserData' : b64s(user_data)})['SpotInstanceRequests']
+                LaunchSpecification=LaunchSpecification)['SpotInstanceRequests']
 
             request_ids = [r['SpotInstanceRequestId'] for r in spot_requests]
             pending_request_ids = request_ids

@@ -174,7 +174,6 @@ def process_message(m, local_message_i, max_run_time, run_dir,
                     aws_region, 
                     server_name, log_stream_prefix):
 
-    logger.info("processing message_id={}".format(m.message_id))
 
     event = json.loads(m.body)
     call_id = event['call_id']
@@ -190,14 +189,13 @@ def process_message(m, local_message_i, max_run_time, run_dir,
         raise Exception("Debug exception")
     message_id = m.message_id
 
-    # run this in a thread: pywren.wrenhandler.generic_handler(event)
+    # id this in a thread: pywren.wrenhandler.generic_handler(event)
     p =  Thread(target=job_handler, args=(event, local_message_i, 
                                            run_dir, aws_region, server_name, 
                                            log_stream_prefix))
     # is thread done
     p.start()
-    pid = "THREAD" # p.pid
-    logger.info("processing message_id={} callset_id={} call_id={} process_pid={}".format(m.message_id, callset_id, call_id, pid))
+
     start_time = time.time()
 
     run_time = time.time() - start_time
@@ -237,7 +235,7 @@ def copy_runtime(tgt_dir):
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
-def job_handler(job, job_i, run_dir, aws_region, 
+def job_handler(event, job_i, run_dir, aws_region, 
                 server_name, log_stream_prefix, 
                 extra_context = None, 
                 delete_taskdir=True):
@@ -248,28 +246,32 @@ def job_handler(job, job_i, run_dir, aws_region,
     """
     debug_pid = open("/tmp/pywren.scripts.standalone.{}.{}.log".format(os.getpid(), 
                                                                        time.time()), 'w')
-    print "subprocess job_handler job i=", job_i, "pid=", os.getpid()
-    session = boto3.session.Session(region_name=aws_region)
+
+    call_id = event['call_id']
+    callset_id = event['callset_id']
+    print "subprocess job_handler job i=", job_i, "pid=", os.getpid(), "callset_id=", callset_id, "call_id=", call_id
+    logger.info("jobhandler_thread callset_id={} call_id={}".format(callset_id, call_id))
+
+    #session = boto3.session.Session(region_name=aws_region)
     # we do this here instead of in the global context 
     # because of how multiprocessing works
-    handler = watchtower.CloudWatchLogHandler(send_interval=20, 
-                                              log_group="pywren.standalone", 
-                                              stream_name=log_stream_prefix + "-{logger_name}", 
-                                              boto3_session=session,
-                                              max_batch_count=10)
-    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+    # handler = watchtower.CloudWatchLogHandler(send_interval=20, 
+    #                                           log_group="pywren.standalone", 
+    #                                           stream_name=log_stream_prefix + "-{logger_name}", 
+    #                                           boto3_session=session,
+    #                                           max_batch_count=10)
+    # log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
 
-    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
+    # formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+    # handler.setFormatter(formatter)
 
 
-    wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
-    wren_log.setLevel(logging.DEBUG)
-    wren_log.propagate = 0
-    wren_log.addHandler(handler)
+    # wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
+    # wren_log.setLevel(logging.DEBUG)
+    # wren_log.propagate = 0
+    # wren_log.addHandler(handler)
 
     original_dir = os.getcwd()
-    debug_pid.write("added log handler\n")
     
     task_run_dir = os.path.join(run_dir, str(job_i))
     shutil.rmtree(task_run_dir, True) # delete old modules
@@ -282,18 +284,24 @@ def job_handler(job, job_i, run_dir, aws_region,
         context.update(extra_context)
 
     os.chdir(task_run_dir)
+    
     try:
         debug_pid.write("invoking generic_handler\n")
+        logger.debug("jobhandler_thread callset_id={} call_id={} invoking".format(callset_id, call_id))
 
-        wrenhandler.generic_handler(job, context)
+        wrenhandler.generic_handler(event, context)
+    except Exception as e:
+        logger.warn("jobhandler_thread callset_id={} call_id={} exception={}".format(callset_id, call_id, str(e)))
+        
     finally:
         debug_pid.write("generic handler finally\n")
 
         if delete_taskdir:
             shutil.rmtree(task_run_dir)
         os.chdir(original_dir)
-    handler.flush()
+
     debug_pid.write("done and returning\n")
+    logger.debug("jobhandler_thread callset_id={} call_id={} returning".format(callset_id, call_id))
 
 
 
@@ -346,9 +354,12 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                                               boto3_session=session,
                                               max_batch_count=10)
 
+    #debug_stream_handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
+
+    #logger.addHandler(debug_stream_handler)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name, 
