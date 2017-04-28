@@ -3,6 +3,8 @@ from numba import jit
 import time
 from six.moves import range
 
+from flaky import flaky
+
 import unittest
 
 def foo(N):
@@ -42,6 +44,7 @@ class NumbaTest(unittest.TestCase):
     def setUp(self):
         self.wrenexec = pywren.default_executor()
 
+    @flaky(max_runs=3)
     def test_numba(self):
         """
         Simple numba test, compares two loops, makes sure
