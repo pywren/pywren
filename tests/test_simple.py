@@ -93,6 +93,11 @@ class SimpleMap(unittest.TestCase):
     def setUp(self):
         self.wrenexec = pywren.default_executor()
 
+    def test_empty_map(self):
+        futures = self.wrenexec.map(lambda x: x, [])
+        res = np.array([f.result() for f in futures])
+        np.testing.assert_array_equal(res, [])
+
     def test_map(self):
 
         def plus_one(x):

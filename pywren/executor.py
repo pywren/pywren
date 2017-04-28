@@ -169,11 +169,14 @@ class Executor(object):
         to False, redownloads runtime.
         """
 
+        data = list(iterdata)
+        if not data:
+          return []
+
         host_job_meta = {}
 
         pool = ThreadPool(invoke_pool_threads)
         callset_id = s3util.create_callset_id()
-        data = list(iterdata)
 
         ### pickle func and all data (to capture module dependencies
         func_and_data_ser, mod_paths = self.serializer([func] + data)
