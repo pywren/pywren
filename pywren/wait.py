@@ -17,7 +17,7 @@ ANY_COMPLETED = 2
 ALWAYS = 3
 
 def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
-         WAIT_DUR_SEC=5):
+            WAIT_DUR_SEC=5):
     """
     this will eventually provide an optimization for checking if a large
     number of futures have completed without too much network traffic
@@ -51,10 +51,10 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
 
     elif return_when == ANY_COMPLETED:
         while True:
-            fs_dones, fs_notdones = _wait(fs, THREADPOOL_SIZE)
+            fs_success, fs_running, fs_failed = _wait_status(fs, THREADPOOL_SIZE)
 
-            if len(fs_dones) != 0:
-                return fs_dones, fs_notdones
+            if len(fs_success + fs_failed) != 0:
+                return fs_success, fs_running, fs_failed
             else:
                 time.sleep(WAIT_DUR_SEC)
 
@@ -63,7 +63,12 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     else:
         raise ValueError()
 
+
 def _wait(fs, THREADPOOL_SIZE):
+    fs_success, fs_running, fs_failed = _wait_status(fs, THREADPOOL_SIZE)
+    return fs_success + fs_failed, fs_running
+
+def _wait_status(fs, THREADPOOL_SIZE):
     """
     internal function that performs the majority of the WAIT task
     work.
@@ -74,7 +79,7 @@ def _wait(fs, THREADPOOL_SIZE):
     not_done_futures =  [f for f in fs if f._state not in [JobState.success,
                                                            JobState.error]]
     if len(not_done_futures) == 0:
-        return fs, []
+        return fs, [], []
 
     # check if the not-done ones have the same callset_id
     present_callsets = set([f.callset_id for f in not_done_futures])
@@ -86,30 +91,48 @@ def _wait(fs, THREADPOOL_SIZE):
     f0 = not_done_futures[0] # This is a hack too
 
     storage_handler = storage.Storage(f0.storage_config)
-    callids_done = storage_handler.get_callset_status(callset_id)
+    succeded_calls, other_calls_attempts = storage_handler.get_callset_status(callset_id)
 
-    callids_done = set(callids_done)
+    succeded_calls = set(succeded_calls)
 
-    fs_dones = []
-    fs_notdones = []
+    fs_success = []
+    fs_failed = []
+    fs_running = []
 
     f_to_wait_on = []
     for f in fs:
-        if f._state in [JobState.success, JobState.error]:
+        if f._state == JobState.success:
             # done, don't need to do anything
-            fs_dones.append(f)
-        else:
-            if f.call_id in callids_done:
+            if f._state == JobState.success:
+                fs_success.append(f)
+        else: # not checked by results yet
+            if f.call_id in succeded_calls:
                 f_to_wait_on.append(f)
-                fs_dones.append(f)
-            else:
-                fs_notdones.append(f)
+                fs_success.append(f)
+            elif f.call_id in other_calls_attempts:
+                n_done = other_calls_attempts[f.call_id]
+                if f.attempts_made <= n_done:
+                    fs_failed.append(f)
+                else:
+                    fs_running.append(f)
+            else: # not found
+                fs_running.append(f)
     def test(f):
         f.result(throw_except=False, storage_handler=storage_handler)
     pool = ThreadPool(THREADPOOL_SIZE)
+    ids = [f.call_id for f in f_to_wait_on]
+    #print "ids: ", ids
     pool.map(test, f_to_wait_on)
 
     pool.close()
     pool.join()
 
-    return fs_dones, fs_notdones
+    # print "start"
+    # print fs_success
+    # print fs_running
+    # print fs_failed
+    # print "end"
+    assert(len(fs_success + fs_running + fs_failed) == len(fs))
+
+    return fs_success, fs_running, fs_failed
+

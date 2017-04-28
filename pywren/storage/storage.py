@@ -99,7 +99,8 @@ class Storage(object):
         """
         callset_prefix = os.path.join(self.prefix, callset_id)
         status_suffix = "status.json"
-        return self.service_handler.get_callset_status(callset_prefix, status_suffix)
+        success_suffix = "status-success.json"
+        return self.service_handler.get_callset_status(callset_prefix, status_suffix, success_suffix)
 
     def get_call_status(self, callset_id, call_id):
         """
@@ -108,8 +109,8 @@ class Storage(object):
         :param call_id: call ID of the call
         :return: A dictionary containing call's status, or None if no updated status
         """
-        _, _, status_key = self.create_keys(callset_id, call_id)
-        return self.service_handler.get_call_status(status_key)
+        success_key = os.path.join(self.prefix, callset_id, call_id, "status-success.json")
+        return self.service_handler.get_call_status(success_key)
 
     def get_call_output(self, callset_id, call_id):
         """

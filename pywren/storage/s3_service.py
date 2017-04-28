@@ -43,7 +43,8 @@ class S3Service(object):
         data = r['Body'].read()
         return data
 
-    def get_callset_status(self, callset_prefix, status_suffix = "status.json"):
+    def get_callset_status(self, callset_prefix,
+                           status_suffix="status.json", success_suffix="status-success.json"):
         """
         Get status for a prefix.
         :param callset_prefix: A prefix for the callset.
@@ -56,14 +57,26 @@ class S3Service(object):
         page_iterator = paginator.paginate(**operation_parameters)
 
         status_keys = []
+        succeeded_keys = []
         for page in page_iterator:
-            for item in page['Contents']:
-                object_name = item['Key']
-                if status_suffix in object_name:
-                    status_keys.append(object_name)
+            if 'Contents' in page:
+                for item in page['Contents']:
+                    object_name = item['Key']
+                    if status_suffix in object_name:
+                        status_keys.append(object_name)
+                    if success_suffix in object_name:
+                        succeeded_keys.append(object_name)
 
-        call_ids = [k[len(callset_prefix)+1:].split("/")[0] for k in status_keys]
-        return call_ids
+        succeeded_call_ids = set([k[len(callset_prefix)+1:].split("/")[0] for k in succeeded_keys])
+        other_calls_attempts = {}
+        for k in status_keys:
+            call_id = k[len(callset_prefix)+1:].split("/")[0]
+            if call_id not in succeeded_call_ids:
+                if call_id not in other_calls_attempts:
+                    other_calls_attempts[call_id] = 1
+                else:
+                    other_calls_attempts[call_id] += 1
+        return succeeded_call_ids, other_calls_attempts
 
     def get_call_status(self, s3_status_key):
         """

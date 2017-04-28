@@ -49,6 +49,7 @@ class ResponseFuture(object):
         self.status_query_count = 0
 
         self.storage_config = storage_config
+        self.attempts_made = 0
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -185,7 +186,8 @@ class ResponseFuture(object):
                         call_invoker_result['exc_traceback'])
             else:
                 # reraise the exception
-                reraise(*self._traceback)
+                # reraise(*self._traceback)
+                print("Failed call {} {} {}".format(self.callset_id, self.call_id, self.attempts_made))
         else:
             return None  # nothing, don't raise, no value
 
