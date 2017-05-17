@@ -158,7 +158,7 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env = None, extra_meta = None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args = None):
+            use_cached_runtime=True, overwrite_invoke_args = None, exclude_modules=[]):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -200,6 +200,12 @@ class Executor(object):
             # FIXME add warning that you wanted data all as one but
             # it exceeded max data size
             pass
+
+        for module in exclude_modules:
+            for mod_path in list(mod_paths):
+                if module in mod_path and mod_path in mod_paths:
+                    mod_paths.remove(mod_path)
+
 
 
         module_data = create_mod_data(mod_paths)
