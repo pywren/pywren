@@ -69,7 +69,21 @@ def default():
         raise ValueError("could not find configuration file")
 
     config_data = load(config_filename)
+    config_data['storage_service'] = 's3'
+    config_data['storage_prefix'] = config_data['s3']['pywren_prefix']
+    config_data['runtime']['runtime_storage'] = 's3'
     return config_data
+
+
+def extract_storage_config(config):
+    storage_config = dict()
+    storage_config['storage_service'] = config['storage_service']
+    storage_config['storage_prefix'] = config['storage_prefix']
+    if storage_config['storage_service'] == 's3':
+        storage_config['s3'] = {}
+        storage_config['s3']['bucket'] = config['s3']['bucket']
+        storage_config['s3']['region'] = config['account']['aws_region']
+    return storage_config
 
 basic_role_policy = {
     "Version": "2012-10-17",
