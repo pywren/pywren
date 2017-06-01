@@ -126,4 +126,27 @@ class InteractiveTest(unittest.TestCase):
 
 
 
+class ExcludeTest(unittest.TestCase):
+
+    '''
+        Exclude modules in map and check if the exclusion worked
+    '''
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_simple(self):
+
+        def foo(x):
+            return extmodule.foo_add(x)
+        x = 1.0
+        fut0 = self.wrenexec.map(foo, [x])
+        res = fut0[0].result()
+        self.assertEqual(res, 2.0)
+
+        fut = self.wrenexec.map(foo, [x], exclude_modules=["extmodule"])
+        try:
+            fut[0].result()
+            self.fail("shouldn't happen")
+        except ModuleNotFoundError as e:
+            pass
 
