@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import json
 
 from .storage_utils import *
@@ -58,7 +59,7 @@ class Storage(object):
         #  this in scheduler refactoring.
         callset_prefix = os.path.join(self.prefix, callset_id)
         keys = self.service_handler.list_keys_with_prefix(callset_prefix)
-        suffix = storage_utils.status_key_suffix
+        suffix = status_key_suffix
         status_keys = [k for k in keys if suffix in k]
         call_ids = [k[len(callset_prefix)+1:].split("/")[0] for k in status_keys]
         return call_ids
@@ -70,7 +71,7 @@ class Storage(object):
         :param call_id: call ID of the call
         :return: A dictionary containing call's status, or None if no updated status
         """
-        status_key = storage_utils.create_status_key(self.prefix, callset_id, call_id)
+        status_key = create_status_key(self.prefix, callset_id, call_id)
         try:
             data = self.service_handler.get_object(status_key)
             return json.loads(data.decode('ascii'))
@@ -84,7 +85,7 @@ class Storage(object):
         :param call_id: call ID of the call
         :return: Output of the call.
         """
-        output_key = storage_utils.create_output_key(self.prefix, callset_id, call_id)
+        output_key = create_output_key(self.prefix, callset_id, call_id)
         try:
             return self.service_handler.get_object(output_key)
         except StorageNoSuchKeyError:
@@ -100,7 +101,7 @@ def get_runtime_info(runtime_config):
     if runtime_config['runtime_storage'] != 's3':
         raise NotImplementedError(("Storing runtime in non-S3 storage is not " +
                                    "supported yet").format(runtime_config['runtime_storage']))
-    config = []
+    config = dict()
     config['bucket'] = runtime_config['s3_bucket']
     handler = S3Service(config)
 

@@ -1,11 +1,12 @@
 import os
 
+from .exceptions import *
+
 func_key_suffix = "func.json"
 agg_data_key_suffix = "aggdata.pickle"
 data_key_suffix = "data.pickle"
 output_key_suffix = "output.pickle"
 status_key_suffix = "status.json"
-
 
 def create_func_key(prefix, callset_id):
     """
@@ -76,3 +77,14 @@ def create_keys(prefix, callset_id, call_id):
     return data_key, output_key, status_key
 
 
+def get_storage_path(config):
+    if config['storage_service'] != 's3':
+        raise NotImplementedError(("Using {} as storage service is" +
+                               "not supported yet").format(config['storage_service']))
+    return [config['storage_service'], config['service_config']['bucket'], config['storage_prefix']]
+
+
+def check_storage_path(config, prev_path):
+    current_path = get_storage_path(config)
+    if current_path != prev_path:
+        raise StorageConfigMismatchError(current_path, prev_path)

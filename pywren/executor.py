@@ -25,7 +25,7 @@ import pywren.storage as storage
 from pywren.cloudpickle import serialize
 from pywren.future import ResponseFuture, JobState
 from pywren.wait import *
-from pywren.storage import storage_utils, create_keys
+from pywren.storage import storage_utils
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,8 @@ class Executor(object):
 
         host_job_meta.update(arg_dict)
 
-        fut = ResponseFuture(call_id, callset_id, host_job_meta, self.storage_config)
+        storage_path = storage_utils.get_storage_path(self.storage_config)
+        fut = ResponseFuture(call_id, callset_id, host_job_meta, storage_path)
 
         fut._set_state(JobState.invoked)
 
@@ -216,7 +217,7 @@ class Executor(object):
                    host_job_meta,
                    agg_data_key = None, data_byte_range=None ):
             data_key, output_key, status_key \
-                = create_keys(self.storage.prefix, callset_id, call_id)
+                = storage_utils.create_keys(self.storage.prefix, callset_id, call_id)
 
             host_job_meta['job_invoke_timestamp'] = time.time()
 

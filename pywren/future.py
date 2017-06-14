@@ -15,7 +15,7 @@ import enum
 from multiprocessing.pool import ThreadPool
 import time
 from pywren.executor import *
-import pywren.storage as storage
+from pywren.storage import storage, storage_utils
 import logging
 import botocore
 import glob2
@@ -38,7 +38,7 @@ class ResponseFuture(object):
     """
     """
     GET_RESULT_SLEEP_SECS = 4
-    def __init__(self, call_id, callset_id, invoke_metadata, storage_config):
+    def __init__(self, call_id, callset_id, invoke_metadata, storage_path):
 
         self.call_id = call_id
         self.callset_id = callset_id
@@ -48,7 +48,7 @@ class ResponseFuture(object):
 
         self.status_query_count = 0
 
-        self.storage_config = storage_config
+        self.storage_path = storage_path
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -101,7 +101,11 @@ class ResponseFuture(object):
                 return None
 
         if storage_handler is None:
-            storage_handler = storage.Storage(self.storage_config)
+            storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+            storage_handler = storage.Storage(storage_config)
+
+        storage_utils.check_storage_path(storage_handler.get_storage_config(), self.storage_path)
+
 
         call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
 

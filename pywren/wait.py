@@ -11,6 +11,7 @@ pickling_support.install()
 
 from pywren.future import JobState
 import pywren.storage as storage
+import pywren.wrenconfig as wrenconfig
 
 ALL_COMPLETED = 1
 ANY_COMPLETED = 2
@@ -83,9 +84,9 @@ def _wait(fs, THREADPOOL_SIZE):
 
     # get the list of all objects in this callset
     callset_id = present_callsets.pop() # FIXME assume only one
-    f0 = not_done_futures[0] # This is a hack too
 
-    storage_handler = storage.Storage(f0.storage_config)
+    storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+    storage_handler = storage.Storage(storage_config)
     callids_done = storage_handler.get_callset_status(callset_id)
 
     callids_done = set(callids_done)
