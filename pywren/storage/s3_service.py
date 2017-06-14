@@ -1,14 +1,5 @@
-import boto3
-import os
-import sys
 import botocore
-import json
-
-if sys.version_info > (3, 0):
-    from .exceptions import StorageNoSuchKeyError
-else:
-    from exceptions import StorageNoSuchKeyError
-
+from .exceptions import *
 
 class S3Service(object):
     """

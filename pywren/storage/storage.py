@@ -1,13 +1,8 @@
-import os
-import sys
 import json
-import pywren.storage.storage_utils as storage_utils
-import pywren.storage.exceptions as exceptions
 
-if sys.version_info > (3, 0):
-    from .s3_service import S3Service
-else:
-    from s3_service import S3Service
+from .storage_utils import *
+from .exceptions import *
+from .s3_service import S3Service
 
 
 class Storage(object):
@@ -79,7 +74,7 @@ class Storage(object):
         try:
             data = self.service_handler.get_object(status_key)
             return json.loads(data.decode('ascii'))
-        except exceptions.StorageNoSuchKeyError:
+        except StorageNoSuchKeyError:
             return None
 
     def get_call_output(self, callset_id, call_id):
@@ -92,8 +87,8 @@ class Storage(object):
         output_key = storage_utils.create_output_key(self.prefix, callset_id, call_id)
         try:
             return self.service_handler.get_object(output_key)
-        except exceptions.StorageNoSuchKeyError:
-            raise exceptions.StorageOutputNotFoundError(callset_id, call_id)
+        except StorageNoSuchKeyError:
+            raise StorageOutputNotFoundError(callset_id, call_id)
 
 
 def get_runtime_info(runtime_config):
