@@ -3,17 +3,13 @@ import json
 import sys
 
 import pywren.storage as storage
-import pywren.wrenconfig as wrenconfig
 
-def get_runtime_info(runtime_config, storage_handler = None):
+
+def get_runtime_info(runtime_config):
     """
     Download runtime information from storage at deserialize
     """
-    if storage_handler is None:
-        storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
-        storage_handler = storage.Storage(storage_config)
-
-    runtime_meta = storage_handler.get_runtime_info(runtime_config)
+    runtime_meta = storage.get_runtime_info(runtime_config)
 
     if not runtime_valid(runtime_meta):
         raise Exception(("The indicated runtime: {} "

@@ -80,9 +80,9 @@ def extract_storage_config(config):
     storage_config['storage_service'] = config['storage_service']
     storage_config['storage_prefix'] = config['storage_prefix']
     if storage_config['storage_service'] == 's3':
-        storage_config['s3'] = {}
-        storage_config['s3']['bucket'] = config['s3']['bucket']
-        storage_config['s3']['region'] = config['account']['aws_region']
+        storage_config['service_config'] = {}
+        storage_config['service_config']['bucket'] = config['s3']['bucket']
+        storage_config['service_config']['region'] = config['account']['aws_region']
     return storage_config
 
 basic_role_policy = {

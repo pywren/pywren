@@ -1,7 +1,8 @@
 import os
 import sys
 import json
-import copy
+import pywren.storage.storage_utils as storage_utils
+import pywren.storage.exceptions as exceptions
 
 if sys.version_info > (3, 0):
     from .s3_service import S3Service
@@ -22,7 +23,7 @@ class Storage(object):
         self.prefix = config['storage_prefix']
         self.service = config['storage_service']
         if config['storage_service'] == 's3':
-            self.service_handler = S3Service(config['s3'])
+            self.service_handler = S3Service(config['service_config'])
         else:
             raise NotImplementedError(("Using {} as storage service is" +
                                        "not supported yet").format(config['storage_service']))
@@ -34,62 +35,23 @@ class Storage(object):
         """
         return self.storage_config
 
-    def get_storage_info(self):
+    def put_data(self, key, data):
         """
-        Get the information of underlying storage service.
-        :return:
-        """
-        info = dict()
-        info['service'] = self.service
-        info['location'] = self.service_handler.get_storage_location()
-        return info
-
-    def put_object(self, key, data):
-        """
-        Put an object into storage.
-        :param key: object key
-        :param data: object data
+        Put input data into storage.
+        :param key: data key
+        :param data: data content
         :return: None
         """
         return self.service_handler.put_object(key, data)
 
-    def get_object(self, key):
+    def put_func(self, key, func):
         """
-        Get an object with key.
-        :param key: object key
-        :return: data
+        Put serialized function into storage.
+        :param key: function key
+        :param data: serialized function
+        :return: None
         """
-        return self.service_handler.get_object(key)
-
-    def create_keys(self, callset_id, call_id):
-        """
-        Create keys for data, output and status given callset and call IDs.
-        :param callset_id: callset's ID
-        :param call_id: call's ID
-        :return: data_key, output_key, status_key
-        """
-        data_key = os.path.join(self.prefix, callset_id, call_id, "data.pickle")
-        output_key = os.path.join(self.prefix, callset_id, call_id, "output.pickle")
-        status_key = os.path.join(self.prefix, callset_id, call_id, "status.json")
-        return data_key, output_key, status_key
-
-    def create_func_key(self, callset_id):
-        """
-        Create function key
-        :param callset_id: callset's ID
-        :return: function key
-        """
-        func_key = os.path.join(self.prefix, callset_id, "func.json")
-        return func_key
-
-    def create_agg_data_key(self, callset_id):
-        """
-        Create aggregate data key
-        :param callset_id: callset's ID
-        :return: a key for aggregate data
-        """
-        agg_data_key = os.path.join(self.prefix, callset_id, "aggdata.pickle")
-        return agg_data_key
+        return self.service_handler.put_object(key, func)
 
     def get_callset_status(self, callset_id):
         """
@@ -97,9 +59,14 @@ class Storage(object):
         :param callset_id: callset's ID
         :return: A list of call IDs that have updated status.
         """
+        # TODO: a better API for this is to return status for all calls in the callset. We'll fix
+        #  this in scheduler refactoring.
         callset_prefix = os.path.join(self.prefix, callset_id)
-        status_suffix = "status.json"
-        return self.service_handler.get_callset_status(callset_prefix, status_suffix)
+        keys = self.service_handler.list_keys_with_prefix(callset_prefix)
+        suffix = storage_utils.status_key_suffix
+        status_keys = [k for k in keys if suffix in k]
+        call_ids = [k[len(callset_prefix)+1:].split("/")[0] for k in status_keys]
+        return call_ids
 
     def get_call_status(self, callset_id, call_id):
         """
@@ -108,8 +75,12 @@ class Storage(object):
         :param call_id: call ID of the call
         :return: A dictionary containing call's status, or None if no updated status
         """
-        _, _, status_key = self.create_keys(callset_id, call_id)
-        return self.service_handler.get_call_status(status_key)
+        status_key = storage_utils.create_status_key(self.prefix, callset_id, call_id)
+        try:
+            data = self.service_handler.get_object(status_key)
+            return json.loads(data.decode('ascii'))
+        except exceptions.StorageNoSuchKeyError:
+            return None
 
     def get_call_output(self, callset_id, call_id):
         """
@@ -118,23 +89,27 @@ class Storage(object):
         :param call_id: call ID of the call
         :return: Output of the call.
         """
-        _, output_key, _ = self.create_keys(callset_id, call_id)
-        return self.service_handler.get_call_output(output_key)
+        output_key = storage_utils.create_output_key(self.prefix, callset_id, call_id)
+        try:
+            return self.service_handler.get_object(output_key)
+        except exceptions.StorageNoSuchKeyError:
+            raise exceptions.StorageOutputNotFoundError(callset_id, call_id)
 
-    def get_runtime_info(self, runtime_config):
-        """
-        Get the metadata given a runtime config.
-        :param runtime_config: configuration of runtime (dictionary)
-        :return: runtime metadata
-        """
-        if runtime_config['runtime_storage'] != 's3':
-            raise NotImplementedError(("Storing runtime in non-S3 storage is not " +
-                                       "supported yet").format(runtime_config['runtime_storage']))
-        config = copy.deepcopy(self.storage_config['s3'])
-        config['bucket'] = runtime_config['s3_bucket']
-        handler = S3Service(config)
 
-        key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
-        json_str = handler.get_object(key)
-        runtime_meta = json.loads(json_str.decode("ascii"))
-        return runtime_meta
+def get_runtime_info(runtime_config):
+    """
+    Get the metadata given a runtime config.
+    :param runtime_config: configuration of runtime (dictionary)
+    :return: runtime metadata
+    """
+    if runtime_config['runtime_storage'] != 's3':
+        raise NotImplementedError(("Storing runtime in non-S3 storage is not " +
+                                   "supported yet").format(runtime_config['runtime_storage']))
+    config = []
+    config['bucket'] = runtime_config['s3_bucket']
+    handler = S3Service(config)
+
+    key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
+    json_str = handler.get_object(key)
+    runtime_meta = json.loads(json_str.decode("ascii"))
+    return runtime_meta

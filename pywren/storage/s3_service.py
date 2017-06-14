@@ -1,7 +1,13 @@
 import boto3
 import os
+import sys
 import botocore
 import json
+
+if sys.version_info > (3, 0):
+    from .exceptions import StorageNoSuchKeyError
+else:
+    from exceptions import StorageNoSuchKeyError
 
 
 class S3Service(object):
@@ -15,16 +21,9 @@ class S3Service(object):
         self.s3client = self.session.create_client('s3',
                             config=botocore.client.Config(max_pool_connections=200))
 
-    def get_storage_location(self):
-        """
-        Get storage location for this S3 service.
-        :return: S3 bucket name
-        """
-        return self.s3_bucket
-
     def put_object(self, key, data):
         """
-        Put an object in S3.
+        Put an object in S3. Override the object if the key already exists.
         :param key: key of the object.
         :param data: data of the object
         :type data: str/bytes
@@ -34,56 +33,52 @@ class S3Service(object):
 
     def get_object(self, key):
         """
-        Get object from S3 with a key.
+        Get object from S3 with a key. Throws StorageNoSuchKeyError if the given key does not exist.
         :param key: key of the object
         :return: Data of the object
         :rtype: str/bytes
         """
-        r = self.s3client.get_object(Bucket = self.s3_bucket, Key = key)
-        data = r['Body'].read()
-        return data
-
-    def get_callset_status(self, callset_prefix, status_suffix = "status.json"):
-        """
-        Get status for a prefix.
-        :param callset_prefix: A prefix for the callset.
-        :param status_suffix: Suffix used for status files. By default, "status.json"
-        :return: A list of call IDs
-        """
-        paginator = self.s3client.get_paginator('list_objects_v2')
-        operation_parameters = {'Bucket': self.s3_bucket,
-                                'Prefix': callset_prefix}
-        page_iterator = paginator.paginate(**operation_parameters)
-
-        status_keys = []
-        for page in page_iterator:
-            for item in page['Contents']:
-                object_name = item['Key']
-                if status_suffix in object_name:
-                    status_keys.append(object_name)
-
-        call_ids = [k[len(callset_prefix)+1:].split("/")[0] for k in status_keys]
-        return call_ids
-
-    def get_call_status(self, s3_status_key):
-        """
-        Get the status for a call.
-        :param s3_status_key: status key
-        :return: Updated status if status key exists, otherwise None.
-        """
         try:
-            data = self.get_object(s3_status_key)
-            return json.loads(data.decode('ascii'))
+            r = self.s3client.get_object(Bucket=self.s3_bucket, Key = key)
+            data = r['Body'].read()
+            return data
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "NoSuchKey":
-                return None
+                raise StorageNoSuchKeyError(key)
             else:
                 raise e
 
-    def get_call_output(self, s3_output_key):
+    def key_exists(self, key):
         """
-        Get the output for a call.
-        :param s3_output_key: output key
-        :return: output for a call, throws exception if output key does not exist
+        Check if a key exists in S3.
+        :param key: key of the object
+        :return: True if key exists, False if not exists
+        :rtype: boolean
         """
-        return self.get_object(s3_output_key)
+        try:
+            self.s3client.head_object(Bucket=self.s3_bucket, Key=key)
+            return True
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchKey":
+                return False
+            else:
+                raise e
+
+    def list_keys_with_prefix(self, prefix):
+        """
+        Return a list of keys for the given prefix.
+        :param key: key of the object
+        :return: True if key exists, False if not exists
+        :rtype: A list of keys
+        """
+        paginator = self.s3client.get_paginator('list_objects_v2')
+        operation_parameters = {'Bucket': self.s3_bucket,
+                                'Prefix': prefix}
+        page_iterator = paginator.paginate(**operation_parameters)
+
+        key_list = []
+        for page in page_iterator:
+            for item in page['Contents']:
+                key_list.append(item['Key'])
+
+        return key_list
