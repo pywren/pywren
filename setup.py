@@ -19,7 +19,7 @@ setup(
     author_email='jonas@ericjonas.com',
     packages=find_packages(),
     install_requires=[
-        'numpy', 'Click', 'boto3', 'cloudpickle', 'PyYAML', 
+        'numpy', 'Click', 'boto3', 'PyYAML', 
         'enum34', 'flaky', 'glob2', 
         'watchtower', 'tblib' # it's nuts that we need both botos
     ],
