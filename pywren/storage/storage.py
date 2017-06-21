@@ -3,26 +3,26 @@ import json
 
 from .storage_utils import *
 from .exceptions import *
-from .s3_service import S3Service
+from .s3_backend import S3Backend
 
 
 class Storage(object):
     """
-    A Storage object is used by executors and other components to access underlying storage service
+    A Storage object is used by executors and other components to access underlying storage backend
     without exposing the the implementation details.
-    Currently we only support S3 as the underlying service.
-    We plan to support other services in the future.
+    Currently we only support S3 as the underlying backend.
+    We plan to support other storage backends in the future.
     """
 
     def __init__(self, config):
         self.storage_config = config
         self.prefix = config['storage_prefix']
-        self.service = config['storage_service']
-        if config['storage_service'] == 's3':
-            self.service_handler = S3Service(config['service_config'])
+        self.backend_type = config['storage_backend']
+        if config['storage_backend'] == 's3':
+            self.backend_handler = S3Backend(config['backend_config'])
         else:
-            raise NotImplementedError(("Using {} as storage service is" +
-                                       "not supported yet").format(config['storage_service']))
+            raise NotImplementedError(("Using {} as storage backend is" +
+                                       "not supported yet").format(config['storage_backend']))
 
     def get_storage_config(self):
         """
@@ -38,7 +38,7 @@ class Storage(object):
         :param data: data content
         :return: None
         """
-        return self.service_handler.put_object(key, data)
+        return self.backend_handler.put_object(key, data)
 
     def put_func(self, key, func):
         """
@@ -47,7 +47,7 @@ class Storage(object):
         :param data: serialized function
         :return: None
         """
-        return self.service_handler.put_object(key, func)
+        return self.backend_handler.put_object(key, func)
 
     def get_callset_status(self, callset_id):
         """
@@ -58,7 +58,7 @@ class Storage(object):
         # TODO: a better API for this is to return status for all calls in the callset. We'll fix
         #  this in scheduler refactoring.
         callset_prefix = os.path.join(self.prefix, callset_id)
-        keys = self.service_handler.list_keys_with_prefix(callset_prefix)
+        keys = self.backend_handler.list_keys_with_prefix(callset_prefix)
         suffix = status_key_suffix
         status_keys = [k for k in keys if suffix in k]
         call_ids = [k[len(callset_prefix)+1:].split("/")[0] for k in status_keys]
@@ -73,7 +73,7 @@ class Storage(object):
         """
         status_key = create_status_key(self.prefix, callset_id, call_id)
         try:
-            data = self.service_handler.get_object(status_key)
+            data = self.backend_handler.get_object(status_key)
             return json.loads(data.decode('ascii'))
         except StorageNoSuchKeyError:
             return None
@@ -87,7 +87,7 @@ class Storage(object):
         """
         output_key = create_output_key(self.prefix, callset_id, call_id)
         try:
-            return self.service_handler.get_object(output_key)
+            return self.backend_handler.get_object(output_key)
         except StorageNoSuchKeyError:
             raise StorageOutputNotFoundError(callset_id, call_id)
 
@@ -103,7 +103,7 @@ def get_runtime_info(runtime_config):
                                    "supported yet").format(runtime_config['runtime_storage']))
     config = dict()
     config['bucket'] = runtime_config['s3_bucket']
-    handler = S3Service(config)
+    handler = S3Backend(config)
 
     key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
     json_str = handler.get_object(key)

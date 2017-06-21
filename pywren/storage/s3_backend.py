@@ -1,7 +1,7 @@
 import botocore
 from .exceptions import *
 
-class S3Service(object):
+class S3Backend(object):
     """
     A wrap-up around S3 boto3 APIs.
     """

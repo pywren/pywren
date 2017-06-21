@@ -134,12 +134,12 @@ def generic_handler(event, context_dict):
 
     try:
         response_status = {'exception' : None}
-        if event['storage_config']['storage_service'] != 's3':
-            raise NotImplementedError(("Using {} as storage service is not supported " +
-                                       "yet.").format(event['storage_config']['storage_service']))
+        if event['storage_config']['storage_backend'] != 's3':
+            raise NotImplementedError(("Using {} as storage backend is not supported " +
+                                       "yet.").format(event['storage_config']['storage_backend']))
         s3_client = boto3.client("s3")
         s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
-        s3_bucket = event['storage_config']['service_config']['bucket']
+        s3_bucket = event['storage_config']['backend_config']['bucket']
         
         logger.info("invocation started")
 

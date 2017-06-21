@@ -22,7 +22,8 @@ import pywren.wrenconfig as wrenconfig
 import pywren.wrenutil as wrenutil
 import pywren.runtime as runtime
 import pywren.storage as storage
-from pywren.cloudpickle import serialize
+from pywren.serialize import cloudpickle, serialize
+from pywren.serialize import create_mod_data
 from pywren.future import ResponseFuture, JobState
 from pywren.wait import *
 from pywren.storage import storage_utils
@@ -67,7 +68,6 @@ class Executor(object):
 
         # Pick a runtime url if we have shards.
         # If not the handler will construct it
-        # TODO: we should always set the url, so our code here is S3-independent
         runtime_url = ""
         if ('urls' in self.runtime_meta_info and
                 isinstance(self.runtime_meta_info['urls'], list) and
@@ -166,12 +166,8 @@ class Executor(object):
         host_job_meta = {}
 
         pool = ThreadPool(invoke_pool_threads)
-<<<<<<< 3d14c30966836bb1613f17ee224e0f6c283e40d9
-        callset_id = s3util.create_callset_id()
-=======
         callset_id = wrenutil.create_callset_id()
         data = list(iterdata)
->>>>>>> Refactor storage API.
 
         ### pickle func and all data (to capture module dependencies
         func_and_data_ser, mod_paths = self.serializer([func] + data)
