@@ -449,6 +449,9 @@ def standalone_launch_instances(ctx, number, max_idle_time,
         sc['max_idle_time'] = max_idle_time
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
+
+    use_fast_io = sc.get("fast_io", False)
+
     availability_zone = sc.get("availability_zone", None)
 
     inst_list = ec2standalone.launch_instances(number, 
@@ -463,6 +466,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                pywren_git_branch=pywren_git_branch, 
                                                pywren_git_commit = pywren_git_commit, 
                                                availability_zone = availability_zone, 
+                                               fast_io = use_fast_io, 
                                                spot_price = spot_price)
     
     print("launched:")

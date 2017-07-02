@@ -39,6 +39,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      pywren_git_branch='master', 
                      spot_price=None, 
                      availability_zone = None, 
+                     fast_io = False, 
                      pywren_git_commit=None):
 
 
@@ -50,16 +51,20 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     ec2 = boto3.resource('ec2', region_name=aws_region)
     image = ec2.Image(tgt_ami)
 
-    # BlockDeviceMappings=[
-    #     {
-    #         'DeviceName': '/dev/xvda',
-    #         'Ebs': {
-    #             'VolumeSize': default_volume_size,
-    #             'DeleteOnTermination': True,
-    #             'VolumeType': 'standard',
-    #         },
-    #     },
-    # ]
+    if fast_io:
+        BlockDeviceMappings=[
+            {
+                'DeviceName': '/dev/xvda',
+                'Ebs': {
+                    'VolumeSize': default_volume_size,
+                    'DeleteOnTermination': True,
+                    'VolumeType': 'gp2',
+                    #'Iops' : 10000, 
+                },
+            },
+        ]
+    else:
+        BlockDeviceMappings = None
     template_file = sd('ec2standalone.cloudinit.template')
 
     user_data = open(template_file, 'r').read()
@@ -103,12 +108,12 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                   spot_price, ami=tgt_ami, 
                                   key_name = my_aws_key, 
                                   instance_type=instance_type, 
-                                  #block_device_mappings = None, 
+                                  block_device_mappings = BlockDeviceMappings, 
                                   security_group_ids = [], 
                                   ebs_optimized = True, 
                                   instance_profile = instance_profile_dict, 
-                                  availability_zone = availability_zone, 
-                                  user_data = user_data)
+                                  availability_zone = availability_zone,
+                                  user_data = user_data) ###FIXME DEBUG DEBUG
 
     
     # FIXME there's a race condition where we could end up with two 
@@ -160,7 +165,7 @@ def _create_instances(num_instances,
                       ami,
                       key_name,
                       instance_type,
-                      #block_device_mappings,
+                      block_device_mappings,
                       security_group_ids,
                       ebs_optimized, 
                       instance_profile, 
@@ -184,13 +189,15 @@ def _create_instances(num_instances,
                 'ImageId': ami,
                 'KeyName': key_name,
                 'InstanceType': instance_type,
-                #'BlockDeviceMappings': block_device_mappings,
                 'SecurityGroupIds': security_group_ids,
                 'EbsOptimized': ebs_optimized, 
                 'IamInstanceProfile' : instance_profile,
                 'UserData' : b64s(user_data)}
             if availability_zone is not None:
                 LaunchSpecification['Placement'] = {"AvailabilityZone":availability_zone}
+            if block_device_mappings is not None:
+                LaunchSpecification['BlockDeviceMappings'] =  block_device_mappings
+
             spot_requests = client.request_spot_instances(
                 SpotPrice=str(spot_price),
                 InstanceCount=num_instances,
@@ -235,19 +242,24 @@ def _create_instances(num_instances,
 
             # TODO: If an exception is raised in here, some instances may be
             #       left stranded.
-            cluster_instances = ec2.create_instances(
-                MinCount=num_instances,
-                MaxCount=num_instances,
-                ImageId=ami,
-                KeyName=key_name,
-                InstanceType=instance_type,
-                #BlockDeviceMappings=block_device_mappings,
-                SecurityGroupIds=security_group_ids,
-                EbsOptimized=ebs_optimized,
-                IamInstanceProfile =  instance_profile,
-                InstanceInitiatedShutdownBehavior = 'terminate', 
 
-                UserData = user_data)
+            LaunchSpecification =  {
+                "MinCount" : num_instances,
+                "MaxCount" : num_instances,
+                "ImageId" : ami,
+                "KeyName" : key_name,
+                "InstanceType" : instance_type,
+                "SecurityGroupIds" : security_group_ids,
+                "EbsOptimized" : ebs_optimized,
+                "IamInstanceProfile" :   instance_profile,
+                "InstanceInitiatedShutdownBehavior" :  'terminate', 
+
+                "UserData" :  user_data}
+            if block_device_mappings is not None:
+                LaunchSpecification['BlockDeviceMappings'] = block_device_mappings
+
+            cluster_instances = ec2.create_instances(**LaunchSpecification)
+
         time.sleep(10)  # AWS metadata eventual consistency tax.
         return cluster_instances
     except (Exception, KeyboardInterrupt) as e:

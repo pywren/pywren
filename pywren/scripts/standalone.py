@@ -354,12 +354,15 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                                               boto3_session=session,
                                               max_batch_count=10)
 
-    #debug_stream_handler = logging.StreamHandler()
+    debug_stream_handler = logging.StreamHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
 
-    #logger.addHandler(debug_stream_handler)
+    wren_log = pywren.wrenhandler.logger
+    wren_log.addHandler(handler)
+
+    wren_log.addHandler(debug_stream_handler)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name, 
