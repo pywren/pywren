@@ -10,7 +10,8 @@ from multiprocessing.pool import ThreadPool
 pickling_support.install()
 
 from pywren.future import JobState
-import pywren.s3util as s3util
+import pywren.storage as storage
+import pywren.wrenconfig as wrenconfig
 
 ALL_COMPLETED = 1
 ANY_COMPLETED = 2
@@ -83,11 +84,11 @@ def _wait(fs, THREADPOOL_SIZE):
 
     # get the list of all objects in this callset
     callset_id = present_callsets.pop() # FIXME assume only one
-    f0 = not_done_futures[0] # This is a hack too
 
-    callids_done = s3util.get_callset_done(f0.s3_bucket,
-                                           f0.s3_prefix,
-                                           callset_id)
+    storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+    storage_handler = storage.Storage(storage_config)
+    callids_done = storage_handler.get_callset_status(callset_id)
+
     callids_done = set(callids_done)
 
     fs_dones = []
@@ -105,7 +106,7 @@ def _wait(fs, THREADPOOL_SIZE):
             else:
                 fs_notdones.append(f)
     def test(f):
-        f.result(throw_except=False)
+        f.result(throw_except=False, storage_handler=storage_handler)
     pool = ThreadPool(THREADPOOL_SIZE)
     pool.map(test, f_to_wait_on)
 

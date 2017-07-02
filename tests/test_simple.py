@@ -301,7 +301,7 @@ class RuntimeSharding(unittest.TestCase):
 
         future = wrenexec.call_async(test_func, 7)
         result = future.result()
-        base_runtime_key = wrenexec.runtime_key
+        base_runtime_key = config['runtime']['s3_key']
         self.assertEqual(future.run_status['runtime_s3_key_used'],
                          base_runtime_key)
 
@@ -316,7 +316,7 @@ class RuntimeSharding(unittest.TestCase):
         def test_func(x):
             return x + 1
 
-        base_runtime_key = wrenexec.runtime_key
+        base_runtime_key = config['runtime']['s3_key']
 
         future = wrenexec.call_async(test_func, 7)
         result = future.result()
