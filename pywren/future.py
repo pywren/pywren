@@ -14,8 +14,8 @@ from pywren import wrenconfig, wrenutil, runtime
 import enum
 from multiprocessing.pool import ThreadPool
 import time
-from pywren import s3util
 from pywren.executor import *
+from pywren.storage import storage, storage_utils
 import logging
 import botocore
 import glob2
@@ -38,19 +38,17 @@ class ResponseFuture(object):
     """
     """
     GET_RESULT_SLEEP_SECS = 4
-    def __init__(self, call_id, callset_id, invoke_metadata,
-                 s3_bucket, s3_prefix, aws_region):
+    def __init__(self, call_id, callset_id, invoke_metadata, storage_path):
 
         self.call_id = call_id
         self.callset_id = callset_id
         self._state = JobState.new
-        self.s3_bucket = s3_bucket
-        self.s3_prefix = s3_prefix
-        self.aws_region = aws_region
 
         self._invoke_metadata = invoke_metadata.copy()
 
         self.status_query_count = 0
+
+        self.storage_path = storage_path
 
     def _set_state(self, new_state):
         ## FIXME add state machine
@@ -72,9 +70,7 @@ class ResponseFuture(object):
             return False
         return True
 
-
-    def result(self, timeout=None, check_only=False, throw_except=True, 
-               s3_client=None):
+    def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
 
 
@@ -104,15 +100,14 @@ class ResponseFuture(object):
             else:
                 return None
 
+        if storage_handler is None:
+            storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+            storage_handler = storage.Storage(storage_config)
 
-        logger.info("ResponseFuture.result() {} {} getting_call_status".format(self.callset_id,
-                                                                           self.call_id))
+        storage_utils.check_storage_path(storage_handler.get_storage_config(), self.storage_path)
 
 
-        call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                             AWS_S3_BUCKET = self.s3_bucket,
-                                             AWS_S3_PREFIX = self.s3_prefix, 
-                                             s3_client = s3_client)
+        call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
 
         self.status_query_count += 1
 
@@ -125,10 +120,7 @@ class ResponseFuture(object):
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
-            call_status = s3util.get_call_status(self.callset_id, self.call_id,
-                                                 AWS_S3_BUCKET = self.s3_bucket,
-                                                 AWS_S3_PREFIX = self.s3_prefix, 
-                                                 s3_client = s3_client)
+            call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
 
             self.status_query_count += 1
         logger.info("ResponseFuture.result() {} {} got call status, status_query_count={}".format(self.callset_id,
@@ -165,11 +157,9 @@ class ResponseFuture(object):
                                                                              self.call_id))
 
         call_output_time = time.time()
-        call_invoker_result = pickle.loads(s3util.get_call_output(self.callset_id,
-                                                                  self.call_id,
-                                                                  AWS_S3_BUCKET = self.s3_bucket,
-                                                                  AWS_S3_PREFIX = self.s3_prefix, 
-                                                                  s3_client = s3_client))
+        call_invoker_result = pickle.loads(storage_handler.get_call_output(
+            self.callset_id, self.call_id))
+
         call_output_time_done = time.time()
         self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
 
