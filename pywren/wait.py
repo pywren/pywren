@@ -17,8 +17,6 @@ ALL_COMPLETED = 1
 ANY_COMPLETED = 2
 ALWAYS = 3
 
-logger = logging.getLogger(__name__)
-
 def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
          WAIT_DUR_SEC=5, s3_client=None):
     """
@@ -114,11 +112,9 @@ def _wait(fs, THREADPOOL_SIZE, s3_client=None):
     def test(f):
         f.result(throw_except=False, storage_handler=storage_handler)
     pool = ThreadPool(THREADPOOL_SIZE)
-    logger.info("_wait calling map, len(f_to_wait_on)={}".format(len(f_to_wait_on)))
     pool.map(test, f_to_wait_on)
 
     pool.close()
     pool.join()
-    logger.info("_wait map done")
 
     return fs_dones, fs_notdones
