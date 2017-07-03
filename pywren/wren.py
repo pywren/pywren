@@ -1,21 +1,19 @@
 from __future__ import absolute_import
 
+import logging
+import os
+
+from tblib import pickling_support
+
 try:
     from six.moves import cPickle as pickle
 except:
     import pickle
-from tblib import pickling_support
-import logging
-import botocore
-import glob2
-import random
-import os
 pickling_support.install()
 
-from pywren.executor import Executor
-import pywren.wrenconfig as wrenconfig
 import pywren.invokers as invokers
-from pywren.wait import wait
+import pywren.queues as queues
+from pywren.executor import Executor
 from pywren.wait import *
 
 logger = logging.getLogger(__name__)
@@ -60,7 +58,7 @@ def remote_executor(config=None, job_max_runtime=3600):
 
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE = config['standalone']['sqs_queue_name']
-    invoker = invokers.SQSInvoker(AWS_REGION, SQS_QUEUE)
+    invoker = queues.SQSInvoker(AWS_REGION, SQS_QUEUE)
 
     return Executor(invoker, config, job_max_runtime)
 
@@ -69,10 +67,10 @@ standalone_executor = remote_executor
 
 def get_all_results(fs):
     """
-    Take in a list of futures and block until they are repeated, 
+    Take in a list of futures and block until they are repeated,
     call result on each one individually, and return those
-    results. 
-    
+    results.
+
     Will throw an exception if any future threw an exception
     """
     wait(fs, return_when=ALL_COMPLETED)

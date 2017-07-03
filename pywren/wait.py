@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 
+import time
+from multiprocessing.pool import ThreadPool
+
 try:
     from six.moves import cPickle as pickle
 except:
     import pickle
 from tblib import pickling_support
-import time
-from multiprocessing.pool import ThreadPool
 pickling_support.install()
 
 from pywren.future import JobState

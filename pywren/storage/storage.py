@@ -1,9 +1,10 @@
 from __future__ import absolute_import
+
 import json
 
-from .storage_utils import *
-from .exceptions import *
+from  .exceptions import *
 from .s3_backend import S3Backend
+from .storage_utils import *
 
 
 class Storage(object):
@@ -44,7 +45,7 @@ class Storage(object):
         """
         Put serialized function into storage.
         :param key: function key
-        :param data: serialized function
+        :param func: serialized function
         :return: None
         """
         return self.backend_handler.put_object(key, func)

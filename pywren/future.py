@@ -1,27 +1,20 @@
 from __future__ import absolute_import
-import boto3
-import botocore
-from six import reraise
-import json
-import base64
-from threading import Thread
+
+import logging
+import time
+
+import enum
+from tblib import pickling_support
+
 try:
+    from six import reraise
     from six.moves import cPickle as pickle
 except:
     import pickle
-from pywren.wrenconfig import *
-from pywren import wrenconfig, wrenutil, runtime
-import enum
-from multiprocessing.pool import ThreadPool
-import time
-from pywren.executor import *
+
+from pywren import wrenconfig
 from pywren.storage import storage, storage_utils
-import logging
-import botocore
-import glob2
-import os
-from pywren import invokers
-from tblib import pickling_support
+
 pickling_support.install()
 
 logger = logging.getLogger(__name__)
@@ -112,7 +105,8 @@ class ResponseFuture(object):
         self.status_query_count += 1
 
         ## FIXME implement timeout
-        if timeout is not None : raise NotImplementedError()
+        if timeout is not None:
+            raise NotImplementedError()
 
         if check_only is True:
             if call_status is None:

@@ -23,13 +23,13 @@ AWS_SQS_QUEUE_DEFAULT='pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
-default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz", 
-                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz", 
+default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz",
+                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz",
                    '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
 
 def load(config_filename):
     import yaml
-    res =  yaml.safe_load(open(config_filename, 'r'))    
+    res =  yaml.safe_load(open(config_filename, 'r'))
     # sanity check
     if res['s3']['bucket'] == 'BUCKET_NAME':
         raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket']))
@@ -55,7 +55,7 @@ def get_default_config_filename():
 
     else:
         config_filename = get_default_home_filename()
-    
+
     return config_filename
 
 def default():
@@ -91,7 +91,7 @@ basic_role_policy = {
         "Sid": "",
         "Effect": "Allow",
         "Principal": { "Service": "lambda.amazonaws.com"},
-        "Action": "sts:AssumeRole"}, 
+        "Action": "sts:AssumeRole"},
 
         {
         "Sid": "",
@@ -99,7 +99,7 @@ basic_role_policy = {
         "Principal": {
             "Service": "ec2.amazonaws.com",
         },
-        "Action": "sts:AssumeRole"}, 
+        "Action": "sts:AssumeRole"},
     ]
 }
 
@@ -118,7 +118,7 @@ more_permissions_policy = {
                 's3:*MultipartUpload*'
             ],
                 'Resource': '*'
-        }, 
+        },
         {
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
@@ -133,7 +133,7 @@ more_permissions_policy = {
             "Resource": [
                 "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:/aws/lambda/*:*"
             ]
-        }, 
+        },
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",

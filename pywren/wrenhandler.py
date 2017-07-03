@@ -1,32 +1,28 @@
-from six.moves import cPickle as pickle
-import botocore
-import boto3
-import tarfile
-import subprocess
-import os
-import time
 import base64
-import logging
-import uuid
 import json
+import logging
+import os
 import shutil
+import signal
+import subprocess
 import sys
-import base64
-
+import tarfile
+import time
 import traceback
 from threading import Thread
-import signal
 
-if (sys.version_info > (3, 0)):
+import boto3
+import botocore
+
+if sys.version_info > (3, 0):
+    from queue import Queue, Empty
     from . import wrenutil
     from . import version
-    from queue import Queue, Empty
 
 else:
+    from Queue import Queue, Empty
     import wrenutil
     import version
-    from Queue import Queue, Empty
-
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
@@ -62,7 +58,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     logger.debug("The etag is ={}".format(ETag))
     runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
     logger.debug("Runtime etag dir={}".format(runtime_etag_dir))
-    expected_target = os.path.join(runtime_etag_dir, 'condaruntime')    
+    expected_target = os.path.join(runtime_etag_dir, 'condaruntime')
     logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
@@ -81,20 +77,20 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
         os.unlink(CONDA_RUNTIME_DIR)
 
     shutil.rmtree(RUNTIME_LOC, True)
-    
+
     os.makedirs(runtime_etag_dir)
-    
+
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                     Key=runtime_s3_key)
 
-    condatar = tarfile.open(mode= "r:gz", 
-                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
+    condatar = tarfile.open(mode= "r:gz",
+                            fileobj = wrenutil.WrappedStreamingBody(res['Body'],
                                                                     res['ContentLength']))
 
 
     condatar.extractall(runtime_etag_dir)
 
-    # final operation 
+    # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
     return False
 
@@ -108,9 +104,9 @@ def b64str_to_bytes(str_data):
 def aws_lambda_handler(event, context):
     logger.setLevel(logging.INFO)
     context_dict = {
-        'aws_request_id' : context.aws_request_id, 
-        'log_group_name' : context.log_group_name, 
-        'log_stream_name' : context.log_stream_name, 
+        'aws_request_id' : context.aws_request_id,
+        'log_group_name' : context.log_group_name,
+        'log_stream_name' : context.log_stream_name,
     }
     return generic_handler(event, context_dict)
 
@@ -118,9 +114,9 @@ def get_server_info():
 
     server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii") }
     if os.path.exists("/proc"):
-        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
-                            '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
-                            '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
+        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
+                            '/proc/meminfo': open("/proc/meminfo", 'r').read(),
+                            '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
 
 
@@ -132,18 +128,18 @@ def generic_handler(event, context_dict):
     that we are running in, provided by the scheduler
     """
 
+    response_status = {'exception': None}
     try:
-        response_status = {'exception' : None}
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
         s3_client = boto3.client("s3")
         s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
         s3_bucket = event['storage_config']['backend_config']['bucket']
-        
+
         logger.info("invocation started")
 
-        # download the input 
+        # download the input
         status_key = event['status_key']
         func_key = event['func_key']
         data_key = event['data_key']
@@ -151,7 +147,7 @@ def generic_handler(event, context_dict):
         output_key = event['output_key']
 
         if version.__version__ != event['pywren_version']:
-            raise Exception("WRONGVERSION", "Pywren version mismatch", 
+            raise Exception("WRONGVERSION", "Pywren version mismatch",
                             version.__version__, event['pywren_version'])
 
         start_time = time.time()
@@ -173,9 +169,9 @@ def generic_handler(event, context_dict):
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
         response_status['func_key'] = func_key
-        response_status['data_key'] = data_key 
+        response_status['data_key'] = data_key
         response_status['output_key'] = output_key
-        response_status['status_key'] = status_key 
+        response_status['status_key'] = status_key
 
         KS =  get_key_size(s3_client, s3_bucket, data_key)
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
@@ -187,7 +183,7 @@ def generic_handler(event, context_dict):
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
 
-        # get the input and save to disk 
+        # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
         s3_transfer.download_file(s3_bucket, func_key, func_filename)
         func_download_time = time.time() - start_time
@@ -239,7 +235,7 @@ def generic_handler(event, context_dict):
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
-        
+
         runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
                                                        runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
@@ -259,10 +255,10 @@ def generic_handler(event, context_dict):
         CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
-        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
-                                         jobrunner_path, 
-                                         func_filename, 
-                                         data_filename, 
+        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
+                                         jobrunner_path,
+                                         func_filename,
+                                         data_filename,
                                          output_filename)
 
         setup_time = time.time()
@@ -278,7 +274,7 @@ def generic_handler(event, context_dict):
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
-        process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, 
+        process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
                                    stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
         logger.info("launched process")
@@ -295,7 +291,7 @@ def generic_handler(event, context_dict):
 
         stdout = b""
         while t.isAlive():
-            try: 
+            try:
                 line = q.get_nowait()
                 stdout += line
                 logger.info(line)
@@ -305,8 +301,8 @@ def generic_handler(event, context_dict):
             if total_runtime > job_max_runtime:
                 logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)  
-                raise Exception("OUTATIME", 
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
 
@@ -327,7 +323,7 @@ def generic_handler(event, context_dict):
         response_status['host_submit_time'] = event['host_submit_time']
         response_status['server_info'] = get_server_info()
 
-        response_status.update(context_dict) 
+        response_status.update(context_dict)
     except Exception as e:
         # internal runtime exceptions
         response_status['exception'] = str(e)
@@ -337,13 +333,13 @@ def generic_handler(event, context_dict):
         # creating new client in case the client has not been created
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
-    
+
 
 if __name__ == "__main__":
     s3 = boto3.resource('s3')
     #s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz', '/tmp/condaruntime.tar.gz')
     res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
 
-    condatar = tarfile.open(mode= "r:gz", 
-                            fileobj = WrappedStreamingBody(res['Body'], res['ContentLength']))
+    condatar = tarfile.open(mode= "r:gz",
+                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
     condatar.extractall('/tmp/test1/')

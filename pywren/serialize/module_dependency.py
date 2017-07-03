@@ -1,7 +1,7 @@
 """
 BSD Licensed
 
-From 
+From
 https://github.com/cloudpipe/multyvac-fork/blob/master/multyvac/util/module_dependency.py
 
 """
@@ -26,7 +26,7 @@ class ModuleDependencyAnalyzer(object):
         self._logger = logging.getLogger('multyvac.dependency-analyzer')
         # Root modules that have been or are being inspected
         self._inspected_modules = set()
-        # Root modules that have yet to be inspected 
+        # Root modules that have yet to be inspected
         self._modules_to_inspect = set()
         # Root modules that should be ignored by this (Not sent or traversed)
         self._modules_to_ignore = set()
@@ -251,11 +251,11 @@ class ModuleDependencyAnalyzer(object):
         # 1. Import that doesn't exist. "Bad import".
         # 2. Since we're only scanning the AST, there's a good chance the
         #    import's inclusion is conditional, and would never be triggered.
-        #    For example, an import specific to an OS. 
+        #    For example, an import specific to an OS.
         return None
 
     def _extract_root_module(self, module_name):
-        """Given a module name, returns only the root module by ignoring 
+        """Given a module name, returns only the root module by ignoring
         everything including and after the leftmost "." if one exists."""
         return module_name.split('.')[0]
 

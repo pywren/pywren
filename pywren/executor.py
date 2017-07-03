@@ -1,32 +1,27 @@
 from __future__ import absolute_import
 
-import boto3
 import json
+import logging
+import random
 
-from pywren.storage.storage_utils import create_func_key
+import boto3
 
 try:
     from six.moves import cPickle as pickle
 except:
     import pickle
-from multiprocessing.pool import ThreadPool
-import time
-import random
-import logging
-import botocore
-import glob2
-import os
 
-import pywren.version as version
-import pywren.wrenconfig as wrenconfig
-import pywren.wrenutil as wrenutil
 import pywren.runtime as runtime
 import pywren.storage as storage
-from pywren.serialize import cloudpickle, serialize
-from pywren.serialize import create_mod_data
-from pywren.future import ResponseFuture, JobState
-from pywren.wait import *
+import pywren.version as version
+import pywren.wrenutil as wrenutil
+
+from pywren.future import ResponseFuture
+from pywren.serialize import serialize, create_mod_data
 from pywren.storage import storage_utils
+from pywren.storage.storage_utils import create_func_key
+from pywren.wait import *
+
 
 logger = logging.getLogger(__name__)
 
@@ -161,7 +156,7 @@ class Executor(object):
 
         data = list(iterdata)
         if not data:
-          return []
+            return []
 
         host_job_meta = {}
 

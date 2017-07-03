@@ -43,21 +43,21 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from __future__ import print_function
 
 import dis
-from functools import partial
 import imp
-import io
 import itertools
 import opcode
 import operator
-import pickle
 import struct
 import sys
 import traceback
 import types
 import weakref
+from functools import partial
 
 if sys.version < '3':
+    import pickle
     from pickle import Pickler
+    import io
     try:
         from cStringIO import StringIO
     except ImportError:
@@ -65,9 +65,16 @@ if sys.version < '3':
     PY3 = False
 else:
     types.ClassType = type
+    import pickle
     from pickle import _Pickler as Pickler
+    import io
     from io import BytesIO as StringIO
     PY3 = True
+
+try:
+    import copy_reg as copyreg
+except ImportError:
+    import copyreg
 
 #relevant opcodes
 STORE_GLOBAL = opcode.opmap['STORE_GLOBAL']
@@ -238,7 +245,7 @@ class CloudPickler(Pickler):
         # a builtin_function_or_method which comes in as an attribute of some
         # object (e.g., object.__new__, itertools.chain.from_iterable) will end
         # up with modname "__main__" and so end up here. But these functions
-        # have no __code__ attribute in CPython, so the handling for 
+        # have no __code__ attribute in CPython, so the handling for
         # user-defined functions below will fail.
         # So we pickle them here using save_reduce; have to do it differently
         # for different python versions.
@@ -379,7 +386,7 @@ class CloudPickler(Pickler):
         base_globals = self.globals_ref.get(id(func.__globals__), {})
         self.globals_ref[id(func.__globals__)] = base_globals
 
-        return (code, f_globals, defaults, closure, dct, base_globals)
+        return code, f_globals, defaults, closure, dct, base_globals
 
     def save_builtin_function(self, obj):
         if obj.__module__ == "__builtin__":
@@ -615,9 +622,9 @@ class CloudPickler(Pickler):
     def save_file(self, obj):
         """Save a file"""
         try:
-            import StringIO as pystringIO #we can't use cStringIO as it lacks the name attribute
+            import StringIO as PyStringIO #we can't use cStringIO as it lacks the name attribute
         except ImportError:
-            import io as pystringIO
+            import io as PyStringIO
 
         if not hasattr(obj, 'name') or  not hasattr(obj, 'mode'):
             raise pickle.PicklingError("Cannot pickle files that do not map to an actual file")
@@ -636,7 +643,7 @@ class CloudPickler(Pickler):
 
         name = obj.name
 
-        retval = pystringIO.StringIO()
+        retval = PyStringIO.StringIO()
 
         try:
             # Read the whole file
@@ -740,13 +747,13 @@ def print_exec(stream):
     traceback.print_exception(ei[0], ei[1], ei[2], None, stream)
 
 
-def _modules_to_main(modList):
+def _modules_to_main(mod_list):
     """Force every module in modList to be placed into main"""
-    if not modList:
+    if not mod_list:
         return
 
     main = sys.modules['__main__']
-    for modname in modList:
+    for modname in mod_list:
         if type(modname) is str:
             try:
                 mod = __import__(modname)
@@ -833,10 +840,6 @@ if sys.version_info < (3, 4):
     method_descriptor = type(str.upper)
 
     def _reduce_method_descriptor(obj):
-        return (getattr, (obj.__objclass__, obj.__name__))
+        return getattr, (obj.__objclass__, obj.__name__)
 
-    try:
-        import copy_reg as copyreg
-    except ImportError:
-        import copyreg
     copyreg.pickle(method_descriptor, _reduce_method_descriptor)

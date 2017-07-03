@@ -1,11 +1,7 @@
 from __future__ import absolute_import
 
-import logging
-import os
-
-from pywren.wren import *
 from pywren import wrenlogging
-from pywren.version import __version__
+from pywren.wren import *
 
 if "PYWREN_LOGLEVEL" in os.environ:
     log_level = os.environ['PYWREN_LOGLEVEL']
@@ -17,4 +13,4 @@ if "PYWREN_LOGLEVEL" in os.environ:
 
 
 
-SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
+SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
