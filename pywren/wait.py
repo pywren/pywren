@@ -48,7 +48,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
             result_count += len(fs_dones)
 
             if result_count == N:
-                return fs_dones, fs_notdones
+                return fs, []
             else:
                 time.sleep(WAIT_DUR_SEC)
 
