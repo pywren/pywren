@@ -15,7 +15,7 @@ import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
 from pywren.executor import Executor
-from pywren.wait import wait, ALL_COMPLETED
+from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED
 
 logger = logging.getLogger(__name__)
 
