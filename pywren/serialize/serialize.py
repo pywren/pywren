@@ -114,7 +114,7 @@ from pywren.serialize import default_preinstalls
         # )
 
 class SerializeIndependent(object):
-    def __init__(self, preinstalled_modules = default_preinstalls.modules):
+    def __init__(self, preinstalled_modules=default_preinstalls.modules):
 
         self.preinstalled_modules = preinstalled_modules
 
@@ -176,6 +176,6 @@ if __name__ == "__main__":
         y = testmod.bar_square(x) + np.arange(3)
         return y + 1
 
-    cp , sb, paths =  serialize(foo, 7)
+    cp, sb, paths = serialize(foo, 7)
     print(cp.modules)
     print("paths=", paths)

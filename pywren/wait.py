@@ -39,7 +39,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     """
     N = len(fs)
 
-    if return_when==ALL_COMPLETED:
+    if return_when == ALL_COMPLETED:
         result_count = 0
         while result_count < N:
 
@@ -73,8 +73,8 @@ def _wait(fs, THREADPOOL_SIZE):
 
 
     # get all the futures that are not yet done
-    not_done_futures =  [f for f in fs if f._state not in [JobState.success,
-                                                           JobState.error]]
+    not_done_futures = [f for f in fs if f._state not in [JobState.success,
+                                                          JobState.error]]
     if len(not_done_futures) == 0:
         return fs, []
 

@@ -12,10 +12,10 @@ from pywren.scripts import pywrencli
 
 
 def get_username():
-    return pwd.getpwuid( os.getuid() )[ 0 ]
+    return pwd.getpwuid(os.getuid())[0]
 
 def click_validate_prompt(message, default, validate_func,
-                          fail_msg ="", max_attempts=5):
+                          fail_msg="", max_attempts=5):
     """
     Click wrapper that repeats prompt until acceptable answer
     """
@@ -25,7 +25,7 @@ def click_validate_prompt(message, default, validate_func,
         if validate_func(res):
             return res
         else:
-            attempt_num +=1
+            attempt_num += 1
             if attempt_num >= max_attempts:
                 raise Exception("Too many invalid answers")
             if fail_msg != "":
@@ -96,7 +96,8 @@ def validate_lambda_role_name(role_name):
 @click.option('--dryrun', default=False, is_flag=True, type=bool,
               help='create config file but take no actions')
 @click.option('--suffix', default="", type=str,
-              help="suffix to use for all automatically-generated named entities, useful for helping with IAM roles, and automated testing")
+              help="suffix to use for all automatically-generated named entities, " + \
+                   "useful for helping with IAM roles, and automated testing")
 @click.pass_context
 def interactive_setup(ctx, dryrun, suffix):
 
@@ -114,66 +115,76 @@ def interactive_setup(ctx, dryrun, suffix):
         #first we will try and make sure AWS is set up
 
         account_id = ctx.invoke(pywrencli.get_aws_account_id, False)
-        click.echo("Your AWS configuration appears to be set up, and your account ID is {}".format(account_id))
+        click.echo("Your AWS configuration appears to be set up, and your account ID is {}".format(
+            account_id))
     except Exception as e:
         raise
 
     click.echo("This interactive script will set up your initial PyWren configuration.")
-    click.echo("If this is your first time using PyWren then accepting the defaults should be fine.")
+    click.echo("If this is the first time you are using PyWren then accepting the defaults " + \
+               "should be fine.")
 
     # first, what is your default AWS region?
-    aws_region = click_validate_prompt("What is your default aws region?",
-                                 default=pywren.wrenconfig.AWS_REGION_DEFAULT,
-                                 validate_func = check_aws_region_valid,
-                                 fail_msg = "{} not a valid aws region"
-                                       "valid regions are " + \
-                                       " ".join(get_lambda_regions()))
+    aws_region = click_validate_prompt(
+        "What is your default aws region?",
+        default=pywren.wrenconfig.AWS_REGION_DEFAULT,
+        validate_func=check_aws_region_valid,
+        fail_msg="{} not a valid aws region. valid regions are " + " ".join(get_lambda_regions()))
     # FIXME make sure this is a valid region
 
 
     # if config file exists, ask before overwriting
-    config_filename = click_validate_prompt("Location for config file: ",
-                                            default=pywren.wrenconfig.get_default_home_filename(),
-                                            validate_func=check_overwrite_function)
+    config_filename = click_validate_prompt(
+        "Location for config file: ",
+        default=pywren.wrenconfig.get_default_home_filename(),
+        validate_func=check_overwrite_function)
     config_filename = os.path.expanduser(config_filename)
 
-    s3_bucket = click_validate_prompt("PyWren requires an s3 bucket to store intermediate data. What s3 bucket would you like to use?",
-                                      default=create_unique_bucket_name(),
-                                      validate_func=check_valid_bucket_name)
+    s3_bucket = click_validate_prompt(
+        "PyWren requires an s3 bucket to store intermediate data. " + \
+            "What s3 bucket would you like to use?",
+        default=create_unique_bucket_name(),
+        validate_func=check_valid_bucket_name)
     create_bucket = False
     if not check_bucket_exists(s3_bucket):
-        create_bucket = click.confirm("Bucket does not currently exist, would you like to create it?", default=True)
+        create_bucket = click.confirm(
+            "Bucket does not currently exist, would you like to create it?", default=True)
 
     click.echo("PyWren prefixes every object it puts in S3 with a particular prefix.")
-    bucket_pywren_prefix = click_validate_prompt("PyWren s3 prefix: ",
-                                                 default=pywren.wrenconfig.AWS_S3_PREFIX_DEFAULT,
-                                                 validate_func=validate_s3_prefix)
+    bucket_pywren_prefix = click_validate_prompt(
+        "PyWren s3 prefix: ",
+        default=pywren.wrenconfig.AWS_S3_PREFIX_DEFAULT,
+        validate_func=validate_s3_prefix)
 
-    lambda_config_advanced = click.confirm("Would you like to configure advanced PyWren properties?", default=False)
+    lambda_config_advanced = click.confirm(
+        "Would you like to configure advanced PyWren properties?", default=False)
     lambda_role = ds(pywren.wrenconfig.AWS_LAMBDA_ROLE_DEFAULT)
     function_name = ds(pywren.wrenconfig.AWS_LAMBDA_FUNCTION_NAME_DEFAULT)
 
     if lambda_config_advanced:
-        lambda_role = click_validate_prompt("Each lambda function runs as a particular"
-                                          "IAM role. What is the name of the role you"
-                                          "would like created for your lambda",
-                                          default=lambda_role,
-                                          validate_func = validate_lambda_role_name)
-        function_name = click_validate_prompt("Each lambda function has a particular function name."
-                                              "What is your function name?",
-                                              default=function_name,
-                                              validate_func = validate_lambda_function_name)
-    click.echo("PyWren standalone mode uses dedicated AWS instances to run PyWren tasks. This is more flexible, but more expensive with fewer simultaneous workers.")
+        lambda_role = click_validate_prompt(
+            "Each lambda function runs as a particular"
+            "IAM role. What is the name of the role you"
+            "would like created for your lambda",
+            default=lambda_role,
+            validate_func=validate_lambda_role_name)
+        function_name = click_validate_prompt(
+            "Each lambda function has a particular function name."
+            "What is your function name?",
+            default=function_name,
+            validate_func=validate_lambda_function_name)
+    click.echo("PyWren standalone mode uses dedicated AWS instances to run PyWren tasks. " + \
+               "This is more flexible, but more expensive with fewer simultaneous workers.")
     use_standalone = click.confirm("Would you like to enable PyWren standalone mode?")
 
     click.echo("Creating config {}".format(config_filename))
     ctx.obj = {"config_filename" : config_filename}
     ctx.invoke(pywrencli.create_config,
-               aws_region = aws_region,
-               bucket_name = s3_bucket,
-               lambda_role = lambda_role,
-               function_name = function_name,
-               bucket_prefix= bucket_pywren_prefix,
+               aws_region=aws_region,
+               bucket_name=s3_bucket,
+               lambda_role=lambda_role,
+               function_name=function_name,
+               bucket_prefix=bucket_pywren_prefix,
                force=True)
     if dryrun:
         click.echo("dryrun is set, not manipulating cloud state.")

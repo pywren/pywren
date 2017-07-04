@@ -31,7 +31,7 @@ if __name__ == "__main__":
 
     N = 10
     LOOPCOUNT = 5
-    extra_env =  {"OMP_NUM_THREADS" :  "1"}
+    extra_env = {"OMP_NUM_THREADS" :  "1"}
 
     pool = ThreadPool(64)
 
@@ -39,7 +39,7 @@ if __name__ == "__main__":
     call_result_objs = []
     for i in range(N):
         def f():
-            wren.call_async(compute_flops, LOOPCOUNT, job_id = job_id,
+            wren.call_async(compute_flops, LOOPCOUNT, job_id=job_id,
                             extra_env=extra_env)
         cb = pool.apply_async(f)
         call_result_objs.append(cb)
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     while not invocation_done:
         invocation_done = True
         for result_obj in call_result_objs:
-            if not result_obj.ready() :
+            if not result_obj.ready():
                 invocation_done = False
                 time.sleep(1)
 
@@ -55,14 +55,15 @@ if __name__ == "__main__":
 
     result_count = 0
     while result_count < N:
-        r = sdbclient.select(SelectExpression="select count(*) from test_two where job_id='{}'".format(job_id))
+        r = sdbclient.select(
+            SelectExpression="select count(*) from test_two where job_id='{}'".format(job_id))
         result_count = int(r['Items'][0]['Attributes'][0]['Value'])
         est_flop = 2 * result_count * LOOPCOUNT * MAT_N**3
 
         est_gflops = est_flop / 1e9/(time.time() - t1)
         print "jobs done: {:5d} runtime: {:5.1f}s {:8.1f} GFLOPS ".format(result_count,
-                                                                           time.time()-t1,
-                                                                           est_gflops)
+                                                                          time.time()-t1,
+                                                                          est_gflops)
 
         if result_count == N:
             break

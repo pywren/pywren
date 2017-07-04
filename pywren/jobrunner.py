@@ -12,7 +12,7 @@ pickling_support.install()
 
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
-    byte_data= base64.b64decode(str_ascii)
+    byte_data = base64.b64decode(str_ascii)
     return byte_data
 
 try:

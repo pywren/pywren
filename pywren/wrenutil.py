@@ -102,7 +102,7 @@ class WrappedStreamingBody:
 
 def sdb_to_dict(item):
     attr = item['Attributes']
-    return {c['Name'] : c['Value'] for c in attr }
+    return {c['Name'] : c['Value'] for c in attr}
 
 def bytes_to_b64str(byte_data):
     byte_data_64 = base64.b64encode(byte_data)
@@ -112,7 +112,7 @@ def bytes_to_b64str(byte_data):
 
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
-    byte_data= base64.b64decode(str_ascii)
+    byte_data = base64.b64decode(str_ascii)
     return byte_data
 
 def split_s3_url(s3_url):

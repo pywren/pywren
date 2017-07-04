@@ -86,7 +86,7 @@ EXTENDED_ARG = dis.EXTENDED_ARG
 
 
 def islambda(func):
-    return getattr(func,'__name__') == '<lambda>'
+    return getattr(func, '__name__') == '<lambda>'
 
 
 _BUILTIN_TYPE_NAMES = {}
@@ -162,7 +162,7 @@ class CloudPickler(Pickler):
 
     def save_buffer(self, obj):
         """Fallback to save_string"""
-        Pickler.save_string(self,str(obj))
+        Pickler.save_string(self, str(obj))
     if PY3:
         dispatch[memoryview] = save_memoryview
     else:
@@ -444,8 +444,9 @@ class CloudPickler(Pickler):
             if PY3:
                 self.save_reduce(types.MethodType, (obj.__func__, obj.__self__), obj=obj)
             else:
-                self.save_reduce(types.MethodType, (obj.__func__, obj.__self__, obj.__self__.__class__),
-                         obj=obj)
+                self.save_reduce(
+                    types.MethodType,
+                    (obj.__func__, obj.__self__, obj.__self__.__class__), obj=obj)
     dispatch[types.MethodType] = save_instancemethod
 
     def save_inst(self, obj):
@@ -459,7 +460,7 @@ class CloudPickler(Pickler):
 
         if hasattr(obj, '__getinitargs__'):
             args = obj.__getinitargs__()
-            len(args)  # XXX Assert it's a sequence
+            len(args)  # TODO: Assert it's a sequence
             pickle._keep_alive(args, memo)
         else:
             args = ()
@@ -615,7 +616,8 @@ class CloudPickler(Pickler):
         """Partial objects do not serialize correctly in python2.x -- this fixes the bugs"""
         self.save_reduce(_genpartial, (obj.func, obj.args, obj.keywords))
 
-    if sys.version_info < (2,7):  # 2.7 supports partial pickling
+    # 2.7 supports partial pickling
+    if sys.version_info < (2, 7):
         dispatch[partial] = save_partial
 
 
@@ -629,9 +631,9 @@ class CloudPickler(Pickler):
         if not hasattr(obj, 'name') or  not hasattr(obj, 'mode'):
             raise pickle.PicklingError("Cannot pickle files that do not map to an actual file")
         if obj is sys.stdout:
-            return self.save_reduce(getattr, (sys,'stdout'), obj=obj)
+            return self.save_reduce(getattr, (sys, 'stdout'), obj=obj)
         if obj is sys.stderr:
-            return self.save_reduce(getattr, (sys,'stderr'), obj=obj)
+            return self.save_reduce(getattr, (sys, 'stderr'), obj=obj)
         if obj is sys.stdin:
             raise pickle.PicklingError("Cannot pickle standard input")
         if obj.closed:
@@ -639,7 +641,8 @@ class CloudPickler(Pickler):
         if hasattr(obj, 'isatty') and obj.isatty():
             raise pickle.PicklingError("Cannot pickle files that map to tty objects")
         if 'r' not in obj.mode and '+' not in obj.mode:
-            raise pickle.PicklingError("Cannot pickle files that are not opened for reading: %s" % obj.mode)
+            raise pickle.PicklingError(
+                "Cannot pickle files that are not opened for reading: %s" % obj.mode)
 
         name = obj.name
 
@@ -709,7 +712,7 @@ def dump(obj, file, protocol=2):
 def dumps(obj, protocol=2):
     file = StringIO()
 
-    cp = CloudPickler(file,protocol)
+    cp = CloudPickler(file, protocol)
     cp.dump(obj)
 
     return file.getvalue()
@@ -799,7 +802,7 @@ def _reconstruct_closure(values):
     return tuple([_make_cell(v) for v in values])
 
 
-def _make_skel_func(code, closures, base_globals = None):
+def _make_skel_func(code, closures, base_globals=None):
     """ Creates a skeleton function object that contains just the provided
         code and the correct number of cells in func_closure.  All other
         func attributes (e.g. func_globals) are empty.
@@ -826,15 +829,12 @@ def _find_module(mod_name):
         file, path, description = imp.find_module(part, path)
     return file, path, description
 
-"""Constructors for 3rd party libraries
-Note: These can never be renamed due to client compatibility issues"""
-
 def _getobject(modname, attribute):
+    """Constructors for 3rd party libraries
+    Note: These can never be renamed due to client compatibility issues
+    """
     mod = __import__(modname, fromlist=[attribute])
     return mod.__dict__[attribute]
-
-
-""" Use copy_reg to extend global pickle definitions """
 
 if sys.version_info < (3, 4):
     method_descriptor = type(str.upper)
@@ -842,4 +842,5 @@ if sys.version_info < (3, 4):
     def _reduce_method_descriptor(obj):
         return getattr, (obj.__objclass__, obj.__name__)
 
+    # Use copy_reg to extend global pickle definitions
     copyreg.pickle(method_descriptor, _reduce_method_descriptor)

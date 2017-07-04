@@ -52,7 +52,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
-                                                  Key=runtime_s3_key)
+                                         Key=runtime_s3_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
     logger.debug("The etag is ={}".format(ETag))
@@ -62,9 +62,10 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
-        if os.path.exists(CONDA_RUNTIME_DIR) :
+        if os.path.exists(CONDA_RUNTIME_DIR):
             if not os.path.islink(CONDA_RUNTIME_DIR):
-                raise Exception("{} is not a symbolic link, your runtime config is broken".format(CONDA_RUNTIME_DIR))
+                raise Exception("{} is not a symbolic link, your runtime config is broken".format(
+                    CONDA_RUNTIME_DIR))
 
             existing_link = os.readlink(CONDA_RUNTIME_DIR)
             if existing_link == expected_target:
@@ -81,12 +82,11 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     os.makedirs(runtime_etag_dir)
 
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
-                                    Key=runtime_s3_key)
+                               Key=runtime_s3_key)
 
-    condatar = tarfile.open(mode= "r:gz",
-                            fileobj = wrenutil.WrappedStreamingBody(res['Body'],
-                                                                    res['ContentLength']))
-
+    condatar = tarfile.open(
+        mode="r:gz",
+        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
 
     condatar.extractall(runtime_etag_dir)
 
@@ -97,7 +97,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
-    byte_data= base64.b64decode(str_ascii)
+    byte_data = base64.b64decode(str_ascii)
     return byte_data
 
 
@@ -112,7 +112,7 @@ def aws_lambda_handler(event, context):
 
 def get_server_info():
 
-    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii") }
+    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii")}
     if os.path.exists("/proc"):
         server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
                             '/proc/meminfo': open("/proc/meminfo", 'r').read(),
@@ -161,7 +161,8 @@ def generic_handler(event, context_dict):
         runtime_s3_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
-            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(event['runtime_url'])
+            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(
+                event['runtime_url'])
         else:
             runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
@@ -173,13 +174,13 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        KS =  get_key_size(s3_client, s3_bucket, data_key)
+        KS = get_key_size(s3_client, s3_bucket, data_key)
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
         while KS is None:
-            logger.warn("WARNING COULD NOT GET FIRST KEY" )
+            logger.warn("WARNING COULD NOT GET FIRST KEY")
 
-            KS =  get_key_size(s3_client, s3_bucket, data_key)
-        if not event['use_cached_runtime'] :
+            KS = get_key_size(s3_client, s3_bucket, data_key)
+        if not event['use_cached_runtime']:
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
 
@@ -196,7 +197,7 @@ def generic_handler(event, context_dict):
         else:
             range_str = 'bytes={}-{}'.format(*data_byte_range)
             dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
-                                             Range=range_str)
+                                        Range=range_str)
             data_fid = open(data_filename, 'wb')
             data_fid.write(dres['Body'].read())
             data_fid.close()
@@ -296,7 +297,7 @@ def generic_handler(event, context_dict):
                 stdout += line
                 logger.info(line)
             except Empty:
-                time.sleep(PROCESS_STDOUT_SLEEP_SECS )
+                time.sleep(PROCESS_STDOUT_SLEEP_SECS)
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
                 logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
@@ -309,7 +310,7 @@ def generic_handler(event, context_dict):
         logger.info("command execution finished")
 
         s3_transfer.upload_file(output_filename, s3_bucket,
-                                   output_key)
+                                output_key)
         logger.debug("output uploaded to %s %s", s3_bucket, output_key)
 
         end_time = time.time()
@@ -332,14 +333,16 @@ def generic_handler(event, context_dict):
     finally:
         # creating new client in case the client has not been created
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
-                                  Body=json.dumps(response_status))
+                                      Body=json.dumps(response_status))
 
 
 if __name__ == "__main__":
     s3 = boto3.resource('s3')
-    #s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz', '/tmp/condaruntime.tar.gz')
+    # s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz',
+    #                              '/tmp/condaruntime.tar.gz')
     res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
 
-    condatar = tarfile.open(mode= "r:gz",
-                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
+    condatar = tarfile.open(
+        mode="r:gz",
+        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
     condatar.extractall('/tmp/test1/')

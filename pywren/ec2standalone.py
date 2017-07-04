@@ -67,11 +67,12 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
 
     supervisord_conf = open(sd('supervisord.conf'), 'r').read()
     logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
-    supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner",
-                                               sqs_queue_name=sqs_queue_name,
-                                               aws_region=aws_region,
-                                               max_idle_time=max_idle_time,
-                                               idle_terminate_granularity=idle_terminate_granularity)
+    supervisord_conf = supervisord_conf.format(
+        run_dir="/tmp/pywren.runner",
+        sqs_queue_name=sqs_queue_name,
+        aws_region=aws_region,
+        max_idle_time=max_idle_time,
+        idle_terminate_granularity=idle_terminate_granularity)
     supervisord_conf_64 = b64s(supervisord_conf)
 
     cloud_agent_conf = open(sd("cloudwatch-agent.config"),
@@ -84,27 +85,26 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     else:
         git_checkout_string = "-b {}".format(pywren_git_branch)
 
-    user_data = user_data.format(supervisord_init_script = supervisord_init_script_64,
-                                 supervisord_conf = supervisord_conf_64,
-                                 git_checkout_string = git_checkout_string,
-                                 aws_region = aws_region,
-                                 cloud_agent_conf = cloud_agent_conf_64)
+    user_data = user_data.format(supervisord_init_script=supervisord_init_script_64,
+                                 supervisord_conf=supervisord_conf_64,
+                                 git_checkout_string=git_checkout_string,
+                                 aws_region=aws_region,
+                                 cloud_agent_conf=cloud_agent_conf_64)
 
 
     open("/tmp/user_data", 'w').write(user_data)
 
     iam = boto3.resource('iam')
     instance_profile = iam.InstanceProfile(instance_profile_name)
-    instance_profile_dict =  {
-                              'Name' : instance_profile.name}
+    instance_profile_dict = {'Name' : instance_profile.name}
     instances = ec2.create_instances(ImageId=tgt_ami, MinCount=number,
                                      MaxCount=number,
                                      KeyName=my_aws_key,
                                      InstanceType=instance_type,
-                                     BlockDeviceMappings = block_device_mappings,
+                                     BlockDeviceMappings=block_device_mappings,
                                      InstanceInitiatedShutdownBehavior='terminate',
                                      EbsOptimized=True,
-                                     IamInstanceProfile = instance_profile_dict,
+                                     IamInstanceProfile=instance_profile_dict,
                                      UserData=user_data)
 
     # FIXME there's a race condition where we could end up with two

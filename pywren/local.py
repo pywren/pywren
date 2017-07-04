@@ -8,7 +8,7 @@ import pywren
 from . import wrenhandler
 
 
-def local_handler(jobs, run_dir, extra_context = None):
+def local_handler(jobs, run_dir, extra_context=None):
     """
     Run a list of (deserialized) jobs locally inside of
     run_dir

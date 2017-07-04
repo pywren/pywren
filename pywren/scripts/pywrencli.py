@@ -103,7 +103,8 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
 
     # print out message about the stuff you need to do
     if os.path.exists(filename) and not force:
-        raise ValueError("{} already exists; not overwriting (did you need --force?)".format(filename))
+        raise ValueError("{} already exists; not overwriting (did you need --force?)".format(
+            filename))
 
     open(filename, 'w').write(default_yaml)
     click.echo("new default file created in {}".format(filename))
@@ -186,7 +187,7 @@ def list_all_funcs(lambclient):
 
 @click.command()
 @click.pass_context
-def deploy_lambda(ctx, update_if_exists = True):
+def deploy_lambda(ctx, update_if_exists=True):
     """
     Package up the source code and deploy to aws. Only creates the new
     function if it doesn't already exist
@@ -244,13 +245,13 @@ def deploy_lambda(ctx, update_if_exists = True):
                     raise Exception() # FIXME will this work?
             else:
 
-                lambclient.create_function(FunctionName = FUNCTION_NAME,
-                                           Handler = pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME,
-                                           Runtime = "python2.7",
-                                           MemorySize = MEMORY,
-                                           Timeout = TIMEOUT,
-                                           Role = ROLE,
-                                           Code = {'ZipFile' : file_like_object.getvalue()})
+                lambclient.create_function(FunctionName=FUNCTION_NAME,
+                                           Handler=pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME,
+                                           Runtime="python2.7",
+                                           MemorySize=MEMORY,
+                                           Timeout=TIMEOUT,
+                                           Role=ROLE,
+                                           Code={'ZipFile' : file_like_object.getvalue()})
                 print("Successfully created function.")
                 break
         except botocore.exceptions.ClientError as e:
@@ -259,8 +260,8 @@ def deploy_lambda(ctx, update_if_exists = True):
                 retries += 1
 
                 # FIXME actually check for "botocore.exceptions.ClientError: An error occurred
-                # (InvalidParameterValueException) when calling the CreateFunction operation: The role defined for
-                # the function cannot be assumed by Lambda."
+                # (InvalidParameterValueException) when calling the CreateFunction operation:
+                # The role defined for the function cannot be assumed by Lambda."
                 print("Pausing for 5 seconds for changes to propagate.")
                 time.sleep(5)
                 continue
@@ -285,7 +286,7 @@ def delete_lambda(ctx):
 
     if FUNCTION_NAME not in [f['FunctionName'] for f in b['Functions']]:
         raise Exception()
-    lambclient.delete_function(FunctionName = FUNCTION_NAME)
+    lambclient.delete_function(FunctionName=FUNCTION_NAME)
 
 
 @click.command()
@@ -300,9 +301,9 @@ def delete_role(ctx):
     iamclient = boto3.client('iam')
     role_name = config['account']['aws_lambda_role']
 
-    iamclient.delete_role_policy(RoleName = role_name,
-                                 PolicyName = '{}-more-permissions'.format(role_name))
-    iamclient.delete_role(RoleName = role_name)
+    iamclient.delete_role_policy(RoleName=role_name,
+                                 PolicyName='{}-more-permissions'.format(role_name))
+    iamclient.delete_role(RoleName=role_name)
     print("deleted role{}".format(role_name))
 @click.command("delete_instance_profile")
 @click.pass_context
@@ -336,7 +337,7 @@ def create_queue(ctx):
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
-    sqs = boto3.resource('sqs',  region_name=AWS_REGION)
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
 
     queue = sqs.create_queue(QueueName=SQS_QUEUE_NAME,
                              Attributes={'VisibilityTimeout' : "20"})
@@ -354,7 +355,7 @@ def delete_queue(ctx):
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
-    sqs = boto3.resource('sqs',  region_name=AWS_REGION)
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
     queue.delete()
 
@@ -420,7 +421,9 @@ def log_url(ctx):
 
     function_name = config['lambda']['function_name']
     aws_region = config['account']['aws_region']
-    url = "https://{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(aws_region, aws_region, function_name)
+    url = "https://" + \
+        "{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(
+            aws_region, aws_region, function_name)
     print(url)
 
 
@@ -441,7 +444,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    sc= config['standalone']
+    sc = config['standalone']
     aws_region = config['account']['aws_region']
 
     if max_idle_time is not None:
@@ -449,17 +452,18 @@ def standalone_launch_instances(ctx, number, max_idle_time,
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
 
-    inst_list = ec2standalone.launch_instances(number,
-                                               sc['target_ami'], aws_region,
-                                               sc['ec2_ssh_key'],
-                                               sc['ec2_instance_type'],
-                                               sc['instance_name'],
-                                               sc['instance_profile_name'],
-                                               sc['sqs_queue_name'],
-                                               sc['max_idle_time'],
-                                               idle_terminate_granularity = sc['idle_terminate_granularity'],
-                                               pywren_git_branch=pywren_git_branch,
-                                               pywren_git_commit = pywren_git_commit)
+    inst_list = ec2standalone.launch_instances(
+        number,
+        sc['target_ami'], aws_region,
+        sc['ec2_ssh_key'],
+        sc['ec2_instance_type'],
+        sc['instance_name'],
+        sc['instance_profile_name'],
+        sc['sqs_queue_name'],
+        sc['max_idle_time'],
+        idle_terminate_granularity=sc['idle_terminate_granularity'],
+        pywren_git_branch=pywren_git_branch,
+        pywren_git_commit=pywren_git_commit)
 
     print("launched:")
     ec2standalone.prettyprint_instances(inst_list)
@@ -472,7 +476,7 @@ def standalone_list_instances(ctx):
     config = pywren.wrenconfig.load(config_filename)
 
     aws_region = config['account']['aws_region']
-    sc= config['standalone']
+    sc = config['standalone']
 
     inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
     ec2standalone.prettyprint_instances(inst_list)
@@ -489,7 +493,7 @@ def standalone_terminate_instances(ctx):
     config = pywren.wrenconfig.load(config_filename)
 
     aws_region = config['account']['aws_region']
-    sc= config['standalone']
+    sc = config['standalone']
 
     inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
     print("terminate")
