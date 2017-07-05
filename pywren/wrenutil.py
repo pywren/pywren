@@ -5,9 +5,17 @@ import base64
 import glob
 import hashlib
 
+
 def uuid_str():
     return str(uuid.uuid4())
 
+
+def create_callset_id():
+    return uuid_str()
+
+
+def create_call_id():
+    return uuid_str()
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 

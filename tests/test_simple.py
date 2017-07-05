@@ -93,6 +93,11 @@ class SimpleMap(unittest.TestCase):
     def setUp(self):
         self.wrenexec = pywren.default_executor()
 
+    def test_empty_map(self):
+        futures = self.wrenexec.map(lambda x: x, [])
+        res = np.array([f.result() for f in futures])
+        np.testing.assert_array_equal(res, [])
+
     def test_map(self):
 
         def plus_one(x):
@@ -296,7 +301,7 @@ class RuntimeSharding(unittest.TestCase):
 
         future = wrenexec.call_async(test_func, 7)
         result = future.result()
-        base_runtime_key = wrenexec.runtime_key
+        base_runtime_key = config['runtime']['s3_key']
         self.assertEqual(future.run_status['runtime_s3_key_used'],
                          base_runtime_key)
 
@@ -311,7 +316,7 @@ class RuntimeSharding(unittest.TestCase):
         def test_func(x):
             return x + 1
 
-        base_runtime_key = wrenexec.runtime_key
+        base_runtime_key = config['runtime']['s3_key']
 
         future = wrenexec.call_async(test_func, 7)
         result = future.result()

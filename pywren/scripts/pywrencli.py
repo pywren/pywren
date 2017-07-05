@@ -208,7 +208,7 @@ def deploy_lambda(ctx, update_if_exists = True):
     # FIXME see if role exists
     module_dir = os.path.join(SOURCE_DIR, "../")
     
-    for f in ['wrenutil.py', 'wrenconfig.py', 's3util.py', 'wrenhandler.py', 
+    for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
               'version.py', 'jobrunner.py', 'wren.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
         a = os.path.relpath(f, SOURCE_DIR + "/..")
