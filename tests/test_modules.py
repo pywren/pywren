@@ -145,6 +145,6 @@ class ExcludeTest(unittest.TestCase):
         try:
             fut[0].result()
             self.fail("shouldn't happen")
-        except ModuleNotFoundError as e:
+        except ImportError as e:
             pass
 
