@@ -1,14 +1,13 @@
 from __future__ import absolute_import
-import boto3
-import botocore
-import json
-import shutil
-import glob2
-import os
-from pywren import local
-from pywren.queues import SQSInvoker
 
-SOURCE_DIR = os.path.dirname(os.path.abspath(__file__)) 
+import json
+import os
+
+import botocore
+import botocore.session
+from pywren import local
+
+SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class LambdaInvoker(object):
@@ -18,16 +17,16 @@ class LambdaInvoker(object):
 
         self.region_name = region_name
         self.lambda_function_name = lambda_function_name
-        self.lambclient = self.session.create_client('lambda', 
-                                                     region_name = region_name)
+        self.lambclient = self.session.create_client('lambda',
+                                                     region_name=region_name)
         self.TIME_LIMIT = True
 
     def invoke(self, payload):
         """
         Invoke -- return information about this invocation
         """
-        res = self.lambclient.invoke(FunctionName=self.lambda_function_name, 
-                                     Payload = json.dumps(payload), 
+        res = self.lambclient.invoke(FunctionName=self.lambda_function_name,
+                                     Payload=json.dumps(payload),
                                      InvocationType='Event')
         # FIXME check response
         return {}
@@ -36,7 +35,7 @@ class LambdaInvoker(object):
         """
         Return config dict
         """
-        return {'lambda_function_name' : self.lambda_function_name, 
+        return {'lambda_function_name' : self.lambda_function_name,
                 'region_name' : self.region_name}
 
 
@@ -73,7 +72,7 @@ class DummyInvoker(object):
             jobn = MAXJOBS
         jobs = self.payloads[:jobn]
 
-        local.local_handler(jobs, run_dir, 
+        local.local_handler(jobs, run_dir,
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]

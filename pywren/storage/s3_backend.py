@@ -1,5 +1,7 @@
 import botocore
-from .exceptions import *
+
+from .exceptions import StorageNoSuchKeyError
+
 
 class S3Backend(object):
     """
@@ -9,8 +11,8 @@ class S3Backend(object):
     def __init__(self, s3config):
         self.s3_bucket = s3config['bucket']
         self.session = botocore.session.get_session()
-        self.s3client = self.session.create_client('s3',
-                            config=botocore.client.Config(max_pool_connections=200))
+        self.s3client = self.session.create_client(
+            's3', config=botocore.client.Config(max_pool_connections=200))
 
     def put_object(self, key, data):
         """
@@ -30,7 +32,7 @@ class S3Backend(object):
         :rtype: str/bytes
         """
         try:
-            r = self.s3client.get_object(Bucket=self.s3_bucket, Key = key)
+            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
             data = r['Body'].read()
             return data
         except botocore.exceptions.ClientError as e:
@@ -73,3 +75,4 @@ class S3Backend(object):
                 key_list.append(item['Key'])
 
         return key_list
+

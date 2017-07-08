@@ -1,22 +1,14 @@
 #!/usr/bin/env python
 
-import pywren
-import boto3
-import click
-import shutil
-import os
 import json
-import zipfile
-from glob2 import glob
-import io
-import time 
-import botocore
-from multiprocessing import Process
-from pywren import wrenhandler
 import logging
-import watchtower
-import subprocess
 import math
+import os
+import shutil
+import subprocess
+import time
+from multiprocessing import Process
+
 try:
     # For Python 3.0 and later
     from urllib.request import urlopen
@@ -24,13 +16,21 @@ except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import urlopen
 
+import boto3
+import click
+import watchtower
+from glob2 import glob
+
+import pywren
+from pywren import wrenhandler
+
 logger = logging.getLogger(__name__)
 
 
 SQS_VISIBILITY_INCREMENT_SEC = 10
-PROCESS_SLEEP_DUR_SEC=2
-AWS_REGION_DEBUG='us-west-2'
-QUEUE_SLEEP_DUR_SEC=2
+PROCESS_SLEEP_DUR_SEC = 2
+AWS_REGION_DEBUG = 'us-west-2'
+QUEUE_SLEEP_DUR_SEC = 2
 IDLE_TERMINATE_THRESHOLD = 0.95
 
 INSTANCE_ID_URL = "http://169.254.169.254/latest/meta-data/instance-id"
@@ -38,7 +38,7 @@ def get_my_ec2_instance(aws_region):
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
 
-    instance_id =  urlopen(INSTANCE_ID_URL).read()
+    instance_id = urlopen(INSTANCE_ID_URL).read()
     instances = ec2.instances.filter(InstanceIds=[instance_id])
 
 
@@ -62,11 +62,11 @@ def tags_to_dict(d):
 
 
 def get_my_ec2_meta(instance):
-    
+
     tags = tags_to_dict(instance.tags)
 
-    r = {'public_dns_name' : instance.public_dns_name, 
-         'public_ip_address' : instance.public_ip_address, 
+    r = {'public_dns_name' : instance.public_dns_name,
+         'public_ip_address' : instance.public_ip_address,
          'instance_id': instance.id}
     r.update(tags)
     return r
@@ -78,18 +78,20 @@ def get_my_uptime():
 
 def check_is_ec2():
     """
-    last-minute check to make sure we are on EC2. 
+    last-minute check to make sure we are on EC2.
 
     """
     try:
-        instance_id =  urlopen(INSTANCE_ID_URL, timeout=3).read()
+        instance_id = urlopen(INSTANCE_ID_URL, timeout=3).read()
         return True
-    except: 
+    except:
         return False
 
 def ec2_self_terminate(idle_time, uptime, message_count):
     if check_is_ec2():
-        logger.info("self-terminating after idle for {:.0f} sec ({:.0f} s uptime), processed {:d} messages".format(idle_time, uptime, message_count))
+        logger.info("self-terminating after idle for " + \
+            "{:.0f} sec ({:.0f} s uptime), processed {:d} messages".format(
+                idle_time, uptime, message_count))
         for h in logger.handlers:
             h.flush()
 
@@ -98,21 +100,22 @@ def ec2_self_terminate(idle_time, uptime, message_count):
         logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
 
 
-def idle_granularity_valid(idle_terminate_granularity, 
+def idle_granularity_valid(idle_terminate_granularity,
                            queue_receive_message_timeout):
-    return (1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity >  (queue_receive_message_timeout)*1.1
-    
-def server_runner(aws_region, sqs_queue_name, 
+    return ((1.0 - IDLE_TERMINATE_THRESHOLD)*idle_terminate_granularity >
+            queue_receive_message_timeout * 1.1)
+
+def server_runner(aws_region, sqs_queue_name,
                   max_run_time, run_dir, server_name, log_stream_prefix,
-                  max_idle_time=None, 
-                  idle_terminate_granularity = None, 
+                  max_idle_time=None,
+                  idle_terminate_granularity=None,
                   queue_receive_message_timeout=10):
     """
     Extract messages from queue and pass them off
     """
 
     sqs = boto3.resource('sqs', region_name=aws_region)
-    
+
     # Get the queue
     queue = sqs.get_queue_by_name(QueueName=sqs_queue_name)
     local_message_i = 0
@@ -120,21 +123,22 @@ def server_runner(aws_region, sqs_queue_name,
 
     terminate_thold_sec = (IDLE_TERMINATE_THRESHOLD * idle_terminate_granularity)
     terminate_window_sec = idle_terminate_granularity - terminate_thold_sec
-    queue_receive_message_timeout = min(math.floor(terminate_window_sec/1.2), queue_receive_message_timeout)
+    queue_receive_message_timeout = min(math.floor(terminate_window_sec/1.2),
+                                        queue_receive_message_timeout)
     queue_receive_message_timeout = int(max(queue_receive_message_timeout, 1))
-    if not idle_granularity_valid(idle_terminate_granularity, 
-                              queue_receive_message_timeout):
-        raise Exception("Idle time granularity window smaller than queue receive message timeout with headroom, instance will not self-terminate")
+    if not idle_granularity_valid(idle_terminate_granularity, queue_receive_message_timeout):
+        raise Exception("Idle time granularity window smaller than queue receive " + \
+                        "message timeout with headroom, instance will not self-terminate")
     message_count = 0
     idle_time = 0
-    while(True):
-        logger.debug("reading queue" )
+    while True:
+        logger.debug("reading queue")
         response = queue.receive_messages(WaitTimeSeconds=queue_receive_message_timeout)
         if len(response) > 0:
             m = response[0]
             logger.info("Dispatching")
-            
-            process_message(m, local_message_i, max_run_time, run_dir, 
+
+            process_message(m, local_message_i, max_run_time, run_dir,
                             aws_region, server_name, log_stream_prefix)
             message_count += 1
             last_processed_timestamp = time.time()
@@ -149,31 +153,28 @@ def server_runner(aws_region, sqs_queue_name,
            idle_terminate_granularity is not None:
             if idle_time > max_idle_time:
                 my_uptime = get_my_uptime()
-                time_frac = (my_uptime % idle_terminate_granularity) 
-                
-                logger.debug("Instance has been up for {:.0f} and inactive for {:.0f} time_frac={:.0f} terminate_thold={:.0f}".format(my_uptime, 
-                                                                                                                                      idle_time, 
-                                                                                                                                      time_frac, 
-                                                                                                                                      terminate_thold_sec))
+                time_frac = (my_uptime % idle_terminate_granularity)
 
+                logger.debug("Instance has been up for " + \
+                    "{:.0f} and inactive for {:.0f} time_frac={:.0f} terminate_thold={:.0f}".format(
+                        my_uptime, idle_time, time_frac, terminate_thold_sec))
 
                 if time_frac > terminate_thold_sec:
-                    logger.info("Instance has been up for {:.0f} and inactive for {:.0f}, terminating".format(my_uptime, 
-                                                                                                              idle_time))
+                    logger.info("Instance has been up for " + \
+                        "{:.0f} and inactive for {:.0f}, terminating".format(my_uptime, idle_time))
                     for h in logger.handlers:
                         h.flush()
                     ec2_self_terminate(idle_time, my_uptime, message_count)
 
 
-def process_message(m, local_message_i, max_run_time, run_dir, 
-                    aws_region, 
+def process_message(m, local_message_i, max_run_time, run_dir,
+                    aws_region,
                     server_name, log_stream_prefix):
     event = json.loads(m.body)
-    
+
     # run this in a thread: pywren.wrenhandler.generic_handler(event)
-    p =  Process(target=job_handler, args=(event, local_message_i, 
-                                           run_dir, aws_region, server_name, 
-                                           log_stream_prefix))
+    p = Process(target=job_handler,
+                args=(event, local_message_i, run_dir, aws_region, server_name, log_stream_prefix))
     # is thread done
     p.start()
     start_time = time.time()
@@ -181,17 +182,18 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     response = m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
-    # add 10s to visibility 
+    # add 10s to visibility
     run_time = time.time() - start_time
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
             response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
-            logger.debug("incrementing visibility timeout by {} sec".format(SQS_VISIBILITY_INCREMENT_SEC))
+            logger.debug("incrementing visibility timeout by {} sec".format(
+                SQS_VISIBILITY_INCREMENT_SEC))
         if p.exitcode is not None:
             logger.debug("attempting to join process")
-            # FIXME will this join ever hang? 
+            # FIXME will this join ever hang?
             p.join()
             break
         else:
@@ -210,9 +212,9 @@ def copy_runtime(tgt_dir):
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
-def job_handler(job, job_i, run_dir, aws_region, 
-                server_name, log_stream_prefix, 
-                extra_context = None, 
+def job_handler(job, job_i, run_dir, aws_region,
+                server_name, log_stream_prefix,
+                extra_context=None,
                 delete_taskdir=True):
     """
     Run a deserialized job in run_dir
@@ -220,14 +222,14 @@ def job_handler(job, job_i, run_dir, aws_region,
     Just for debugging
     """
     session = boto3.session.Session(region_name=aws_region)
-    # we do this here instead of in the global context 
+    # we do this here instead of in the global context
     # because of how multiprocessing works
-    handler = watchtower.CloudWatchLogHandler(send_interval=20, 
-                                              log_group="pywren.standalone", 
-                                              stream_name=log_stream_prefix + "-{logger_name}", 
+    handler = watchtower.CloudWatchLogHandler(send_interval=20,
+                                              log_group="pywren.standalone",
+                                              stream_name=log_stream_prefix + "-{logger_name}",
                                               boto3_session=session,
                                               max_batch_count=10)
-    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+    log_format_str = '{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
     handler.setFormatter(formatter)
@@ -240,7 +242,7 @@ def job_handler(job, job_i, run_dir, aws_region,
 
     original_dir = os.getcwd()
 
-    
+
     task_run_dir = os.path.join(run_dir, str(job_i))
     shutil.rmtree(task_run_dir, True) # delete old modules
     os.makedirs(task_run_dir)
@@ -264,43 +266,43 @@ def job_handler(job, job_i, run_dir, aws_region,
 
 
 @click.command()
-@click.option('--max_run_time', default=3600, 
+@click.option('--max_run_time', default=3600,
               help='max run time for a job', type=int)
-@click.option('--run_dir', default="/tmp/pywren.rundir", 
+@click.option('--run_dir', default="/tmp/pywren.rundir",
               help='directory to hold intermediate output')
-@click.option('--aws_region', default="us-west-2", 
+@click.option('--aws_region', default="us-west-2",
               help='aws region')
-@click.option('--sqs_queue_name', default="pywren-queue", 
+@click.option('--sqs_queue_name', default="pywren-queue",
               help='queue')
-@click.option('--max_idle_time', default=None, type=int, 
+@click.option('--max_idle_time', default=None, type=int,
               help='maximum time for queue to remine idle before we try to self-terminate (sec)')
-@click.option('--idle_terminate_granularity', default=None, type=int, 
+@click.option('--idle_terminate_granularity', default=None, type=int,
               help="only terminate if we have been up for an integral number of this")
-@click.option('--queue_receive_message_timeout', default=10, type=int, 
+@click.option('--queue_receive_message_timeout', default=10, type=int,
               help="longpoll timeout for getting sqs messages")
-def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time, 
+def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
            idle_terminate_granularity, queue_receive_message_timeout):
-    
+
     session = boto3.session.Session(region_name=aws_region)
 
-    # make boto quiet locally FIXME is there a better way of doing this? 
+    # make boto quiet locally FIXME is there a better way of doing this?
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
-    
+
 
     instance = get_my_ec2_instance(aws_region)
     ec2_metadata = get_my_ec2_meta(instance)
     server_name = ec2_metadata['Name']
-    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+    log_format_str = '{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
     log_stream_prefix = ec2_metadata['instance_id']
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
 
 
-    handler = watchtower.CloudWatchLogHandler(send_interval=20, 
-                                              log_group="pywren.standalone", 
-                                              stream_name=log_stream_prefix + "-{logger_name}", 
+    handler = watchtower.CloudWatchLogHandler(send_interval=20,
+                                              log_group="pywren.standalone",
+                                              stream_name=log_stream_prefix + "-{logger_name}",
                                               boto3_session=session,
                                               max_batch_count=10)
 
@@ -308,10 +310,10 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logger.addHandler(handler)
 
     #config = pywren.wrenconfig.default()
-    server_runner(aws_region, sqs_queue_name, 
-                  max_run_time, os.path.abspath(run_dir), 
-                  server_name, log_stream_prefix, 
-                  max_idle_time, 
-                  idle_terminate_granularity, 
+    server_runner(aws_region, sqs_queue_name,
+                  max_run_time, os.path.abspath(run_dir),
+                  server_name, log_stream_prefix,
+                  max_idle_time,
+                  idle_terminate_granularity,
                   queue_receive_message_timeout)
 

@@ -1,27 +1,20 @@
 from __future__ import absolute_import
-import boto3
-import botocore
-from six import reraise
-import json
-import base64
-from threading import Thread
+
+import logging
+import time
+
+import enum
+from tblib import pickling_support
+
 try:
+    from six import reraise
     from six.moves import cPickle as pickle
 except:
     import pickle
-from pywren.wrenconfig import *
-from pywren import wrenconfig, wrenutil, runtime
-import enum
-from multiprocessing.pool import ThreadPool
-import time
-from pywren.executor import *
+
+from pywren import wrenconfig
 from pywren.storage import storage, storage_utils
-import logging
-import botocore
-import glob2
-import os
-from pywren import invokers
-from tblib import pickling_support
+
 pickling_support.install()
 
 logger = logging.getLogger(__name__)
@@ -66,7 +59,7 @@ class ResponseFuture(object):
     def done(self):
         if self._state in [JobState.success, JobState.error]:
             return True
-        if self.result(check_only = True) is None:
+        if self.result(check_only=True) is None:
             return False
         return True
 
@@ -112,7 +105,8 @@ class ResponseFuture(object):
         self.status_query_count += 1
 
         ## FIXME implement timeout
-        if timeout is not None : raise NotImplementedError()
+        if timeout is not None:
+            raise NotImplementedError()
 
         if check_only is True:
             if call_status is None:
@@ -136,7 +130,9 @@ class ResponseFuture(object):
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
                 if throw_except:
-                    raise Exception("Pywren version mismatch: remove expected version {}, local library is version {}".format(exception_args[2], exception_args[3]))
+                    raise Exception("Pywren version mismatch: remote " + \
+                        "expected version {}, local library is version {}".format(
+                            exception_args[2], exception_args[3]))
                 return None
             elif exception_args[0] == "OUTATIME":
                 if throw_except:
@@ -183,7 +179,11 @@ class ResponseFuture(object):
 
             self._state = JobState.error
             if call_invoker_result.get('pickle_fail', False):
-                logging.warning("there was an error pickling. The original exception: {}\n The pickling exception: {}".format(call_invoker_result['exc_value'], str(call_invoker_result['pickle_exception'])))
+                logging.warning(
+                    "there was an error pickling. The original exception: " + \
+                        "{}\nThe pickling exception: {}".format(
+                            call_invoker_result['exc_value'],
+                            str(call_invoker_result['pickle_exception'])))
 
                 reraise(Exception, call_invoker_result['exc_value'],
                         call_invoker_result['exc_traceback'])
@@ -193,7 +193,7 @@ class ResponseFuture(object):
         else:
             return None  # nothing, don't raise, no value
 
-    def exception(self, timeout = None):
+    def exception(self, timeout=None):
         raise NotImplementedError()
 
     def add_done_callback(self, fn):

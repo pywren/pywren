@@ -1,16 +1,16 @@
 from __future__ import absolute_import
 
-import uuid
+import glob
 import os
 import shutil
-import base64
-import glob
-from . import wrenhandler
-import pywren
 
-def local_handler(jobs, run_dir, extra_context = None):
+import pywren
+from . import wrenhandler
+
+
+def local_handler(jobs, run_dir, extra_context=None):
     """
-    Run a list of (deserialized) jobs locally inside of 
+    Run a list of (deserialized) jobs locally inside of
     run_dir
 
     Just for debugging

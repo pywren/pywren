@@ -2,9 +2,11 @@
 Generic utility functions for serialization
 """
 
-import os
-import glob2
 import base64
+import os
+
+import glob2
+
 
 def bytes_to_b64str(byte_data):
     byte_data_64 = base64.b64encode(byte_data)

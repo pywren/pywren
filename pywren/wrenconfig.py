@@ -14,25 +14,27 @@ AWS_ROLE = "helloworld_exec_role"
 
 ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_ROLE)
 
-AWS_REGION_DEFAULT ='us-west-2'
+AWS_REGION_DEFAULT = 'us-west-2'
 AWS_S3_BUCKET_DEFAULT = "pywren.data"
 AWS_S3_PREFIX_DEFAULT = "pywren.jobs"
 AWS_LAMBDA_ROLE_DEFAULT = 'pywren_exec_role_1'
 AWS_LAMBDA_FUNCTION_NAME_DEFAULT = 'pywren_1'
-AWS_SQS_QUEUE_DEFAULT='pywren-jobs-1'
+AWS_SQS_QUEUE_DEFAULT = 'pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
-default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz", 
-                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz", 
+default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz",
+                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz",
                    '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
 
 def load(config_filename):
     import yaml
-    res =  yaml.safe_load(open(config_filename, 'r'))    
+    res = yaml.safe_load(open(config_filename, 'r'))
     # sanity check
     if res['s3']['bucket'] == 'BUCKET_NAME':
-        raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket']))
+        raise Exception(
+            "{} has bucket name as {} -- make sure you change the default bucket".format(
+                config_filename, res['s3']['bucket']))
     return res
 
 def get_default_home_filename():
@@ -55,7 +57,7 @@ def get_default_config_filename():
 
     else:
         config_filename = get_default_home_filename()
-    
+
     return config_filename
 
 def default():
@@ -87,19 +89,19 @@ def extract_storage_config(config):
 
 basic_role_policy = {
     "Version": "2012-10-17",
-    "Statement": [{
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": { "Service": "lambda.amazonaws.com"},
-        "Action": "sts:AssumeRole"}, 
-
+    "Statement": [
         {
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "ec2.amazonaws.com",
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
         },
-        "Action": "sts:AssumeRole"}, 
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {"Service": "ec2.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        },
     ]
 }
 
@@ -117,8 +119,8 @@ more_permissions_policy = {
                 's3:Get*',
                 's3:*MultipartUpload*'
             ],
-                'Resource': '*'
-        }, 
+            'Resource': '*'
+        },
         {
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
@@ -133,7 +135,7 @@ more_permissions_policy = {
             "Resource": [
                 "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:/aws/lambda/*:*"
             ]
-        }, 
+        },
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
@@ -159,6 +161,4 @@ more_permissions_policy = {
             ],
             "Effect": "Allow"
         }
-
-
-]}
+    ]}
