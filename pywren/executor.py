@@ -142,7 +142,7 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args = None, exclude_modules=[]):
+            use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=[]):
         """
         # FIXME work with an actual iterable instead of just a list
 
