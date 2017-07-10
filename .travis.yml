@@ -32,7 +32,7 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest numba
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest pylint cython nose boto3 PyYAML Click pytest numba
   - source activate test-environment
   - pip install glob2
   - tests/install_pywren.sh
@@ -59,6 +59,7 @@ script:
   - tests/ec2_standalone_tests.sh
   - tests/ec2_macroreduce_tests.sh
   - tests/cmdline_tests.sh
+  - tests/run_pylint.sh
   
 
 after_script:
@@ -87,3 +88,4 @@ env:
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
     - RUN_COMMANDLINE=true
+    - RUN_PYLINT=true
