@@ -156,15 +156,15 @@ class CloudPickler(Pickler):
 
     def save_memoryview(self, obj):
         """Fallback to save_string"""
-        Pickler.save_string(self, str(obj))
+        Pickler.save_str(self, str(obj)) # pylint: disable=no-member
 
     def save_buffer(self, obj):
         """Fallback to save_string"""
-        Pickler.save_string(self, str(obj))
+        Pickler.save_string(self, str(obj)) # pylint: disable=no-member
     if PY3:
         dispatch[memoryview] = save_memoryview
     else:
-        dispatch[buffer] = save_buffer
+        dispatch[buffer] = save_buffer # pylint: disable=undefined-variable
 
     def save_unsupported(self, obj): # pylint: disable=no-self-use
         raise pickle.PicklingError("Cannot pickle objects of type %s" % type(obj))
@@ -392,7 +392,7 @@ class CloudPickler(Pickler):
         return self.save_function(obj)
     dispatch[types.BuiltinFunctionType] = save_builtin_function
 
-    def save_global(self, obj, name=None, pack=struct.pack):
+    def save_global(self, obj, name=None, pack=struct.pack): # pylint: disable=unused-argument
         if obj.__module__ == "__builtin__" or obj.__module__ == "builtins":
             if obj in _BUILTIN_TYPE_NAMES:
                 return self.save_reduce(_builtin_type, (_BUILTIN_TYPE_NAMES[obj],), obj=obj)
@@ -459,7 +459,7 @@ class CloudPickler(Pickler):
         if hasattr(obj, '__getinitargs__'):
             args = obj.__getinitargs__()
             len(args)  # TODO: Assert it's a sequence
-            pickle._keep_alive(args, memo)
+            pickle._keep_alive(args, memo) # pylint: disable=no-member
         else:
             args = ()
 
@@ -495,7 +495,7 @@ class CloudPickler(Pickler):
         write(pickle.BUILD)
 
     if not PY3:
-        dispatch[types.InstanceType] = save_inst
+        dispatch[types.InstanceType] = save_inst # pylint: disable=no-member
 
     def save_property(self, obj):
         # properties not correctly saved in python
@@ -673,7 +673,7 @@ class CloudPickler(Pickler):
     if PY3:
         dispatch[io.TextIOWrapper] = save_file
     else:
-        dispatch[file] = save_file
+        dispatch[file] = save_file # pylint: disable=undefined-variable
 
     dispatch[type(Ellipsis)] = save_ellipsis
     dispatch[type(NotImplemented)] = save_not_implemented

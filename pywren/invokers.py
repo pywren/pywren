@@ -76,4 +76,3 @@ class DummyInvoker(object):
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
-

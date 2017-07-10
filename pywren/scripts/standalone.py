@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import json
 import logging
 import math
@@ -97,7 +99,7 @@ def ec2_self_terminate(idle_time, uptime, message_count):
 
         subprocess.call("sudo shutdown -h now", shell=True)
     else:
-        logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
+        logger.warning("attempted to self-terminate on non-EC2 instance. Check config")
 
 
 def idle_granularity_valid(idle_terminate_granularity,
@@ -197,7 +199,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
             p.join()
             break
         else:
-            print "sleeping"
+            print("sleeping")
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
@@ -316,4 +318,3 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                   max_idle_time,
                   idle_terminate_granularity,
                   queue_receive_message_timeout)
-

@@ -4,20 +4,18 @@ from __future__ import print_function
 import sys
 import types
 
-try:
-    from pywren.cStringIO import StringIO
-except:
-    if sys.version < '3':
-        try:
-            from cStringIO import StringIO
-        except ImportError:
-            from io import BytesIO as StringIO
-        PY3 = False
-    else:
-        types.ClassType = type
+if sys.version < '3':
+    try:
+        from cStringIO import StringIO
+    except ImportError:
         from io import BytesIO as StringIO
-        PY3 = True
+    PY3 = False
+else:
+    types.ClassType = type
+    from io import BytesIO as StringIO
+    PY3 = True
 
+# pylint: disable=wrong-import-position
 import numpy as np
 
 from pywren.serialize.cloudpickle import CloudPickler

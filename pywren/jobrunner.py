@@ -70,5 +70,3 @@ except Exception as e:
                      'pickle_exception' : pickle_exception,
                      'success' : False},
                     open(out_filename, 'wb'), -1)
-
-

@@ -282,5 +282,3 @@ class ModuleDependencyAnalyzer(object):
             return imps
         else:
             return set()
-
-

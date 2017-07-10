@@ -177,7 +177,7 @@ def generic_handler(event, context_dict):
         KS = get_key_size(s3_client, s3_bucket, data_key)
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
         while KS is None:
-            logger.warn("WARNING COULD NOT GET FIRST KEY")
+            logger.warning("WARNING COULD NOT GET FIRST KEY")
 
             KS = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
@@ -300,7 +300,7 @@ def generic_handler(event, context_dict):
                 time.sleep(PROCESS_STDOUT_SLEEP_SECS)
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
-                logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
+                logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 raise Exception("OUTATIME",

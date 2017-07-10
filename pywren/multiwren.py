@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import time
 import uuid
 from multiprocessing.pool import ThreadPool
@@ -27,7 +29,7 @@ if __name__ == "__main__":
     sdbclient = boto3.client('sdb', region_name='us-west-2')
 
     job_id = str(uuid.uuid1())
-    print "job_id=", job_id
+    print("job_id=", job_id)
 
     N = 10
     LOOPCOUNT = 5
@@ -52,7 +54,7 @@ if __name__ == "__main__":
                 invocation_done = False
                 time.sleep(1)
 
-    print "invocation done, dur=", time.time() - t1
+    print("invocation done, dur=", time.time() - t1)
 
     result_count = 0
     while result_count < N:
@@ -62,9 +64,9 @@ if __name__ == "__main__":
         est_flop = 2 * result_count * LOOPCOUNT * MAT_N**3
 
         est_gflops = est_flop / 1e9/(time.time() - t1)
-        print "jobs done: {:5d} runtime: {:5.1f}s {:8.1f} GFLOPS ".format(result_count,
+        print("jobs done: {:5d} runtime: {:5.1f}s {:8.1f} GFLOPS ".format(result_count,
                                                                           time.time()-t1,
-                                                                          est_gflops)
+                                                                          est_gflops))
 
         if result_count == N:
             break
@@ -72,8 +74,7 @@ if __name__ == "__main__":
         time.sleep(1)
     all_done = time.time()
     total_time = all_done - t1
-    print "total time", total_time
+    print("total time", total_time)
     est_flop = result_count * 2 * LOOPCOUNT * MAT_N**3
 
-    print est_flop / 1e9/total_time, "GFLOPS"
-
+    print(est_flop / 1e9/total_time, "GFLOPS")
