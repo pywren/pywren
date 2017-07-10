@@ -3,19 +3,11 @@ from __future__ import absolute_import
 import logging
 import os
 
-from tblib import pickling_support
-
-try:
-    from six.moves import cPickle as pickle
-except:
-    import pickle
-pickling_support.install()
-
 import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
 from pywren.executor import Executor
-from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED
+from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 

@@ -75,20 +75,21 @@ def check_valid_bucket_name(bucket_name):
     # Validates bucketname
     # Based on http://info.easydynamics.com/blog/aws-s3-bucket-name-validation-regex
     # https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
-    bucket_regex = r"^([a-z]|(\d(?!\d{0,2}\.\d{1,3}\.\d{1,3}\.\d{1,3})))([a-z\d]|(\.(?!(\.|-)))|(-(?!\.))){1,61}[a-z\d\.]$"
+    bucket_regex = re.compile(r"""^([a-z]|(\d(?!\d{0,2}\.\d{1,3}\.\d{1,3}\.\d{1,3})))
+                                   ([a-z\d]|(\.(?!(\.|-)))|(-(?!\.))){1,61}[a-z\d\.]$""", re.X)
     if re.match(bucket_regex, bucket_name):
         return True
     return False
 
-def validate_s3_prefix(prefix):
+def validate_s3_prefix(prefix): # pylint: disable=unused-argument
     # FIXME
     return True
 
-def validate_lambda_function_name(function_name):
+def validate_lambda_function_name(function_name): # pylint: disable=unused-argument
     # FIXME
     return True
 
-def validate_lambda_role_name(role_name):
+def validate_lambda_role_name(role_name): # pylint: disable=unused-argument
     # FIXME
     return True
 
@@ -117,7 +118,7 @@ def interactive_setup(ctx, dryrun, suffix):
         account_id = ctx.invoke(pywrencli.get_aws_account_id, False)
         click.echo("Your AWS configuration appears to be set up, and your account ID is {}".format(
             account_id))
-    except Exception as e:
+    except Exception as e: # pylint: disable=unused-variable
         raise
 
     click.echo("This interactive script will set up your initial PyWren configuration.")
@@ -207,4 +208,4 @@ def interactive_setup(ctx, dryrun, suffix):
     ctx.invoke(pywrencli.test_function)
 
 if __name__ == '__main__':
-    interactive_setup()
+    interactive_setup() # pylint: disable=no-value-for-parameter

@@ -27,7 +27,7 @@ def create_instance_profile(instance_profile_name):
     iam = boto3.resource('iam')
     #iam.create_instance_profile(InstanceProfileName=INSTANCE_PROFILE_NAME)
 
-    instance_profile = iam.InstanceProfile(instance_profile_name)
+    iam.InstanceProfile(instance_profile_name)
     #instance_profile.add_role(RoleName='pywren_exec_role_refactor8')
 
 
@@ -173,6 +173,7 @@ def terminate_instances(instance_list):
     # FIXME delete individuals
     """
     for instance_name, instance_obj in instance_list:
+        logger.debug('Terminating instance %s', instance_name)
         instance_obj.terminate()
 
 

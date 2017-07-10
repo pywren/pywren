@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import json
 import os
 import time
@@ -26,7 +28,7 @@ class SQSInvoker(object):
         """
 
         MessageBody = json.dumps(payload)
-        response = self.queue.send_message(MessageBody=MessageBody)
+        self.queue.send_message(MessageBody=MessageBody)
         # fixme return something
 
     def config(self):

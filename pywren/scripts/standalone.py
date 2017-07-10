@@ -82,7 +82,7 @@ def check_is_ec2():
 
     """
     try:
-        instance_id = urlopen(INSTANCE_ID_URL, timeout=3).read()
+        urlopen(INSTANCE_ID_URL, timeout=3).read()
         return True
     except:
         return False
@@ -179,7 +179,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     p.start()
     start_time = time.time()
 
-    response = m.change_visibility(
+    m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
     # add 10s to visibility
@@ -187,7 +187,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+            m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
             logger.debug("incrementing visibility timeout by {} sec".format(
                 SQS_VISIBILITY_INCREMENT_SEC))

@@ -16,13 +16,13 @@ import botocore
 
 if sys.version_info > (3, 0):
     from queue import Queue, Empty
-    from . import wrenutil
-    from . import version
+    from . import wrenutil # pylint: disable=relative-import
+    from . import version  # pylint: disable=relative-import
 
 else:
     from Queue import Queue, Empty
-    import wrenutil
-    import version
+    import wrenutil # pylint: disable=relative-import
+    import version  # pylint: disable=relative-import
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
@@ -340,9 +340,9 @@ if __name__ == "__main__":
     s3 = boto3.resource('s3')
     # s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz',
     #                              '/tmp/condaruntime.tar.gz')
-    res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
+    s3_res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
 
-    condatar = tarfile.open(
+    condatar_test = tarfile.open(
         mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
-    condatar.extractall('/tmp/test1/')
+        fileobj=wrenutil.WrappedStreamingBody(s3_res['Body'], s3_res['ContentLength']))
+    condatar_test.extractall('/tmp/test1/')

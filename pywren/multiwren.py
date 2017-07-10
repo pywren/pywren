@@ -13,13 +13,13 @@ def compute_flops(loopcount):
     A = np.arange(MAT_N**2, dtype=np.float64).reshape(MAT_N, MAT_N)
     B = np.arange(MAT_N**2, dtype=np.float64).reshape(MAT_N, MAT_N)
 
-    t1 = time.time()
-    for i in range(loopcount):
-        c = np.sum(np.dot(A, B))
+    t3 = time.time()
+    for _ in range(loopcount):
+        np.sum(np.dot(A, B))
 
     FLOPS = 2 *  MAT_N**3 * loopcount
-    t2 = time.time()
-    return FLOPS / (t2-t1)
+    t4 = time.time()
+    return FLOPS / (t4-t3)
 
 if __name__ == "__main__":
     t1 = time.time()
@@ -35,12 +35,13 @@ if __name__ == "__main__":
 
     pool = ThreadPool(64)
 
+    wrenexec = wren.default_executor()
 
     call_result_objs = []
     for i in range(N):
         def f():
-            wren.call_async(compute_flops, LOOPCOUNT, job_id=job_id,
-                            extra_env=extra_env)
+            wrenexec.call_async(compute_flops, LOOPCOUNT, job_id=job_id,
+                                extra_env=extra_env)
         cb = pool.apply_async(f)
         call_result_objs.append(cb)
     invocation_done = False

@@ -12,7 +12,7 @@ This module was extracted from the `cloud` package, developed by `PiCloud, Inc.
 <https://web.archive.org/web/20140626004012/http://www.picloud.com/>`_.
 
 Copyright (c) 2012, Regents of the University of California.
-Copyright (c) 2009 `PiCloud, Inc. <https://web.archive.org/web/20140626004012/http://www.picloud.com/>`_.
+Copyright (c) 2009 PiCloud, Inc.<https://web.archive.org/web/20140626004012/http://www.picloud.com>.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -44,9 +44,11 @@ from __future__ import print_function
 
 import dis
 import imp
+import io
 import itertools
 import opcode
 import operator
+import pickle
 import struct
 import sys
 import traceback
@@ -55,9 +57,7 @@ import weakref
 from functools import partial
 
 if sys.version < '3':
-    import pickle
-    from pickle import Pickler
-    import io
+    from pickle import Pickler # pylint: disable=ungrouped-imports
     try:
         from cStringIO import StringIO
     except ImportError:
@@ -65,10 +65,8 @@ if sys.version < '3':
     PY3 = False
 else:
     types.ClassType = type
-    import pickle
-    from pickle import _Pickler as Pickler
-    import io
-    from io import BytesIO as StringIO
+    from pickle import _Pickler as Pickler # pylint: disable=ungrouped-imports,no-name-in-module
+    from io import BytesIO as StringIO # pylint: disable=ungrouped-imports
     PY3 = True
 
 try:
@@ -130,7 +128,7 @@ else:
         Yield (opcode, argument number) tuples for all
         global-referencing instructions in *code*.
         """
-        for instr in dis.get_instructions(code):
+        for instr in dis.get_instructions(code): # pylint: disable=no-member
             op = instr.opcode
             if op in GLOBAL_OPS:
                 yield op, instr.arg
@@ -140,8 +138,8 @@ class CloudPickler(Pickler):
 
     dispatch = Pickler.dispatch.copy()
 
-    def __init__(self, file, protocol=None):
-        Pickler.__init__(self, file, protocol)
+    def __init__(self, cp_file, protocol=None):
+        Pickler.__init__(self, cp_file, protocol)
         # set of modules to unpickle
         self.modules = set()
         # map ids to dictionary. used to ensure that functions can share global env
@@ -168,7 +166,7 @@ class CloudPickler(Pickler):
     else:
         dispatch[buffer] = save_buffer
 
-    def save_unsupported(self, obj):
+    def save_unsupported(self, obj): # pylint: disable=no-self-use
         raise pickle.PicklingError("Cannot pickle objects of type %s" % type(obj))
     dispatch[types.GeneratorType] = save_unsupported
 
@@ -487,9 +485,9 @@ class CloudPickler(Pickler):
             if hasattr(obj, '__transient__'):
                 transient = obj.__transient__
                 stuff = stuff.copy()
-                for k in list(stuff.keys()):
-                    if k in transient:
-                        del stuff[k]
+                for key in list(stuff.keys()):
+                    if key in transient:
+                        del stuff[key]
         else:
             stuff = getstate()
             pickle._keep_alive(stuff, memo)
@@ -517,7 +515,10 @@ class CloudPickler(Pickler):
 
     def save_itemgetter(self, obj):
         """itemgetter serializer (needed for namedtuple support)"""
-        class Dummy:
+        class Dummy(object):
+            def __init__(self):
+                pass
+
             def __getitem__(self, item):
                 return item
         items = obj(Dummy())
@@ -583,9 +584,9 @@ class CloudPickler(Pickler):
                 transient = obj.__transient__
                 state = state.copy()
 
-                for k in list(state.keys()):
-                    if k in transient:
-                        del state[k]
+                for key in list(state.keys()):
+                    if key in transient:
+                        del state[key]
 
             save(args)
             write(pickle.NEWOBJ)
@@ -626,7 +627,7 @@ class CloudPickler(Pickler):
         try:
             import StringIO as PyStringIO #we can't use cStringIO as it lacks the name attribute
         except ImportError:
-            import io as PyStringIO
+            import io as PyStringIO  # pylint: disable=reimported
 
         if not hasattr(obj, 'name') or  not hasattr(obj, 'mode'):
             raise pickle.PicklingError("Cannot pickle files that do not map to an actual file")
@@ -663,10 +664,10 @@ class CloudPickler(Pickler):
         self.save(retval)
         self.memoize(obj)
 
-    def save_ellipsis(self, obj):
+    def save_ellipsis(self, obj): # pylint: disable=unused-argument
         self.save_reduce(_gen_ellipsis, ())
 
-    def save_not_implemented(self, obj):
+    def save_not_implemented(self, obj): # pylint: disable=unused-argument
         self.save_reduce(_gen_not_implemented, ())
 
     if PY3:
@@ -705,17 +706,17 @@ def _rebuild_tornado_coroutine(func):
 
 # Shorthands for legacy support
 
-def dump(obj, file, protocol=2):
-    CloudPickler(file, protocol).dump(obj)
+def dump(obj, cp_file, protocol=2):
+    CloudPickler(cp_file, protocol).dump(obj)
 
 
 def dumps(obj, protocol=2):
-    file = StringIO()
+    cp_file = StringIO()
 
-    cp = CloudPickler(file, protocol)
+    cp = CloudPickler(cp_file, protocol)
     cp.dump(obj)
 
-    return file.getvalue()
+    return cp_file.getvalue()
 
 # including pickles unloading functions in this namespace
 load = pickle.load
@@ -728,9 +729,9 @@ def subimport(name):
     return sys.modules[name]
 
 
-def dynamic_subimport(name, vars):
+def dynamic_subimport(name, mod_vars):
     mod = imp.new_module(name)
-    mod.__dict__.update(vars)
+    mod.__dict__.update(mod_vars)
     sys.modules[name] = mod
     return mod
 
@@ -739,10 +740,6 @@ def _restore_attr(obj, attr):
     for key, val in attr.items():
         setattr(obj, key, val)
     return obj
-
-
-def _get_module_builtins():
-    return pickle.__builtins__
 
 
 def print_exec(stream):
@@ -760,7 +757,7 @@ def _modules_to_main(mod_list):
         if type(modname) is str:
             try:
                 mod = __import__(modname)
-            except Exception as e:
+            except Exception as e: # pylint: disable=unused-variable
                 sys.stderr.write('warning: could not import %s\n.  '
                                  'Your function may unexpectedly error due to this import failing;'
                                  'A version mismatch is likely.  Specific error was:\n' % modname)
@@ -783,13 +780,13 @@ def _gen_ellipsis():
 def _gen_not_implemented():
     return NotImplemented
 
-def _fill_function(func, globals, defaults, dict):
+def _fill_function(func, func_globals, defaults, func_dict):
     """ Fills in the rest of function data into the skeleton function object
         that were created via _make_skel_func().
          """
-    func.__globals__.update(globals)
+    func.__globals__.update(func_globals)
     func.__defaults__ = defaults
-    func.__dict__ = dict
+    func.__dict__ = func_dict
 
     return func
 
@@ -799,7 +796,7 @@ def _make_cell(value):
 
 
 def _reconstruct_closure(values):
-    return tuple([_make_cell(v) for v in values])
+    return tuple([_make_cell(val) for val in values])
 
 
 def _make_skel_func(code, closures, base_globals=None):
@@ -826,8 +823,8 @@ def _find_module(mod_name):
     for part in mod_name.split('.'):
         if path is not None:
             path = [path]
-        file, path, description = imp.find_module(part, path)
-    return file, path, description
+        mod_file, path, description = imp.find_module(part, path)
+    return mod_file, path, description
 
 def _getobject(modname, attribute):
     """Constructors for 3rd party libraries
