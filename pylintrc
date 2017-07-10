@@ -78,7 +78,7 @@ enable=
 # --disable=W"
 
 # These are errors still not addressed in PyWren.
-disable=invalid-name,missing-docstring,too-many-branches,too-many-arguments,too-many-locals,logging-format-interpolation,too-many-public-methods,too-few-public-methods,too-many-instance-attributes,bare-except,broad-except,protected-access,unidiomatic-typecheck,too-many-return-statements,too-many-statements,locally-disabled
+disable=invalid-name,missing-docstring,too-many-branches,too-many-arguments,too-many-locals,logging-format-interpolation,too-many-public-methods,too-few-public-methods,too-many-instance-attributes,bare-except,broad-except,protected-access,unidiomatic-typecheck,too-many-return-statements,too-many-statements,locally-disabled,len-as-condition,no-else-return
 
 [REPORTS]
 
