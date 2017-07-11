@@ -15,12 +15,12 @@ import boto3
 import botocore
 
 if sys.version_info > (3, 0):
-    from queue import Queue, Empty
+    from queue import Queue, Empty # pylint: disable=import-error
     from . import wrenutil # pylint: disable=relative-import
     from . import version  # pylint: disable=relative-import
 
 else:
-    from Queue import Queue, Empty
+    from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
 
