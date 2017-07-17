@@ -61,8 +61,8 @@ class S3Backend(object):
         """
         Return a list of keys for the given prefix.
         :param prefix: Prefix to filter object names.
-        :return: Objects of the bucket that match prefix
-        :rtype: A list of keys
+        :return: List of keys in bucket that match the given prefix.
+        :rtype: list of str
         """
         paginator = self.s3client.get_paginator('list_objects_v2')
         operation_parameters = {'Bucket': self.s3_bucket,
