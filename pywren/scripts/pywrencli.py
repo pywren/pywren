@@ -15,7 +15,7 @@ import click
 import pywren
 import pywren.runtime
 from pywren import ec2standalone
-
+import urllib2
 
 @click.group()
 @click.option('--filename', default=pywren.wrenconfig.get_default_config_filename())
@@ -78,8 +78,12 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
     filename = ctx.obj['config_filename']
     # copy default config file
 
-    # FIXME check if it exists
-    default_yaml = open(os.path.join(SOURCE_DIR, "../default_config.yaml")).read()
+    default_config_path = os.path.join(SOURCE_DIR, "../default_config.yaml")
+    if not os.path.isfile(default_config_path):
+        config_file = open(default_config_path, 'w')
+        config_file.write(urllib2.urlopen("https://raw.githubusercontent.com/pywren/pywren/master/pywren/default_config.yaml").read())
+        config_file.close()
+    default_yaml = open(default_config_path).read()
 
     client = boto3.client("sts")
     account_id = client.get_caller_identity()["Account"]
