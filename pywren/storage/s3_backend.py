@@ -60,9 +60,9 @@ class S3Backend(object):
     def list_keys_with_prefix(self, prefix):
         """
         Return a list of keys for the given prefix.
-        :param key: key of the object
-        :return: True if key exists, False if not exists
-        :rtype: A list of keys
+        :param prefix: Prefix to filter object names.
+        :return: List of keys in bucket that match the given prefix.
+        :rtype: list of str
         """
         paginator = self.s3client.get_paginator('list_objects_v2')
         operation_parameters = {'Bucket': self.s3_bucket,
