@@ -150,6 +150,38 @@ def create_role(ctx):
     iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
         PolicyDocument=more_json_policy)
 
+
+@click.command()
+@click.pass_context
+@click.option('--key_file_save_location', default=None,
+              help="The directory which key file would be saved.")
+def create_ssh_key(ctx, key_file_save_location=None):
+    """
+
+    """
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
+    region = config['account']['aws_region']
+    ec2 = boto3.client('ec2', region)
+    keyname = config['standalone']['ec2_ssh_key']
+    try:
+        ec2.describe_key_pairs(KeyNames=[keyname])
+        print("EC2 SSH key " + keyname + " exists already.")
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'InvalidKeyPair.NotFound':
+            key = ec2.create_key_pair(KeyName=keyname)
+            print("EC2 SSH key " + keyname + " is created.")
+            if key_file_save_location is not None:
+                filename = os.path.join(key_file_save_location, keyname + ".pem")
+                with open(filename, "w") as f:
+                    f.write(key['KeyMaterial'])
+                f.close()
+                print("SSH private key " + keyname + " is saved to " + filename)
+        else:
+            raise e
+
+
 @click.command()
 @click.pass_context
 def create_bucket(ctx):
@@ -560,6 +592,7 @@ cli.add_command(test_config)
 cli.add_command(test_function)
 cli.add_command(get_aws_account_id)
 cli.add_command(create_role)
+cli.add_command(create_ssh_key)
 cli.add_command(create_bucket)
 cli.add_command(create_instance_profile)
 cli.add_command(delete_instance_profile)
