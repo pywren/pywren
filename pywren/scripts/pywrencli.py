@@ -16,6 +16,11 @@ import pywren
 import pywren.runtime
 from pywren import ec2standalone
 
+if sys.version_info > (3, 0):
+    from urllib.request import urlopen
+
+else:
+    from urllib2 import urlopen
 
 @click.group()
 @click.option('--filename', default=pywren.wrenconfig.get_default_config_filename())
@@ -78,8 +83,15 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
     filename = ctx.obj['config_filename']
     # copy default config file
 
-    # FIXME check if it exists
-    default_yaml = open(os.path.join(SOURCE_DIR, "../default_config.yaml")).read()
+    default_config_path = os.path.join(SOURCE_DIR, "../default_config.yaml")
+    if not os.path.isfile(default_config_path):
+        config_file = open(default_config_path, 'w')
+        config_file.write(
+            urlopen(
+                "https://raw.githubusercontent.com/pywren/pywren/master/pywren/default_config.yaml"
+                ).read())
+        config_file.close()
+    default_yaml = open(default_config_path).read()
 
     client = boto3.client("sts")
     account_id = client.get_caller_identity()["Account"]
@@ -138,8 +150,8 @@ def create_role(ctx):
     iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    role = iamclient.create_role(RoleName=role_name,
-                                 AssumeRolePolicyDocument=json_policy)
+    iamclient.create_role(RoleName=role_name,
+                          AssumeRolePolicyDocument=json_policy)
     more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
     AWS_ACCOUNT_ID = config['account']['aws_account_id']
@@ -238,8 +250,8 @@ def deploy_lambda(ctx, update_if_exists=True):
                 print("function exists, updating")
                 if update_if_exists:
 
-                    response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
-                                                               ZipFile=file_like_object.getvalue())
+                    lambclient.update_function_code(FunctionName=FUNCTION_NAME,
+                                                    ZipFile=file_like_object.getvalue())
                     return True
                 else:
                     raise Exception() # FIXME will this work?
