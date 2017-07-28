@@ -9,6 +9,8 @@ import sys
 import tarfile
 import time
 import traceback
+import platform
+
 from threading import Thread
 
 import boto3
@@ -112,10 +114,10 @@ def aws_lambda_handler(event, context):
 
 def get_server_info():
 
-    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii")}
+    server_info = {'uname' : " ".join(platform.uname(),
+                   'cpuinfo': platform.processor()}
     if os.path.exists("/proc"):
-        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
-                            '/proc/meminfo': open("/proc/meminfo", 'r').read(),
+        server_info.update({'/proc/meminfo': open("/proc/meminfo", 'r').read(),
                             '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
 
@@ -181,8 +183,8 @@ def generic_handler(event, context_dict):
 
             KS = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
-
+            shutil.rmtree(RUNTIME_LOC, True)
+            os.mkdir(RUNTIME_LOC)
 
         # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
@@ -231,8 +233,6 @@ def generic_handler(event, context_dict):
             fid.write(b64str_to_bytes(m_data))
             fid.close()
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-        logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
