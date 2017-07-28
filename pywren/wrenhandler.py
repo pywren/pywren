@@ -334,18 +334,17 @@ def generic_handler(event, context_dict):
 
         response_status['stdout'] = stdout.decode("ascii")
 
-
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
 
         response_status['host_submit_time'] = event['host_submit_time']
-        response_status['server_info'] = get_server_info()
 
         response_status.update(context_dict)
     except Exception as e:
         # internal runtime exceptions
         response_status['exception'] = str(e)
         response_status['exception_args'] = e.args
+        response_status['server_info'] = get_server_info()
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
         # creating new client in case the client has not been created
