@@ -13,8 +13,6 @@ import platform
 
 from threading import Thread
 
-import boto3
-import botocore
 
 if sys.version_info > (3, 0):
     from queue import Queue, Empty # pylint: disable=import-error
@@ -26,9 +24,24 @@ else:
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
 
-PYTHON_MODULE_PATH = "/tmp/pymodules"
-CONDA_RUNTIME_DIR = "/tmp/condaruntime"
-RUNTIME_LOC = "/tmp/runtimes"
+if sys.platform == 'win32':
+    TEMP = "D:\local\Temp"
+    PATH_DELIMETER = ";"
+
+elif sys.platform == 'linux':
+    TEMP = "/tmp"
+    PATH_DELIMETER = ":"
+    import boto3
+    import botocore
+
+else:
+    raise NotImplementedError(("Using {} based cloud is not supported " +
+                               "yet.").format(sys.platfrom))
+
+PYTHON_MODULE_PATH = os.path.join(TEMP, "pymodules")
+CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime")
+RUNTIME_LOC = os.path.join(TEMP, "runtimes")
+
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +129,11 @@ def get_server_info():
 
     server_info = {'uname' : " ".join(platform.uname(),
                    'cpuinfo': platform.processor()}
+
     if os.path.exists("/proc"):
         server_info.update({'/proc/meminfo': open("/proc/meminfo", 'r').read(),
                             '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
-
 
     return server_info
 
@@ -155,9 +168,9 @@ def generic_handler(event, context_dict):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        func_filename = "/tmp/func.pickle"
-        data_filename = "/tmp/data.pickle"
-        output_filename = "/tmp/output.pickle"
+        func_filename = os.path.join(TEMP, "func.pickle")
+        data_filename = os.path.join(TEMP, "data.pickle"
+        output_filename = os.path.join(TEMP, "output.pickle")
 
         runtime_s3_bucket = event['runtime']['s3_bucket']
         runtime_s3_key = event['runtime']['s3_key']
@@ -205,7 +218,7 @@ def generic_handler(event, context_dict):
             data_fid.close()
 
         data_download_time = time.time() - start_time
-        logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
+        logger.info("data download complete, took {:3.2f} sec".format(data_download_time))
         response_status['data_download_time'] = data_download_time
 
         # now split
@@ -217,7 +230,12 @@ def generic_handler(event, context_dict):
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
+                #wait but what if the client is using windows .
                 m_path = m_path[1:]
+
+            if sys.platform == 'win32':
+                m_path = os.path.join(*filter(lambda x: len(x) > 0, m_path.split("/")))
+
             to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
             #print "to_make=", to_make, "m_path=", m_path
             try:
@@ -228,7 +246,6 @@ def generic_handler(event, context_dict):
                 else:
                     raise e
             full_filename = os.path.join(to_make, os.path.basename(m_filename))
-            #print "creating", full_filename
             fid = open(full_filename, 'wb')
             fid.write(b64str_to_bytes(m_data))
             fid.close()
@@ -246,14 +263,14 @@ def generic_handler(event, context_dict):
         jobrunner_path = os.path.join(cwd, "jobrunner.py")
 
         extra_env = event.get('extra_env', {})
-        extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
+        extra_env['PYTHONPATH'] = "{}{}{}".format(os.getcwd(), PATH_DELIMETER, PYTHON_MODULE_PATH)
 
         call_id = event['call_id']
         callset_id = event['callset_id']
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
 
-        CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
+        CONDA_PYTHON_PATH = os.path.join(CONDA_RUNTIME_DIR, "bin")
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
         cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
@@ -270,7 +287,7 @@ def generic_handler(event, context_dict):
         local_env["OMP_NUM_THREADS"] = "1"
         local_env.update(extra_env)
 
-        local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
+        local_env['PATH'] = "{}{}{}".format(CONDA_PYTHON_PATH, PATH_DELIMETER, local_env.get("PATH", ""))
 
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
