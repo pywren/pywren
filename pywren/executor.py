@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 
 import json
 import logging
@@ -131,7 +132,8 @@ class Executor(object):
                    extra_meta=None):
         return self.map(func, [data], extra_env, extra_meta)[0]
 
-    def agg_data(self, data_strs):
+    @staticmethod
+    def agg_data(data_strs):
         ranges = []
         pos = 0
         for datum in data_strs:
@@ -142,7 +144,7 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=[]):
+            use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=None):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -185,10 +187,11 @@ class Executor(object):
             # it exceeded max data size
             pass
 
-        for module in exclude_modules:
-            for mod_path in list(mod_paths):
-                if module in mod_path and mod_path in mod_paths:
-                    mod_paths.remove(mod_path)
+        if exclude_modules:
+            for module in exclude_modules:
+                for mod_path in list(mod_paths):
+                    if module in mod_path and mod_path in mod_paths:
+                        mod_paths.remove(mod_path)
 
         module_data = create_mod_data(mod_paths)
         func_str_encoded = wrenutil.bytes_to_b64str(func_str)

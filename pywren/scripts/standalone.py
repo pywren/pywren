@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import json
 import logging
 import math
@@ -82,7 +84,7 @@ def check_is_ec2():
 
     """
     try:
-        instance_id = urlopen(INSTANCE_ID_URL, timeout=3).read()
+        urlopen(INSTANCE_ID_URL, timeout=3).read()
         return True
     except:
         return False
@@ -97,7 +99,7 @@ def ec2_self_terminate(idle_time, uptime, message_count):
 
         subprocess.call("sudo shutdown -h now", shell=True)
     else:
-        logger.warn("attempted to self-terminate on non-EC2 instance. Check config")
+        logger.warning("attempted to self-terminate on non-EC2 instance. Check config")
 
 
 def idle_granularity_valid(idle_terminate_granularity,
@@ -179,7 +181,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     p.start()
     start_time = time.time()
 
-    response = m.change_visibility(
+    m.change_visibility(
         VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
 
     # add 10s to visibility
@@ -187,7 +189,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     last_visibility_update_time = time.time()
     while run_time < max_run_time:
         if (time.time() - last_visibility_update_time) > (SQS_VISIBILITY_INCREMENT_SEC*0.9):
-            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
+            m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_INCREMENT_SEC)
             last_visibility_update_time = time.time()
             logger.debug("incrementing visibility timeout by {} sec".format(
                 SQS_VISIBILITY_INCREMENT_SEC))
@@ -197,7 +199,7 @@ def process_message(m, local_message_i, max_run_time, run_dir,
             p.join()
             break
         else:
-            print "sleeping"
+            print("sleeping")
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
@@ -316,4 +318,3 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                   max_idle_time,
                   idle_terminate_granularity,
                   queue_receive_message_timeout)
-

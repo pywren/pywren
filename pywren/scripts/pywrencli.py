@@ -113,7 +113,7 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
 
 @click.command()
 @click.pass_context
-def test_config(ctx):
+def test_config(ctx): # pylint: disable=unused-argument
     """
     Test that you have properly filled in the necessary
     aws fields, your boto install is working correctly, your s3 bucket is
@@ -130,7 +130,7 @@ def test_config(ctx):
 @click.pass_context
 def create_role(ctx):
     """
-
+    Creates the IAM profile used by PyWren.
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
@@ -138,8 +138,8 @@ def create_role(ctx):
     iamclient = boto3.resource('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    role = iamclient.create_role(RoleName=role_name,
-                                 AssumeRolePolicyDocument=json_policy)
+    iamclient.create_role(RoleName=role_name,
+                          AssumeRolePolicyDocument=json_policy)
     more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
     AWS_ACCOUNT_ID = config['account']['aws_account_id']
@@ -154,7 +154,7 @@ def create_role(ctx):
 @click.pass_context
 def create_bucket(ctx):
     """
-
+    Creates S3 buckets used by PyWren.
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
@@ -237,9 +237,8 @@ def deploy_lambda(ctx, update_if_exists=True):
             if function_exists:
                 print("function exists, updating")
                 if update_if_exists:
-
-                    response = lambclient.update_function_code(FunctionName=FUNCTION_NAME,
-                                                               ZipFile=file_like_object.getvalue())
+                    lambclient.update_function_code(FunctionName=FUNCTION_NAME,
+                                                    ZipFile=file_like_object.getvalue())
                     return True
                 else:
                     raise Exception() # FIXME will this work?
@@ -293,7 +292,7 @@ def delete_lambda(ctx):
 @click.pass_context
 def delete_role(ctx):
     """
-
+    Deletes IAM roles specified in PyWren config.
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
@@ -312,7 +311,6 @@ def delete_instance_profile(ctx, name):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    role_name = config['account']['aws_lambda_role']
     instance_profile_name = config['standalone']['instance_profile_name']
 
     if name != "":
@@ -339,8 +337,8 @@ def create_queue(ctx):
 
     sqs = boto3.resource('sqs', region_name=AWS_REGION)
 
-    queue = sqs.create_queue(QueueName=SQS_QUEUE_NAME,
-                             Attributes={'VisibilityTimeout' : "20"})
+    sqs.create_queue(QueueName=SQS_QUEUE_NAME,
+                     Attributes={'VisibilityTimeout' : "20"})
 
 
 @click.command()
@@ -366,10 +364,10 @@ def test_function(ctx):
     Simple single-function test
     """
     config_filename = ctx.obj['config_filename']
-    config = pywren.wrenconfig.load(config_filename)
+    pywren.wrenconfig.load(config_filename)
 
     wrenexec = pywren.default_executor()
-    def hello_world(x):
+    def hello_world(_):
         return "Hello world"
 
 
@@ -483,7 +481,7 @@ def standalone_list_instances(ctx):
 
 @standalone.command("instance_uptime")
 @click.pass_context
-def standalone_instance_uptime(ctx):
+def standalone_instance_uptime(ctx): # pylint: disable=unused-argument
     pass
 
 @standalone.command("terminate_instances")
@@ -576,4 +574,4 @@ cli.add_command(standalone)
 
 
 def main():
-    return cli(obj={})
+    return cli() # pylint: disable=no-value-for-parameter

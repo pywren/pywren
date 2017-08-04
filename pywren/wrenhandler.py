@@ -15,14 +15,14 @@ import boto3
 import botocore
 
 if sys.version_info > (3, 0):
-    from queue import Queue, Empty
-    from . import wrenutil
-    from . import version
+    from queue import Queue, Empty # pylint: disable=import-error
+    from . import wrenutil # pylint: disable=relative-import
+    from . import version  # pylint: disable=relative-import
 
 else:
-    from Queue import Queue, Empty
-    import wrenutil
-    import version
+    from Queue import Queue, Empty # pylint: disable=import-error
+    import wrenutil # pylint: disable=relative-import
+    import version  # pylint: disable=relative-import
 
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
@@ -177,7 +177,7 @@ def generic_handler(event, context_dict):
         KS = get_key_size(s3_client, s3_bucket, data_key)
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
         while KS is None:
-            logger.warn("WARNING COULD NOT GET FIRST KEY")
+            logger.warning("WARNING COULD NOT GET FIRST KEY")
 
             KS = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
@@ -300,7 +300,7 @@ def generic_handler(event, context_dict):
                 time.sleep(PROCESS_STDOUT_SLEEP_SECS)
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
-                logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
+                logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
                 os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 raise Exception("OUTATIME",
@@ -340,9 +340,9 @@ if __name__ == "__main__":
     s3 = boto3.resource('s3')
     # s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz',
     #                              '/tmp/condaruntime.tar.gz')
-    res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
+    s3_res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
 
-    condatar = tarfile.open(
+    condatar_test = tarfile.open(
         mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
-    condatar.extractall('/tmp/test1/')
+        fileobj=wrenutil.WrappedStreamingBody(s3_res['Body'], s3_res['ContentLength']))
+    condatar_test.extractall('/tmp/test1/')

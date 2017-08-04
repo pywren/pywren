@@ -25,9 +25,9 @@ class LambdaInvoker(object):
         """
         Invoke -- return information about this invocation
         """
-        res = self.lambclient.invoke(FunctionName=self.lambda_function_name,
-                                     Payload=json.dumps(payload),
-                                     InvocationType='Event')
+        self.lambclient.invoke(FunctionName=self.lambda_function_name,
+                               Payload=json.dumps(payload),
+                               InvocationType='Event')
         # FIXME check response
         return {}
 
@@ -55,7 +55,7 @@ class DummyInvoker(object):
     def invoke(self, payload):
         self.payloads.append(payload)
 
-    def config(self):
+    def config(self): # pylint: disable=no-self-use
         return {}
 
 
@@ -76,4 +76,3 @@ class DummyInvoker(object):
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
-

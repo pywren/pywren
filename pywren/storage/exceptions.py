@@ -13,4 +13,3 @@ class StorageConfigMismatchError(Exception):
         msg = "The data is stored at {}, but current storage is configured at {}.".format(
             prev_path, current_path)
         super(StorageConfigMismatchError, self).__init__(msg)
-

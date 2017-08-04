@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 
 from pywren import wrenlogging
-from pywren.wren import *
+from pywren.wren import * # pylint: disable=wildcard-import
 
 if "PYWREN_LOGLEVEL" in os.environ:
     log_level = os.environ['PYWREN_LOGLEVEL']

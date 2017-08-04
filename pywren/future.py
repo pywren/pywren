@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+from __future__ import print_function
 
 import logging
 import time
@@ -29,6 +30,8 @@ class JobState(enum.Enum):
 class ResponseFuture(object):
 
     """
+    Object representing the result of a PyWren invocation. Returns the status of the
+    execution and the result when available.
     """
     GET_RESULT_SLEEP_SECS = 4
     def __init__(self, call_id, callset_id, invoke_metadata, storage_path):
@@ -36,8 +39,15 @@ class ResponseFuture(object):
         self.call_id = call_id
         self.callset_id = callset_id
         self._state = JobState.new
+        self._exception = Exception()
+        self._return_val = None
+        self._traceback = None
+        self._call_invoker_result = None
 
         self._invoke_metadata = invoke_metadata.copy()
+
+        self.run_status = None
+        self.invoke_status = None
 
         self.status_query_count = 0
 
@@ -85,6 +95,7 @@ class ResponseFuture(object):
             raise ValueError("job not yet invoked")
 
         if self._state == JobState.success:
+            assert self._return_val != None
             return self._return_val
 
         if self._state == JobState.error:
@@ -167,7 +178,7 @@ class ResponseFuture(object):
         if call_success:
 
             self._return_val = call_invoker_result['result']
-            self._state = JobState.success
+            self._set_state(JobState.success)
             return self._return_val
 
         elif throw_except:

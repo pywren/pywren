@@ -75,4 +75,3 @@ class S3Backend(object):
                 key_list.append(item['Key'])
 
         return key_list
-
