@@ -249,8 +249,8 @@ def generic_handler(event, context_dict):
             fid = open(full_filename, 'wb')
             fid.write(b64str_to_bytes(m_data))
             fid.close()
-        logger.info("Finished writing {} module files".format(len(d['module_data'])))
 
+        logger.info("Finished writing {} module files".format(len(d['module_data'])))
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
 
@@ -292,6 +292,8 @@ def generic_handler(event, context_dict):
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
+
+        # os.setsid doesn't work in windows
         process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
                                    stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
