@@ -28,21 +28,24 @@ if sys.platform == 'win32':
     TEMP = "D:\local\Temp"
     PATH_DELIMETER = ";"
 
-elif sys.platform == 'linux':
+elif sys.platform.startswith('linux'):
     TEMP = "/tmp"
     PATH_DELIMETER = ":"
     import boto3
     import botocore
 
 else:
+    from Queue import Queue, Empty
+    import wrenutil
+    import version
+
+else:
     raise NotImplementedError(("Using {} based cloud is not supported " +
-                               "yet.").format(sys.platfrom))
+                               "yet.").format(sys.platform))
 
 PYTHON_MODULE_PATH = os.path.join(TEMP, "pymodules")
 CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime")
 RUNTIME_LOC = os.path.join(TEMP, "runtimes")
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +131,7 @@ def aws_lambda_handler(event, context):
 
 def get_server_info():
 
-    server_info = {'uname' : " ".join(platform.uname(),
+    server_info = {'uname' : " ".join(platform.uname()),
                    'cpuinfo': platform.processor()}
 
     if os.path.exists("/proc"):
@@ -170,7 +173,7 @@ def generic_handler(event, context_dict):
         response_status['start_time'] = start_time
 
         func_filename = os.path.join(TEMP, "func.pickle")
-        data_filename = os.path.join(TEMP, "data.pickle"
+        data_filename = os.path.join(TEMP, "data.pickle")
         output_filename = os.path.join(TEMP, "output.pickle")
 
         runtime_bucket = event['runtime']['s3_bucket']
@@ -231,6 +234,7 @@ def generic_handler(event, context_dict):
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
+                #wait but what if the client is using windows .
                 m_path = m_path[1:]
 
             if sys.platform == 'win32':
@@ -325,7 +329,10 @@ def generic_handler(event, context_dict):
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                if sys.platform.startswith('linux'):
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                else:
+                    pass
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
