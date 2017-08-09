@@ -43,6 +43,7 @@ CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime")
 RUNTIME_LOC = os.path.join(TEMP, "runtimes")
 
 
+
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
@@ -190,7 +191,7 @@ def generic_handler(event, context_dict):
         response_status['status_key'] = status_key
 
         KS = get_key_size(s3_client, s3_bucket, data_key)
-        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
+
         while KS is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
 
@@ -230,14 +231,13 @@ def generic_handler(event, context_dict):
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
-                #wait but what if the client is using windows .
                 m_path = m_path[1:]
 
             if sys.platform == 'win32':
                 m_path = os.path.join(*filter(lambda x: len(x) > 0, m_path.split("/")))
 
             to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-            #print "to_make=", to_make, "m_path=", m_path
+
             try:
                 os.makedirs(to_make)
             except OSError as e:
@@ -294,8 +294,12 @@ def generic_handler(event, context_dict):
         # reasons for setting process group: http://stackoverflow.com/a/4791612
 
         # os.setsid doesn't work in windows
+        if sys.platfrom == 'win32':
+           preexec = None
+        else:
+            preexec = os.setsid
         process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
-                                   stdout=subprocess.PIPE, preexec_fn=os.setsid)
+                                   stdout=subprocess.PIPE, preexec_fn=preexec)
 
         logger.info("launched process")
         def consume_stdout(stdout, queue):
