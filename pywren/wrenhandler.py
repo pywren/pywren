@@ -57,7 +57,7 @@ def get_key_size(s3client, bucket, key):
         else:
             raise e
 
-def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
+def download_runtime_if_necessary(s3_client, runtime_bucket, runtime_key):
     """
     Download the runtime if necessary
 
@@ -66,8 +66,8 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
 
     # get runtime etag
-    runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
-                                         Key=runtime_s3_key)
+    runtime_meta = s3_client.head_object(Bucket=runtime_bucket,
+                                         Key=runtime_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
     logger.debug("The etag is ={}".format(ETag))
@@ -96,8 +96,8 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     os.makedirs(runtime_etag_dir)
 
-    res = s3_client.get_object(Bucket=runtime_s3_bucket,
-                               Key=runtime_s3_key)
+    res = s3_client.get_object(Bucket=runtime_bucket,
+                               Key=runtime_key)
 
     condatar = tarfile.open(
         mode="r:gz",
@@ -172,15 +172,15 @@ def generic_handler(event, context_dict):
         data_filename = os.path.join(TEMP, "data.pickle"
         output_filename = os.path.join(TEMP, "output.pickle")
 
-        runtime_s3_bucket = event['runtime']['s3_bucket']
-        runtime_s3_key = event['runtime']['s3_key']
+        runtime_bucket = event['runtime']['s3_bucket']
+        runtime_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
-            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(
+            runtime_bucket_used, runtime_key_used = wrenutil.split_s3_url(
                 event['runtime_url'])
         else:
-            runtime_s3_bucket_used = runtime_s3_bucket
-            runtime_s3_key_used = runtime_s3_key
+            runtime_bucket_used = runtime_bucket
+            runtime_key_used = runtime_key
 
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
@@ -251,11 +251,11 @@ def generic_handler(event, context_dict):
             fid.close()
 
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        response_status['runtime_s3_key_used'] = runtime_s3_key_used
-        response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
+        response_status['runtime_key_used'] = runtime_key_used
+        response_status['runtime_bucket_used'] = runtime_bucket_used
 
-        runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
-                                                       runtime_s3_key_used)
+        runtime_cached = download_runtime_if_necessary(s3_client, runtime_bucket_used,
+                                                       runtime_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
 
