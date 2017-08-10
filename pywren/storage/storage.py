@@ -36,6 +36,7 @@ class Storage(object):
     def get_head(self, key):
         """
         Retrieves metadata for given key.
+        The metadata dict must have Contentlength and Etag as keys
         :return: dict
         """
         return self.backend_handler.head_object(key)

@@ -49,9 +49,9 @@ class S3Backend(object):
         try:
             if data_byte_range != None:
                 range_str = 'bytes={}-{}'.format(*data_byte_range)
+                r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key, Range = range_str)
             else:
-                range_str = None
-            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key, Range = range_str)
+                r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
             data = r['Body'].read()
             return data
         except botocore.exceptions.ClientError as e:
