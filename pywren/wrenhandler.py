@@ -120,6 +120,7 @@ def aws_lambda_handler(event, context):
         'log_stream_name' : context.log_stream_name,
     }
 
+    #construct storage handler based on s3 backend
     backend_config = {
         'bucket': event['storage_config']['backend_config']['bucket']
     }
