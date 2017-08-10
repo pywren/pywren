@@ -39,7 +39,7 @@ class S3Backend(object):
         """
         self.s3client.put_object(Bucket=self.s3_bucket, Key=key, Body=data)
 
-    def get_object(self, key):
+    def get_object(self, key, data_byte_range = None):
         """
         Get object from S3 with a key. Throws StorageNoSuchKeyError if the given key does not exist.
         :param key: key of the object
@@ -47,7 +47,11 @@ class S3Backend(object):
         :rtype: str/bytes
         """
         try:
-            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
+            if data_byte_range != None:
+                range_str = 'bytes={}-{}'.format(*data_byte_range)
+            else:
+                range_str = None
+            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key, Range = range_str)
             data = r['Body'].read()
             return data
         except botocore.exceptions.ClientError as e:

@@ -13,7 +13,6 @@ import platform
 
 from threading import Thread
 
-
 if sys.version_info > (3, 0):
     from queue import Queue, Empty # pylint: disable=import-error
     from . import wrenutil # pylint: disable=relative-import
@@ -28,15 +27,12 @@ if sys.platform == 'win32':
     TEMP = "D:\local\Temp"
     PATH_DELIMETER = ";"
 
-elif sys.platform.startswith('linux'):
+else:
     TEMP = "/tmp"
     PATH_DELIMETER = ":"
     import boto3
     import botocore
 
-else:
-    raise NotImplementedError(("Using {} based cloud is not supported " +
-                               "yet.").format(sys.platform))
 
 PYTHON_MODULE_PATH = os.path.join(TEMP, "pymodules")
 CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime")
@@ -46,9 +42,10 @@ logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
-def get_key_size(s3client, bucket, key):
+
+def get_key_size(storage_client, key):
     try:
-        a = s3client.head_object(Bucket=bucket, Key=key)
+        a = storage_client.head_object(Bucket=bucket, Key=key)
         return a['ContentLength']
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "404":
@@ -122,7 +119,19 @@ def aws_lambda_handler(event, context):
         'log_group_name' : context.log_group_name,
         'log_stream_name' : context.log_stream_name,
     }
-    return generic_handler(event, context_dict)
+
+    backend_config = {
+        'bucket': event['storage_config']['backend_config']['bucket']
+    }
+
+    storage_config = {
+        'storage_prefix' : event['storage_config']['storage_prefix'],
+        'storage_backend' : 's3',
+        'backend_config': backend_config
+    }
+
+    storage_handler = Storage(storage_config)
+    return generic_handler(event, context_dict, storage_handler)
 
 def get_server_info():
 
@@ -136,7 +145,7 @@ def get_server_info():
 
     return server_info
 
-def generic_handler(event, context_dict):
+def generic_handler(event, context_dict, storage_client):
     """
     context_dict is generic infromation about the context
     that we are running in, provided by the scheduler
@@ -147,9 +156,7 @@ def generic_handler(event, context_dict):
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
-        s3_client = boto3.client("s3")
         s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
-        s3_bucket = event['storage_config']['backend_config']['bucket']
 
         logger.info("invocation started")
 
@@ -188,12 +195,12 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        KS = get_key_size(s3_client, s3_bucket, data_key)
+        KS = get_key_size(s3_client, data_key)
 
         while KS is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
 
-            KS = get_key_size(s3_client, s3_bucket, data_key)
+            KS = get_key_size(storage_client, data_key)
         if not event['use_cached_runtime']:
             shutil.rmtree(RUNTIME_LOC, True)
             os.mkdir(RUNTIME_LOC)
@@ -209,9 +216,7 @@ def generic_handler(event, context_dict):
         if data_byte_range is None:
             s3_transfer.download_file(s3_bucket, data_key, data_filename)
         else:
-            range_str = 'bytes={}-{}'.format(*data_byte_range)
-            dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
-                                        Range=range_str)
+            dres = storage_client.get_object(data_key, data_byte_range)
             data_fid = open(data_filename, 'wb')
             data_fid.write(dres['Body'].read())
             data_fid.close()
@@ -229,10 +234,10 @@ def generic_handler(event, context_dict):
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
-                #wait but what if the client is using windows .
                 m_path = m_path[1:]
 
             if sys.platform == 'win32':
+                #change backslash to forward slash. 
                 m_path = os.path.join(*filter(lambda x: len(x) > 0, m_path.split("/")))
 
             to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
@@ -339,12 +344,9 @@ def generic_handler(event, context_dict):
         logger.debug("output uploaded to %s %s", s3_bucket, output_key)
 
         end_time = time.time()
-
         response_status['stdout'] = stdout.decode("ascii")
-
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
-
         response_status['host_submit_time'] = event['host_submit_time']
 
         response_status.update(context_dict)
@@ -355,9 +357,7 @@ def generic_handler(event, context_dict):
         response_status['server_info'] = get_server_info()
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
-        # creating new client in case the client has not been created
-        boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
-                                      Body=json.dumps(response_status))
+        storage_client.put_object(status_key, json.dumps(response_status))
 
 
 if __name__ == "__main__":
