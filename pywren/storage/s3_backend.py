@@ -14,6 +14,21 @@ class S3Backend(object):
         self.s3client = self.session.create_client(
             's3', config=botocore.client.Config(max_pool_connections=200))
 
+    def head_object(self, key):
+        """
+        Get object metadata from S3 with a key. Throws StorageNoSuchKeyError if the given key does not exist.
+        :param key: key of the object
+        :return: Data of the object
+        :rtype: str/bytes
+        """
+        try:
+            return self.s3client.head_object(self.s3_bucket, key)
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchKey":
+                raise StorageNoSuchKeyError(key)
+            else:
+                raise e
+
     def put_object(self, key, data):
         """
         Put an object in S3. Override the object if the key already exists.

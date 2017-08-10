@@ -33,6 +33,19 @@ class Storage(object):
         """
         return self.storage_config
 
+    def get_head(self, key):
+        """
+        Retrieves metadata for given key.
+        :return: dict
+        """
+        return self.backend_handler.head_object(key)
+
+    def get_object(self, key):
+        """
+        Retrieves object for given key.
+        """
+        return self.backend_handler.get_object(key)
+
     def put_data(self, key, data):
         """
         Put input data into storage.

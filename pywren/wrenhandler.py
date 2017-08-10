@@ -35,11 +35,6 @@ elif sys.platform.startswith('linux'):
     import botocore
 
 else:
-    from Queue import Queue, Empty
-    import wrenutil
-    import version
-
-else:
     raise NotImplementedError(("Using {} based cloud is not supported " +
                                "yet.").format(sys.platform))
 
@@ -298,7 +293,7 @@ def generic_handler(event, context_dict):
         # reasons for setting process group: http://stackoverflow.com/a/4791612
 
         # os.setsid doesn't work in windows
-        if sys.platfrom == 'win32':
+        if sys.platform == 'win32':
            preexec = None
         else:
             preexec = os.setsid
