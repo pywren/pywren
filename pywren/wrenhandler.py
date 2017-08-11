@@ -158,9 +158,9 @@ def generic_handler(event, context_dict):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        func_filename = "/tmp/func.pickle"
-        data_filename = "/tmp/data.pickle"
-        output_filename = "/tmp/output.pickle"
+        func_filename = "/tmp/func_%s.pickle" % RAND_ID
+        data_filename = "/tmp/data_%s.pickle" % RAND_ID
+        output_filename = "/tmp/output_%s.pickle" % RAND_ID
 
         runtime_s3_bucket = event['runtime']['s3_bucket']
         runtime_s3_key = event['runtime']['s3_key']
@@ -236,7 +236,7 @@ def generic_handler(event, context_dict):
             fid.close()
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
         logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-        #logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+        logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
@@ -347,4 +347,4 @@ if __name__ == "__main__":
 
     condatar = tarfile.open(mode= "r:gz", 
                             fileobj = WrappedStreamingBody(res['Body'], res['ContentLength']))
-    condatar.extractall('/tmp/test1/')
+    condatar.extractall('/tmp/test1_%s/' % RAND_ID)
