@@ -22,11 +22,15 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/conda install -q -y numpy boto3 boto"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install supervisor"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install git+https://github.com/ericmjonas/watchtower.git"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pxgao/pywren.git /home/ec2-user/pywren"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/head:refs/remotes/origin/pr/*"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/merge:refs/remotes/origin/pr/*"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren checkout {git_checkout_string}"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "sudo yum install -y cmake gcc-c++ boost-devel"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "sudo pip install boto3"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pxgao/ucache.git /home/ec2-user/ucache"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "cd /home/ec2-user/ucache; cmake .; make; cmake .;make"]
   - [ ls, /etc/init.d/]
   - mkdir /var/run/supervisor
   - chown ec2-user /var/run/supervisor

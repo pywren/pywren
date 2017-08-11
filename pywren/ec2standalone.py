@@ -35,7 +35,9 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      default_volume_size=100, 
                      max_idle_time=60, idle_terminate_granularity=600, 
                      pywren_git_branch='master', 
-                     pywren_git_commit=None):
+                     pywren_git_commit=None,
+                     master_ip="localhost",
+                     parallelism=1):
 
 
     logger.info("launching {} {} instances in {}".format(number, instance_type, 
@@ -64,13 +66,20 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     supervisord_init_script = open(sd('supervisord.init'), 'r').read()
     supervisord_init_script_64 = b64s(supervisord_init_script)
 
-    supervisord_conf = open(sd('supervisord.conf'), 'r').read()
-    logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
-    supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
+    if master_ip is None:
+        supervisord_conf = open(sd('supervisord-master.conf'), 'r').read()
+        logger.info("Running master")
+    else:
+        supervisord_conf = open(sd('supervisord.conf'), 'r').read()
+        logger.info("Running with idle_terminate_granularity={}".format(idle_terminate_granularity))
+        supervisord_conf = supervisord_conf.format(run_dir = "/tmp/pywren.runner", 
                                                sqs_queue_name=sqs_queue_name, 
                                                aws_region=aws_region, 
                                                max_idle_time=max_idle_time,
-                                               idle_terminate_granularity=idle_terminate_granularity)
+                                               idle_terminate_granularity=idle_terminate_granularity,
+                                               master_ip=master_ip,
+                                               num_procs_start=0,
+                                               num_procs=parallelism)
     supervisord_conf_64 = b64s(supervisord_conf)
 
     cloud_agent_conf = open(sd("cloudwatch-agent.config"), 
@@ -177,5 +186,5 @@ def terminate_instances(instance_list):
     
 def prettyprint_instances(inst_list):
     for instance_name, instance_obj in inst_list:
-        print(instance_name, instance_obj.public_dns_name)
+        print(instance_name, instance_obj.public_dns_name, instance_obj.private_ip_address)
 

@@ -12,6 +12,7 @@ import json
 import shutil
 import sys
 import base64
+import random 
 
 import traceback
 from threading import Thread
@@ -27,10 +28,10 @@ else:
     import version
     from Queue import Queue, Empty
 
-
-PYTHON_MODULE_PATH = "/tmp/pymodules"
-CONDA_RUNTIME_DIR = "/tmp/condaruntime"
-RUNTIME_LOC = "/tmp/runtimes"
+RAND_ID = random.randint(0, 100000)
+PYTHON_MODULE_PATH = "/tmp/pymodules_%s" % RAND_ID
+CONDA_RUNTIME_DIR = "/tmp/condaruntime_%s" % RAND_ID
+RUNTIME_LOC = "/tmp/runtimes_%s" % RAND_ID
 
 logger = logging.getLogger(__name__)
 
