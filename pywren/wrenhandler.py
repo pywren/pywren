@@ -257,7 +257,7 @@ def generic_handler(event, context_dict):
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
 
-        CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
+        CONDA_PYTHON_PATH = CONDA_RUNTIME_DIR + "/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
         cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
