@@ -34,7 +34,7 @@ def create_instance_profile(instance_profile_name):
 def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type, 
                      instance_name, instance_profile_name, sqs_queue_name, 
                      default_volume_size=100, 
-                     max_idle_time=60, idle_terminate_granularity=600, 
+                     max_idle_time=6000, idle_terminate_granularity=600, 
                      pywren_git_branch='master', 
                      pywren_git_commit=None,
                      master_ip="localhost",

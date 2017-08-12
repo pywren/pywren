@@ -171,7 +171,7 @@ def generic_handler(event, context_dict):
             runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
 
-        job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
+        job_max_runtime = event.get("job_max_runtime", 3600) # default for lambda
 
         response_status['func_key'] = func_key
         response_status['data_key'] = data_key 
