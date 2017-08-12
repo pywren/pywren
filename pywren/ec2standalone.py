@@ -6,6 +6,7 @@ import os
 import pywren
 import base64
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      pywren_git_branch='master', 
                      pywren_git_commit=None,
                      master_ip="localhost",
-                     parallelism=1):
+                     parallelism=1,
+                     spot_price=0):
 
 
     logger.info("launching {} {} instances in {}".format(number, instance_type, 
@@ -47,6 +49,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
 
 
     ec2 = boto3.resource('ec2', region_name=aws_region)
+    ec2_client = boto3.client('ec2', region_name=aws_region)
 
     BlockDeviceMappings=[
         {
@@ -61,7 +64,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     ]
     template_file = sd('ec2standalone.cloudinit.template')
 
-    user_data = open(template_file, 'r').read()
+    user_data_template = open(template_file, 'r').read()
 
     supervisord_init_script = open(sd('supervisord.init'), 'r').read()
     supervisord_init_script_64 = b64s(supervisord_init_script)
@@ -92,7 +95,11 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     else: 
         git_checkout_string = "-b {}".format(pywren_git_branch)
 
-    user_data = user_data.format(supervisord_init_script = supervisord_init_script_64, 
+    iam = boto3.resource('iam')
+    instance_profile = iam.InstanceProfile(instance_profile_name)
+    instance_profile_dict =  { 'Name' : instance_profile.name}
+
+    user_data = user_data_template.format(supervisord_init_script = supervisord_init_script_64, 
                                  supervisord_conf = supervisord_conf_64, 
                                  git_checkout_string = git_checkout_string, 
                                  aws_region = aws_region, 
@@ -101,11 +108,49 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
 
     open("/tmp/user_data", 'w').write(user_data)
 
-    iam = boto3.resource('iam')
-    instance_profile = iam.InstanceProfile(instance_profile_name)
-    instance_profile_dict =  {
-                              'Name' : instance_profile.name}
-    instances = ec2.create_instances(ImageId=tgt_ami, MinCount=number, 
+    if spot_price > 0:
+        #net_interface = [{'DeviceIndex':0, 'SubnetId':subnet.subnet_id}]
+        launch_spec = {'EbsOptimized':True,
+                'ImageId':tgt_ami, 
+                'BlockDeviceMappings':BlockDeviceMappings, 
+                'KeyName':my_aws_key, 
+                #'NetworkInterfaces':net_interface, 
+                #'SecurityGroupIds':[security_group['GroupId']], 
+                #'InstanceInitiatedShutdownBehavior':'terminate',
+                'IamInstanceProfile':instance_profile_dict,
+                'UserData':b64s(user_data),
+                'InstanceType':instance_type
+                }
+        spot_request = ec2_client.request_spot_instances(SpotPrice = str(spot_price), Type = "one-time", InstanceCount=number, LaunchSpecification=launch_spec)
+        my_req_ids = [req["SpotInstanceRequestId"] for req in spot_request["SpotInstanceRequests"]]
+        print "my_req_ids", my_req_ids
+        try:
+          while True:
+            time.sleep(10)
+            req_state = ec2_client.describe_spot_instance_requests(SpotInstanceRequestIds=my_req_ids)
+            #print req_state
+            success = 0
+            for s in req_state['SpotInstanceRequests']:
+              if s["SpotInstanceRequestId"] in my_req_ids:
+                if s["State"] == "active":
+                  success += 1
+                elif s["State"] == "failed":
+                  raise Exception(str(s["Fault"]))
+            if success == len(my_req_ids):
+              print "All %d slaves granted" % success
+              instances_id = [ r['InstanceId'] for r in req_state['SpotInstanceRequests']]
+              print "instances_id", instances_id
+              instances = [ec2.Instance(i) for i in instances_id]
+              break
+            else:
+              print "%d of %d slaves granted, waiting longer" % (success, len(my_req_ids))
+        except Exception as e:
+          print "Error %s" % str(e)    
+          print "Canceling spot instance requests"
+          ec2_client.cancel_spot_instance_requests(SpotInstanceRequestIds=my_req_ids)
+          exit() 
+    else:
+        instances = ec2.create_instances(ImageId=tgt_ami, MinCount=number, 
                                      MaxCount=number,
                                      KeyName=my_aws_key, 
                                      InstanceType=instance_type, 

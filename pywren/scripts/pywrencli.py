@@ -429,13 +429,14 @@ def log_url(ctx):
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int, 
               help='granularity of billing (sec)')
+@click.option('--spot_price', default=0, type=float, help='Spot instance price ($)')
 @click.option('--parallelism', default=8, type=int, 
               help='Number of worker per machine')
 @click.option('--pywren_git_branch', default='master', type=str, 
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None, 
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
-def standalone_launch_instances(ctx, number, max_idle_time, 
+def standalone_launch_instances(ctx, number, max_idle_time, spot_price,
                                 idle_terminate_granularity, parallelism,
                                 pywren_git_branch, pywren_git_commit):
     config_filename = ctx.obj['config_filename']
@@ -449,6 +450,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
     sc['parallelism'] = parallelism
+    sc['spot_price'] = spot_price
 
     master_inst_list = ec2standalone.launch_instances(1, 
                                                sc['target_ami'], aws_region, 
@@ -461,7 +463,8 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                idle_terminate_granularity = sc['idle_terminate_granularity'], 
                                                pywren_git_branch=pywren_git_branch, 
                                                pywren_git_commit = pywren_git_commit,
-                                               master_ip = None)
+                                               master_ip = None, 
+                                               spot_price = spot_price)
     
     print("launched master:")
     ec2standalone.prettyprint_instances(master_inst_list)
@@ -478,7 +481,8 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                pywren_git_branch=pywren_git_branch, 
                                                pywren_git_commit = pywren_git_commit,
                                                master_ip = master_inst_list[0][1].private_ip_address,
-                                               parallelism = sc['parallelism'])
+                                               parallelism = sc['parallelism'],
+                                               spot_price = spot_price)
     
     print("launched:")
     ec2standalone.prettyprint_instances(inst_list)
