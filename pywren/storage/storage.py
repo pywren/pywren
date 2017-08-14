@@ -41,11 +41,11 @@ class Storage(object):
         """
         return self.backend_handler.head_object(key)
 
-    def get_object(self, key):
+    def get_object(self, key, data_byte_range = None):
         """
         Retrieves object for given key.
         """
-        return self.backend_handler.get_object(key)
+        return self.backend_handler.get_object(key, data_byte_range)
 
     def put_data(self, key, data):
         """

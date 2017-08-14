@@ -210,7 +210,8 @@ def deploy_lambda(ctx, update_if_exists=True):
     module_dir = os.path.join(SOURCE_DIR, "../")
 
     for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
-              'version.py', 'jobrunner.py', 'wren.py']:
+              'version.py', 'jobrunner.py', 'wren.py', 'storage/storage.py',
+              'storage/s3_backend.py', 'storage/storage_utils.py', 'storage/__init__.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
         a = os.path.relpath(f, SOURCE_DIR + "/..")
 

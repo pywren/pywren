@@ -22,6 +22,7 @@ else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
+    import storage as Storage
 
 if sys.platform == 'win32':
     TEMP = "D:\local\Temp"
@@ -154,10 +155,11 @@ def generic_handler(event, context_dict, storage_client):
 
     response_status = {'exception': None}
     try:
-        if event['storage_config']['storage_backend'] != 's3':
+        storage_backend = event['storage_config']['storage_backend']
+        if storage_backend != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
-        s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
+#        s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
 
         logger.info("invocation started")
 
@@ -179,8 +181,9 @@ def generic_handler(event, context_dict, storage_client):
         data_filename = os.path.join(TEMP, "data.pickle")
         output_filename = os.path.join(TEMP, "output.pickle")
 
-        runtime_bucket = event['runtime']['s3_bucket']
-        runtime_key = event['runtime']['s3_key']
+        if storage_backend == 's3':
+            runtime_bucket = event['runtime']['s3_bucket']
+            runtime_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
             runtime_bucket_used, runtime_key_used = wrenutil.split_s3_url(
@@ -208,19 +211,19 @@ def generic_handler(event, context_dict, storage_client):
 
         # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
-        s3_transfer.download_file(s3_bucket, func_key, func_filename)
+        
+#        s3_transfer.download_file(s3_bucket, func_key, func_filename)
+        func_data = storage_client.get_object(func_key)
+        with open(func_filename, 'wb') as f:
+            f.write(func_data)
         func_download_time = time.time() - start_time
         response_status['func_download_time'] = func_download_time
 
         logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
 
-        if data_byte_range is None:
-            s3_transfer.download_file(s3_bucket, data_key, data_filename)
-        else:
-            dres = storage_client.get_object(data_key, data_byte_range)
-            data_fid = open(data_filename, 'wb')
-            data_fid.write(dres['Body'].read())
-            data_fid.close()
+        with open(data_filename, 'wb') as data_fid:
+            data_data = storage_client.get_object(data_key, data_byte_range)
+            data_filename.write(data_dat)
 
         data_download_time = time.time() - start_time
         logger.info("data download complete, took {:3.2f} sec".format(data_download_time))
@@ -340,9 +343,11 @@ def generic_handler(event, context_dict, storage_client):
 
         logger.info("command execution finished")
 
-        s3_transfer.upload_file(output_filename, s3_bucket,
-                                output_key)
-        logger.debug("output uploaded to %s %s", s3_bucket, output_key)
+#        s3_transfer.upload_file(output_filename, s3_bucket,
+#                                output_key)
+        output_d = open(output_filename).read()
+        storage_client.put_data(output_key, output_d)
+        logger.debug("output uploaded to %s %s", storage_client.config['backend_config']['bucket'], output_key)
 
         end_time = time.time()
         response_status['stdout'] = stdout.decode("ascii")
