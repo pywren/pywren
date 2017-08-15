@@ -37,7 +37,8 @@ install:
   - pip install glob2 pylint tornado awscli
   - tests/install_pywren.sh
 
-
+before_install:
+  - tests/install_pywren.sh
   
 before_script:
   - export EPOCH_STAMP=`date +%s`
