@@ -22,6 +22,10 @@ def create_mod_data(mod_paths):
             if m.split("/")[-1] == 'pywren':
                 files = glob2.glob(os.path.join(m, "serialize/**/*.py"))
                 files.append(os.path.join(m, "version.py"))
+                init_path = os.path.join(m, "__init__.py")
+                pkg_root = os.path.abspath(os.path.dirname(m))
+                dest_filename = os.path.abspath(init_path)[len(pkg_root)+1:]
+                module_data[dest_filename] = bytes_to_b64str("")
             else:
                 files = glob2.glob(os.path.join(m, "**/*.py"))
             pkg_root = os.path.abspath(os.path.dirname(m))
