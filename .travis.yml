@@ -38,7 +38,7 @@ install:
   - tests/install_pywren.sh
 
 before_install:
-  - tests/install_pywren.sh
+  - tests/run_pylint.sh
   
 before_script:
   - export EPOCH_STAMP=`date +%s`
@@ -61,9 +61,7 @@ script:
   - tests/ec2_standalone_tests.sh
   - tests/ec2_macroreduce_tests.sh
   - tests/cmdline_tests.sh
-  - tests/run_pylint.sh
   
-
 after_script:
   # always make sure we do this cleanup if we can
   - pywren delete_queue
