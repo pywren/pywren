@@ -22,7 +22,7 @@ class S3Backend(object):
         :rtype: str/bytes
         """
         try:
-            return self.s3client.head_object(self.s3_bucket, key)
+            return self.s3client.head_object(Bucket = self.s3_bucket, Key = key)
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "NoSuchKey":
                 raise StorageNoSuchKeyError(key)

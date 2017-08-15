@@ -46,7 +46,7 @@ PROCESS_STDOUT_SLEEP_SECS = 2
 
 def get_key_size(storage_client, key):
     try:
-        a = storage_client.head_object(Bucket=bucket, Key=key)
+        a = storage_client.head_object(key)
         return a['ContentLength']
     except botocore.exceptions.ClientError as e:
         if e.response['Error']['Code'] == "404":
@@ -54,13 +54,14 @@ def get_key_size(storage_client, key):
         else:
             raise e
 
-def download_runtime_if_necessary(s3_client, runtime_bucket, runtime_key):
+def download_runtime_if_necessary(runtime_bucket, runtime_key):
     """
     Download the runtime if necessary
 
     return True if cached, False if not (download occured)
 
     """
+    s3_client = boto3.client("s3")
 
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_bucket,
@@ -199,7 +200,7 @@ def generic_handler(event, context_dict, storage_client):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        KS = get_key_size(s3_client, data_key)
+        KS = get_key_size(storage_client, data_key)
 
         while KS is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
@@ -223,7 +224,7 @@ def generic_handler(event, context_dict, storage_client):
 
         with open(data_filename, 'wb') as data_fid:
             data_data = storage_client.get_object(data_key, data_byte_range)
-            data_filename.write(data_dat)
+            data_fid.write(data_data)
 
         data_download_time = time.time() - start_time
         logger.info("data download complete, took {:3.2f} sec".format(data_download_time))
@@ -262,7 +263,7 @@ def generic_handler(event, context_dict, storage_client):
         response_status['runtime_key_used'] = runtime_key_used
         response_status['runtime_bucket_used'] = runtime_bucket_used
 
-        runtime_cached = download_runtime_if_necessary(s3_client, runtime_bucket_used,
+        runtime_cached = download_runtime_if_necessary(runtime_bucket_used,
                                                        runtime_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
@@ -347,7 +348,7 @@ def generic_handler(event, context_dict, storage_client):
 #                                output_key)
         output_d = open(output_filename).read()
         storage_client.put_data(output_key, output_d)
-        logger.debug("output uploaded to %s %s", storage_client.config['backend_config']['bucket'], output_key)
+        logger.debug("output uploaded to %s %s", storage_client.storage_config['backend_config']['bucket'], output_key)
 
         end_time = time.time()
         response_status['stdout'] = stdout.decode("ascii")
@@ -363,7 +364,7 @@ def generic_handler(event, context_dict, storage_client):
         response_status['server_info'] = get_server_info()
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
-        storage_client.put_object(status_key, json.dumps(response_status))
+        storage_client.put_data(status_key, json.dumps(response_status))
 
 
 if __name__ == "__main__":

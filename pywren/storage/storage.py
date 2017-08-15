@@ -33,7 +33,7 @@ class Storage(object):
         """
         return self.storage_config
 
-    def get_head(self, key):
+    def head_object(self, key):
         """
         Retrieves metadata for given key.
         The metadata dict must have Contentlength and Etag as keys
