@@ -22,7 +22,7 @@ else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
-    import storage as Storage
+    from storage.storage import Storage
 
 if sys.platform == 'win32':
     TEMP = "D:\local\Temp"
