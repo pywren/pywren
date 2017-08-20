@@ -364,16 +364,15 @@ def test_function(ctx):
     Simple single-function test
     """
     config_filename = ctx.obj['config_filename']
-    pywren.wrenconfig.load(config_filename)
+    config = pywren.wrenconfig.load(config_filename)
 
-    wrenexec = pywren.default_executor()
-    def hello_world(_):
+    wrenexec = pywren.default_executor(config=config)
+    def hello_world(x):
         return "Hello world"
 
-
     fut = wrenexec.call_async(hello_world, None)
+    res = fut.result(storage_handler=wrenexec.storage) 
 
-    res = fut.result()
     click.echo("function returned: {}".format(res))
 
 @click.command()
