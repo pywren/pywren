@@ -5,7 +5,7 @@
 SPHINXOPTS    =
 SPHINXBUILD   = python -msphinx
 SPHINXPROJ    = pywren
-SOURCEDIR     = .
+SOURCEDIR     = ./source
 BUILDDIR      = _build
 
 # Put it first so that "make" without argument is like "make help".
