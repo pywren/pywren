@@ -38,6 +38,7 @@ install:
   - tests/install_pywren.sh
 
 before_install:
+  - pip install pylint
   - tests/run_pylint.sh
   
 before_script:
