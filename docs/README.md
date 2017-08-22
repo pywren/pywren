@@ -10,7 +10,7 @@ The docs are generated from the `*.rst` in `./source/`.
 To auto-generate documentation, execute
 ```
 cd docs/
-sphinx-apidoc -o source/ ../<package>
+sphinx-apidoc -o source/ ../pywren
 ```
 
 

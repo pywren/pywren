@@ -1,5 +1,5 @@
-pywren package
-==============
+Documentation
+=============
 
 Subpackages
 -----------

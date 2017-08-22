@@ -24,7 +24,7 @@ foo bar bas blah blah blah blah
    :maxdepth: 1
 
    getting-started.rst
-   documentation.rst
+   pywren.rst
    examples.rst
    design.rst
    help.rst
