@@ -367,11 +367,11 @@ def test_function(ctx):
     config = pywren.wrenconfig.load(config_filename)
 
     wrenexec = pywren.default_executor(config=config)
-    def hello_world(x):
+    def hello_world(_):
         return "Hello world"
 
     fut = wrenexec.call_async(hello_world, None)
-    res = fut.result(storage_handler=wrenexec.storage) 
+    res = fut.result(storage_handler=wrenexec.storage)
 
     click.echo("function returned: {}".format(res))
 
