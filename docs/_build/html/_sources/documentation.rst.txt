@@ -1,6 +1,0 @@
-
-
-Documentation
-=============
-
-.. autoclass:: Executor

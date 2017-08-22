@@ -4,3 +4,4 @@ dist/
 pywren.egg-info
 .idea/
 *.iml
+docs/_build/
