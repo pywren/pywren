@@ -5,7 +5,7 @@ import os
 import time
 
 import boto3
-from pywren import local
+#from pywren import local
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
