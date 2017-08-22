@@ -7,9 +7,8 @@ pip install sphinx
 
 The docs are generated from the `*.rst` in `./source/`.
 
-To auto-generate documentation, execute
+To auto-generate documentation, make sure you are in this directory (`/docs/`)` and execute
 ```
-cd docs/
 sphinx-apidoc -o source/ ../pywren
 ```
 
