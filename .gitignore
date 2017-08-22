@@ -5,3 +5,4 @@ pywren.egg-info
 .idea/
 *.iml
 docs/_build/
+docs/source/pywren*
