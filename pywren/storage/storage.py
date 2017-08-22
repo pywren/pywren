@@ -106,8 +106,9 @@ def get_runtime_info(runtime_config):
     config = dict()
     config['bucket'] = runtime_config['s3_bucket']
     handler = S3Backend(config)
-
-    key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
+    key = runtime_config['s3_key']
+    if '.tar.gz' in key:
+        key = key.replace(".tar.gz", ".meta.json")
     json_str = handler.get_object(key)
     runtime_meta = json.loads(json_str.decode("ascii"))
     return runtime_meta

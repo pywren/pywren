@@ -23,9 +23,10 @@ AWS_SQS_QUEUE_DEFAULT = 'pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
-default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz",
-                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz",
-                   '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
+default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
+                   '3.4' : "pywren.runtimes/default_3.4.meta.json",
+                   '3.5' : "pywren.runtimes/default_3.5.meta.json",
+                   '3.6' : "pywren.runtimes/default_3.6.meta.json"}
 
 def load(config_filename):
     import yaml

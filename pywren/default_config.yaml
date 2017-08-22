@@ -13,7 +13,7 @@ s3:
     pywren_prefix: pywren.jobs
 
 runtime:
-    s3_bucket: ericmjonas-public
+    s3_bucket: RUNTIME_BUCKET
     s3_key: RUNTIME_KEY
 
 standalone:

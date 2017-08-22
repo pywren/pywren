@@ -98,7 +98,12 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         print('No matching runtime package for python version ', pythonver)
         print('Python 2.7 runtime will be used for remote.')
         pythonver = '2.7'
+
+    runtime_bucket = 'pywren-public-{}'.format(aws_region)
+    default_yaml = default_yaml.replace("RUNTIME_BUCKET", 
+                                        runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
+
     default_yaml = default_yaml.replace("RUNTIME_KEY", k)
 
     # print out message about the stuff you need to do
