@@ -1,0 +1,7 @@
+./source/*
+!./source/conf.py
+!./source/help.rst
+!./source/index.rst
+!./source/examples.rst
+!./source/design.rst
+!./source/getting-started.rst
