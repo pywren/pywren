@@ -34,10 +34,11 @@ install:
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest numba
   - source activate test-environment
-  - pip install glob2 pylint tornado
+  - pip install glob2 tornado
   - tests/install_pywren.sh
 
 before_install:
+  - pip install pylint
   - tests/run_pylint.sh
   
 before_script:
