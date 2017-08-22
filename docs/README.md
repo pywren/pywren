@@ -14,11 +14,12 @@ sphinx-apidoc -o source/ ../pywren
 ```
 
 
-To build the html files, execute `make html`.
+To build the html files, make sure you have environment variable `$PYWREN_DOCS` set to whatever the pywren docs repo is.
 
-It seems 
+Execute `make update`.
+
+Or, to build the html files in only this repo execute `make html`.
 
 
-
-##Misc.
+### Misc.
 Most of the configuration is done in `conf.py`

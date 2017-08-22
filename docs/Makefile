@@ -20,4 +20,4 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 update: html
-	cp -r ./_build/html/* ${DOCS_HOME}
+	cp -r ./_build/html/* ${PYWREN_DOCS}
