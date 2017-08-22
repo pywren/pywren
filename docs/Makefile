@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 
 # Dest. to copy generated web files.
-PYWREN_DOCS   ?=${PYWREN_DOCS} 
+PYWREN_DOCS_DIR   ?=${PYWREN_DOCS} 
 
 SPHINXOPTS    =
 SPHINXBUILD   = python -msphinx
