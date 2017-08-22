@@ -3,4 +3,6 @@
 Examples
 ========
 
-check out the repo.
+There are examples on github_
+
+.. _github : https://github.com/pywren/examples
