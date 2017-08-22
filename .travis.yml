@@ -89,4 +89,3 @@ env:
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
     - RUN_COMMANDLINE=true
-    - RUN_PYLINT=true
