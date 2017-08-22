@@ -32,5 +32,4 @@ You can launch an interactive setup script with
 
 This will help you set up your buckets and deploy the lambda function.
 
-
 The test function is broken, so verify that everything works by...
