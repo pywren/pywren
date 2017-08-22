@@ -310,7 +310,7 @@ class RuntimeSharding(unittest.TestCase):
         old_key = config['runtime']['s3_key']
         prefix, tar_gz = os.path.split(old_key)
         # Use a runtime that has shards
-        config['runtime']['s3_key'] = os.path.join("pywren.runtime", tar_gz)
+        config['runtime']['s3_key'] = os.path.join("pywren.runtimes", tar_gz)
         wrenexec = pywren.default_executor(config=config)
 
         def test_func(x):
