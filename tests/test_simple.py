@@ -288,22 +288,22 @@ class RuntimeSharding(unittest.TestCase):
     that the metadata propagates properly and we actually
     download the real key
     """
-    def test_no_shard(self):
-        config = pywren.wrenconfig.default()
-        old_key = config['runtime']['s3_key']
-        prefix, tar_gz = os.path.split(old_key)
-        # Use the staging key to test as it doesn't have shards
-        config['runtime']['s3_key'] = os.path.join("pywren.runtime.staging", tar_gz)
-        wrenexec = pywren.default_executor(config=config)
+    # def test_no_shard(self):
+    #     config = pywren.wrenconfig.default()
+    #     old_key = config['runtime']['s3_key']
+    #     prefix, tar_gz = os.path.split(old_key)
+    #     # Use the staging key to test as it doesn't have shards
+    #     config['runtime']['s3_key'] = os.path.join("pywren.runtime.staging", tar_gz)
+    #     wrenexec = pywren.default_executor(config=config)
 
-        def test_func(x):
-            return x + 1
+    #     def test_func(x):
+    #         return x + 1
 
-        future = wrenexec.call_async(test_func, 7)
-        result = future.result()
-        base_runtime_key = config['runtime']['s3_key']
-        self.assertEqual(future.run_status['runtime_s3_key_used'],
-                         base_runtime_key)
+    #     future = wrenexec.call_async(test_func, 7)
+    #     result = future.result()
+    #     base_runtime_key = config['runtime']['s3_key']
+    #     self.assertEqual(future.run_status['runtime_s3_key_used'],
+    #                      base_runtime_key)
 
     def test_shard(self):
         config = pywren.wrenconfig.default()
