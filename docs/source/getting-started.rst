@@ -27,6 +27,7 @@ This should recursively install all of the dependencies, including those needed 
 You can launch an interactive setup script with
 
 .. code-block:: bash
+
    pywren-setup
 
 This will help you set up your buckets and deploy the lambda function.

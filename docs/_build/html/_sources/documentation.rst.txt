@@ -1,8 +1,6 @@
 
 
 Documentation
-============
+=============
 
-
-.. automodule:: Storage
-.. autoclass:: executor
+.. autoclass:: Executor

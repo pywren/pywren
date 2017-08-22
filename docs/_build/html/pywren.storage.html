@@ -1,0 +1,325 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pywren.storage package &#8212; pywren 0.3 documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.3',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="pywren-storage-package">
+<h1>pywren.storage package<a class="headerlink" href="#pywren-storage-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pywren.storage.exceptions">
+<span id="pywren-storage-exceptions-module"></span><h2>pywren.storage.exceptions module<a class="headerlink" href="#module-pywren.storage.exceptions" title="Permalink to this headline">¶</a></h2>
+<dl class="exception">
+<dt id="pywren.storage.exceptions.StorageConfigMismatchError">
+<em class="property">exception </em><code class="descclassname">pywren.storage.exceptions.</code><code class="descname">StorageConfigMismatchError</code><span class="sig-paren">(</span><em>current_path</em>, <em>prev_path</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.exceptions.StorageConfigMismatchError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></code></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="pywren.storage.exceptions.StorageNoSuchKeyError">
+<em class="property">exception </em><code class="descclassname">pywren.storage.exceptions.</code><code class="descname">StorageNoSuchKeyError</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.exceptions.StorageNoSuchKeyError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></code></p>
+</dd></dl>
+
+<dl class="exception">
+<dt id="pywren.storage.exceptions.StorageOutputNotFoundError">
+<em class="property">exception </em><code class="descclassname">pywren.storage.exceptions.</code><code class="descname">StorageOutputNotFoundError</code><span class="sig-paren">(</span><em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.exceptions.StorageOutputNotFoundError" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">exceptions.Exception</span></code></p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pywren.storage.s3_backend">
+<span id="pywren-storage-s3-backend-module"></span><h2>pywren.storage.s3_backend module<a class="headerlink" href="#module-pywren.storage.s3_backend" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pywren.storage.s3_backend.S3Backend">
+<em class="property">class </em><code class="descclassname">pywren.storage.s3_backend.</code><code class="descname">S3Backend</code><span class="sig-paren">(</span><em>s3config</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.s3_backend.S3Backend" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A wrap-up around S3 boto3 APIs.</p>
+<dl class="method">
+<dt id="pywren.storage.s3_backend.S3Backend.get_object">
+<code class="descname">get_object</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.s3_backend.S3Backend.get_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get object from S3 with a key. Throws StorageNoSuchKeyError if the given key does not exist.
+:param key: key of the object
+:return: Data of the object
+:rtype: str/bytes</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.s3_backend.S3Backend.key_exists">
+<code class="descname">key_exists</code><span class="sig-paren">(</span><em>key</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.s3_backend.S3Backend.key_exists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a key exists in S3.
+:param key: key of the object
+:return: True if key exists, False if not exists
+:rtype: boolean</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.s3_backend.S3Backend.list_keys_with_prefix">
+<code class="descname">list_keys_with_prefix</code><span class="sig-paren">(</span><em>prefix</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.s3_backend.S3Backend.list_keys_with_prefix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of keys for the given prefix.
+:param prefix: Prefix to filter object names.
+:return: List of keys in bucket that match the given prefix.
+:rtype: list of str</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.s3_backend.S3Backend.put_object">
+<code class="descname">put_object</code><span class="sig-paren">(</span><em>key</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.s3_backend.S3Backend.put_object" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put an object in S3. Override the object if the key already exists.
+:param key: key of the object.
+:param data: data of the object
+:type data: str/bytes
+:return: None</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pywren.storage.storage">
+<span id="pywren-storage-storage-module"></span><h2>pywren.storage.storage module<a class="headerlink" href="#module-pywren.storage.storage" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="pywren.storage.storage.Storage">
+<em class="property">class </em><code class="descclassname">pywren.storage.storage.</code><code class="descname">Storage</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal"><span class="pre">object</span></code></p>
+<p>A Storage object is used by executors and other components to access underlying storage backend
+without exposing the the implementation details.
+Currently we only support S3 as the underlying backend.
+We plan to support other storage backends in the future.</p>
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.get_call_output">
+<code class="descname">get_call_output</code><span class="sig-paren">(</span><em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.get_call_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the output of a call.
+:param callset_id: callset ID of the call
+:param call_id: call ID of the call
+:return: Output of the call.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.get_call_status">
+<code class="descname">get_call_status</code><span class="sig-paren">(</span><em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.get_call_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get status of a call.
+:param callset_id: callset ID of the call
+:param call_id: call ID of the call
+:return: A dictionary containing call’s status, or None if no updated status</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.get_callset_status">
+<code class="descname">get_callset_status</code><span class="sig-paren">(</span><em>callset_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.get_callset_status" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the status of a callset.
+:param callset_id: callset’s ID
+:return: A list of call IDs that have updated status.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.get_storage_config">
+<code class="descname">get_storage_config</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.get_storage_config" title="Permalink to this definition">¶</a></dt>
+<dd><p>Retrieves the configuration of this storage handler.
+:return: storage configuration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.put_data">
+<code class="descname">put_data</code><span class="sig-paren">(</span><em>key</em>, <em>data</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.put_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put input data into storage.
+:param key: data key
+:param data: data content
+:return: None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pywren.storage.storage.Storage.put_func">
+<code class="descname">put_func</code><span class="sig-paren">(</span><em>key</em>, <em>func</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.Storage.put_func" title="Permalink to this definition">¶</a></dt>
+<dd><p>Put serialized function into storage.
+:param key: function key
+:param func: serialized function
+:return: None</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage.get_runtime_info">
+<code class="descclassname">pywren.storage.storage.</code><code class="descname">get_runtime_info</code><span class="sig-paren">(</span><em>runtime_config</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage.get_runtime_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the metadata given a runtime config.
+:param runtime_config: configuration of runtime (dictionary)
+:return: runtime metadata</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pywren.storage.storage_utils">
+<span id="pywren-storage-storage-utils-module"></span><h2>pywren.storage.storage_utils module<a class="headerlink" href="#module-pywren.storage.storage_utils" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pywren.storage.storage_utils.check_storage_path">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">check_storage_path</code><span class="sig-paren">(</span><em>config</em>, <em>prev_path</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.check_storage_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_agg_data_key">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_agg_data_key</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_agg_data_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create aggregate data key
+:param prefix: prefix
+:param callset_id: callset’s ID
+:return: a key for aggregate data</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_data_key">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_data_key</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_data_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create data key
+:param prefix: prefix
+:param callset_id: callset’s ID
+:param call_id: call’s ID
+:return: data key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_func_key">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_func_key</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_func_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create function key
+:param prefix: prefix
+:param callset_id: callset’s ID
+:return: function key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_keys">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_keys</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_keys" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create keys for data, output and status given callset and call IDs.
+:param prefix: prefix
+:param callset_id: callset’s ID
+:param call_id: call’s ID
+:return: data_key, output_key, status_key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_output_key">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_output_key</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_output_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create output key
+:param prefix: prefix
+:param callset_id: callset’s ID
+:param call_id: call’s ID
+:return: output key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.create_status_key">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">create_status_key</code><span class="sig-paren">(</span><em>prefix</em>, <em>callset_id</em>, <em>call_id</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.create_status_key" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create status key
+:param prefix: prefix
+:param callset_id: callset’s ID
+:param call_id: call’s ID
+:return: status key</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pywren.storage.storage_utils.get_storage_path">
+<code class="descclassname">pywren.storage.storage_utils.</code><code class="descname">get_storage_path</code><span class="sig-paren">(</span><em>config</em><span class="sig-paren">)</span><a class="headerlink" href="#pywren.storage.storage_utils.get_storage_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pywren.storage">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pywren.storage" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pywren</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting Started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="documentation.html">Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="design.html">Design</a></li>
+<li class="toctree-l1"><a class="reference internal" href="help.html">Troubleshooting</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2017, Eric Jonas, Qifan Pu, Shivaram Venkataraman, Vaishaal Shankar, Allan Peng.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+      |
+      <a href="_sources/pywren.storage.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
