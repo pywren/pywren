@@ -19,5 +19,11 @@ help:
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-update: html
+update:
+ifdef PYWREN_DOCS
+	$(MAKE) html
 	cp -r ./_build/html/* ${PYWREN_DOCS}
+else
+	@echo 1>&2 "PYWREN_DOCS must be set to the root of the pywren documentation repo"
+	false
+endif

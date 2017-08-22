@@ -12,12 +12,11 @@ To auto-generate documentation, make sure you are in this directory (`/docs/`)` 
 sphinx-apidoc -o source/ ../pywren
 ```
 
-
 To build the html files, make sure you have environment variable `$PYWREN_DOCS` set to whatever the pywren docs repo is.
 
 Execute `make update`.
 
-Or, to build the html files in only this repo execute `make html`.
+Or, to build the html files into only the `/_build` directory of this repo execute `make html`.
 
 
 ### Misc.
