@@ -29,6 +29,3 @@ foo bar bas blah blah blah blah
    design.rst
    help.rst
    
-
-
-
