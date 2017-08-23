@@ -115,7 +115,7 @@ def _wait(fs, THREADPOOL_SIZE):
         callids_done.update(callids_found)
 
         # break if not all N tasks completed
-        if (len(fs_found) < len(fs_samples)):
+        if (len(callids_found) < len(fs_samples)):
             break
         # calculate new still_not_done_futures
         still_not_done_futures = [f for f in not_done_futures if (f.call_id not in callids_done)]
