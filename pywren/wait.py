@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import random
 import time
 from multiprocessing.pool import ThreadPool
 
@@ -81,9 +82,46 @@ def _wait(fs, THREADPOOL_SIZE):
 
     storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
     storage_handler = storage.Storage(storage_config)
-    callids_done = storage_handler.get_callset_status(callset_id)
 
+    # Signal the completion of tasks by probing status files.
+    # Because S3 does not provide list-after-write consistency (which might also apply
+    # to other storage backend). List() can be only used as an optimization
+    # but not a timely way to signal completion. Thus, our strategy is to:
+    # 1) do list()
+    # 2) use get() to signal N tasks that do not show up in 1)
+    # 3) repeat 2) if all N tasks completed, otherwise stop
+    # Note: a small N is probably preferred here.
+
+
+    callids_done = storage_handler.get_callset_status(callset_id)
     callids_done = set(callids_done)
+
+    num_samples = 4
+    still_not_done_futures = [f for f in not_done_futures if (f.call_id not in callids_done)]
+    def fetch_status(f):
+        return storage_handler.get_callset_status(f.callset_id, f.call_id)
+
+    pool = ThreadPool(num_samples)
+    # repeat util all futures are done
+    while still_not_done_futures:
+        fs_samples = random.sample(still_not_done_futures,
+                                  min(num_samples, len(still_not_done_futures)))
+        fs_statuses = pool.map(fetch_status, fs_samples)
+
+        callids_found = [fs_samples[i].call_id for i in range(len(fs_samples))
+                         if (fs_statuses[i] is not None)]
+
+        # update done call_ids
+        callids_done.update(callids_found)
+
+        # break if not all N tasks completed
+        if (len(fs_found) < len(fs_samples)):
+            break
+        # calculate new still_not_done_futures
+        still_not_done_futures = [f for f in not_done_futures if (f.call_id not in callids_done)]
+    pool.close()
+    pool.join()
+
 
     fs_dones = []
     fs_notdones = []
