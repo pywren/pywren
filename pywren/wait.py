@@ -99,7 +99,7 @@ def _wait(fs, THREADPOOL_SIZE):
     num_samples = 4
     still_not_done_futures = [f for f in not_done_futures if (f.call_id not in callids_done)]
     def fetch_status(f):
-        return storage_handler.get_callset_status(f.callset_id, f.call_id)
+        return storage_handler.get_call_status(f.callset_id, f.call_id)
 
     pool = ThreadPool(num_samples)
     # repeat util all futures are done
