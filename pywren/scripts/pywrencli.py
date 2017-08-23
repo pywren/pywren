@@ -100,7 +100,7 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         pythonver = '2.7'
 
     runtime_bucket = 'pywren-public-{}'.format(aws_region)
-    default_yaml = default_yaml.replace("RUNTIME_BUCKET", 
+    default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
 
