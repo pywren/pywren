@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 import os
+import sys
 
 #import pkgconfig
 from setuptools import setup, find_packages
+
+if sys.version_info < (2,7):
+    sys.exit('Sorry, Python < 2.7 is not supported')
 
 # http://stackoverflow.com/questions/6344076/differences-between-distribute-distutils-setuptools-and-distutils2
 
