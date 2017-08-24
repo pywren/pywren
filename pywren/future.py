@@ -137,7 +137,7 @@ class ResponseFuture(object):
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
             exception_str = call_status['exception']
-            print(call_status)
+
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
                 if throw_except:
