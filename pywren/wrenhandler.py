@@ -98,10 +98,13 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
         condatar = tarfile.open(
             mode="r:gz",
-            fileobj=wrenutil.WrappedStreamingBody(res['Body'], 
+            fileobj=wrenutil.WrappedStreamingBody(res['Body'],
                                                   res['ContentLength']))
         condatar.extractall(runtime_etag_dir)
     except OSerror as e:
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+
         if e.args[0] == 28:
 
             raise Exception("RUNTIME_TOO_BIG",
@@ -109,12 +112,10 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
         else:
             raise Exception("RUNTIME_ERROR", str(e))
     except tarfile.ReadError as e:
-        raise Exception("RUNTIME_READ_ERROR", str(e))
-
-    finally:
         # do the cleanup
         shutil.rmtree(runtime_etag_dir, True)
-        
+        raise Exception("RUNTIME_READ_ERROR", str(e))
+
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
     return False
