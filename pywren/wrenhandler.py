@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
+# Make sure we have at least 10 MB
 TMP_MIN_FREE_SPACE_BYTES = 10000000
 
 def get_key_size(s3client, bucket, key):
@@ -93,16 +94,27 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                Key=runtime_s3_key)
 
-    condatar = tarfile.open(
-        mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
     try:
-        condatar.extractall(runtime_etag_dir)
-    except:
-        shutil.rmtree(runtime_etag_dir, True)
-        raise Exception("RUNTIME_TOO_BIG",
-                        "Ran out of space when untarring runtime")
 
+        condatar = tarfile.open(
+            mode="r:gz",
+            fileobj=wrenutil.WrappedStreamingBody(res['Body'], 
+                                                  res['ContentLength']))
+        condatar.extractall(runtime_etag_dir)
+    except OSerror as e:
+        if e.args[0] == 28:
+
+            raise Exception("RUNTIME_TOO_BIG",
+                            "Ran out of space when untarring runtime")
+        else:
+            raise Exception("RUNTIME_ERROR", str(e))
+    except tarfile.ReadError as e:
+        raise Exception("RUNTIME_READ_ERROR", str(e))
+
+    finally:
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
     return False
