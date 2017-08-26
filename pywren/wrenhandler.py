@@ -101,10 +101,9 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
             fileobj=wrenutil.WrappedStreamingBody(res['Body'],
                                                   res['ContentLength']))
         condatar.extractall(runtime_etag_dir)
-    except OSerror as e:
+    except IOError as e: # this is an OSError in python3 
         # do the cleanup
         shutil.rmtree(runtime_etag_dir, True)
-
         if e.args[0] == 28:
 
             raise Exception("RUNTIME_TOO_BIG",
@@ -115,6 +114,9 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
         # do the cleanup
         shutil.rmtree(runtime_etag_dir, True)
         raise Exception("RUNTIME_READ_ERROR", str(e))
+    except:
+        shutil.rmtree(runtime_etag_dir, True)
+        raise
 
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
