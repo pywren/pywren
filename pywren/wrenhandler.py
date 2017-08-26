@@ -101,7 +101,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
             fileobj=wrenutil.WrappedStreamingBody(res['Body'],
                                                   res['ContentLength']))
         condatar.extractall(runtime_etag_dir)
-    except IOError as e: # this is an OSError in python3 
+    except IOError as e: # this is an OSError in python3
         # do the cleanup
         shutil.rmtree(runtime_etag_dir, True)
         if e.args[0] == 28:
