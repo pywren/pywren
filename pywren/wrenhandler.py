@@ -32,6 +32,9 @@ logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
+# Make sure we have at least 10 MB
+TMP_MIN_FREE_SPACE_BYTES = 10000000
+
 def get_key_size(s3client, bucket, key):
     try:
         a = s3client.head_object(Bucket=bucket, Key=key)
@@ -41,6 +44,13 @@ def get_key_size(s3client, bucket, key):
             return None
         else:
             raise e
+
+def free_disk_space(dirname):
+    """
+    Returns the number of free bytes on the mount point containing DIRNAME
+    """
+    s = os.statvfs(dirname)
+    return s.f_bsize * s.f_bavail
 
 def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
@@ -84,11 +94,29 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                Key=runtime_s3_key)
 
-    condatar = tarfile.open(
-        mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
+    try:
 
-    condatar.extractall(runtime_etag_dir)
+        condatar = tarfile.open(
+            mode="r:gz",
+            fileobj=wrenutil.WrappedStreamingBody(res['Body'],
+                                                  res['ContentLength']))
+        condatar.extractall(runtime_etag_dir)
+    except IOError as e: # this is an OSError in python3
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        if e.args[0] == 28:
+
+            raise Exception("RUNTIME_TOO_BIG",
+                            "Ran out of space when untarring runtime")
+        else:
+            raise Exception("RUNTIME_ERROR", str(e))
+    except tarfile.ReadError as e:
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        raise Exception("RUNTIME_READ_ERROR", str(e))
+    except:
+        shutil.rmtree(runtime_etag_dir, True)
+        raise
 
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
@@ -174,16 +202,26 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        KS = get_key_size(s3_client, s3_bucket, data_key)
-        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
-        while KS is None:
+        data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", data_key_size, "bytes" )
+        while data_key_size is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
 
-            KS = get_key_size(s3_client, s3_bucket, data_key)
+            data_key_size = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
+        func_key_size = get_key_size(s3_client, s3_bucket, func_key)
 
-
+        free_disk_bytes = free_disk_space("/tmp")
+        if (func_key_size + data_key_size) > (free_disk_bytes - TMP_MIN_FREE_SPACE_BYTES):
+            raise Exception("ARGS_TOO_BIG",
+                            "data + func too large {:3.1f} MB (data={:3.1f}MB, func={:3.1f}MB)," \
+                            " free space on worker is {:3.1f} MB, " \
+                            " need at least {:3.1f} MB of free space headroom to run"\
+                            .format((func_key_size + data_key_size)/1e6,
+                                    data_key_size/1e6, func_key_size/1e6,
+                                    free_disk_bytes/1e6,
+                                    TMP_MIN_FREE_SPACE_BYTES/1e6))
         # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
         s3_transfer.download_file(s3_bucket, func_key, func_filename)
