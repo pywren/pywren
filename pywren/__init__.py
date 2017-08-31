@@ -14,3 +14,5 @@ if "PYWREN_LOGLEVEL" in os.environ:
 
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+from pywren.wait import ALL_COMPLETED, ANY_COMPLETED, ALWAYS
