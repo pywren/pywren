@@ -255,7 +255,6 @@ def generic_handler(event, context_dict):
             if len(m_path) > 0 and m_path[0] == "/":
                 m_path = m_path[1:]
             to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-            #print "to_make=", to_make, "m_path=", m_path
             try:
                 os.makedirs(to_make)
             except OSError as e:
@@ -294,11 +293,22 @@ def generic_handler(event, context_dict):
         CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
-        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
-                                         jobrunner_path,
-                                         func_filename,
-                                         data_filename,
-                                         output_filename)
+        # pass a full json blob
+        jobrunner_config_filename = "/tmp/jobrunner.config.json"
+        jobrunner_config = {'func_bucket' : s3_bucket, 
+                            'func_key' : func_key, 
+                            'data_bucket' : s3_bucket, 
+                            'data_key' : data_key, 
+                            'data_byte_range' : data_byte_range}
+        with open(jobrunner_config_filename, 'w') as jobrunner_fid:
+            json.dump(jobrunner_config, jobrunner_fid)
+ 
+        cmdstr = "{} {} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
+                                               jobrunner_path,
+                                               func_filename,
+                                               data_filename,
+                                               output_filename, 
+                                               jobrunner_config_filename)
 
         setup_time = time.time()
         response_status['setup_time'] = setup_time - start_time
