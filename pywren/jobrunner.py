@@ -44,11 +44,11 @@ try:
 
     data_byte_range = jobrunner_config['data_byte_range']
     func_obj_stream = s3_client.get_object(Bucket=func_bucket, Key=func_key)
-    loaded_func_json = json.load(func_obj_stream['Body'])
+    loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
 
     # save modules, before we unpickle actual function
     PYTHON_MODULE_PATH = jobrunner_config['python_module_path']
-    for m_filename, m_data in loaded_func_json['module_data'].items():
+    for m_filename, m_data in loaded_func_all['module_data'].items():
         m_path = os.path.dirname(m_filename)
 
         if len(m_path) > 0 and m_path[0] == "/":
@@ -72,7 +72,7 @@ try:
 
 
     # now unpickle function; it will expect modules to be there
-    loaded_func = pickle.loads(b64str_to_bytes(loaded_func_json['func']))
+    loaded_func = pickle.loads(loaded_func_all['func'])
 
     extra_get_args = {}
     if data_byte_range is not None:

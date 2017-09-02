@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import json
 import logging
 import random
 import time
 from multiprocessing.pool import ThreadPool
+from six.moves import cPickle as pickle
 
 import boto3
 
@@ -206,14 +206,14 @@ class Executor(object):
                         mod_paths.remove(mod_path)
 
         module_data = create_mod_data(mod_paths)
-        func_str_encoded = wrenutil.bytes_to_b64str(func_str)
+        func_str_encoded = func_str
         #debug_foo = {'func' : func_str_encoded,
         #             'module_data' : module_data}
 
         #pickle.dump(debug_foo, open("/tmp/py35.debug.pickle", 'wb'))
         ### Create func and upload
-        func_module_str = json.dumps({'func' : func_str_encoded,
-                                      'module_data' : module_data})
+        func_module_str = pickle.dumps({'func' : func_str_encoded,
+                                        'module_data' : module_data}, -1)
         host_job_meta['func_module_str_len'] = len(func_module_str)
 
         func_upload_time = time.time()
