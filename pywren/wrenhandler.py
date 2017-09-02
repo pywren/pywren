@@ -245,7 +245,7 @@ def generic_handler(event, context_dict):
         logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
         response_status['data_download_time'] = data_download_time
 
-        d = json.load(open(func_filename, 'r'))
+        # d = json.load(open(func_filename, 'r'))
         # clean up for modules
         shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
         os.mkdir(PYTHON_MODULE_PATH)
@@ -297,15 +297,15 @@ def generic_handler(event, context_dict):
 
         # pass a full json blob
         jobrunner_config_filename = "/tmp/jobrunner.config.json"
-        jobrunner_config = {'func_bucket' : s3_bucket, 
-                            'func_key' : func_key, 
-                            'data_bucket' : s3_bucket, 
-                            'data_key' : data_key, 
-                            'data_byte_range' : data_byte_range, 
+        jobrunner_config = {'func_bucket' : s3_bucket,
+                            'func_key' : func_key,
+                            'data_bucket' : s3_bucket,
+                            'data_key' : data_key,
+                            'data_byte_range' : data_byte_range,
                             'python_module_path' : PYTHON_MODULE_PATH}
         with open(jobrunner_config_filename, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)
- 
+
         cmdstr = "{} {} {} {}".format(CONDA_PYTHON_RUNTIME,
                                       jobrunner_path,
                                       jobrunner_config_filename,

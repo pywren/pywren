@@ -1,11 +1,11 @@
 from __future__ import print_function
-
+import os
 import base64
 import json
 import sys
 import traceback
 import boto3
-import os
+
 
 from six.moves import cPickle as pickle
 from tblib import pickling_support
@@ -17,7 +17,7 @@ pickling_support.install()
 #         raise Exception("improperly formatted s3 url: {}".format(url))
 #     bucket, key = url[5:].split("/", 1)
 #     return bucket, key
-    
+
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
     byte_data = base64.b64decode(str_ascii)
@@ -32,10 +32,10 @@ try:
     pickle.dump({'result' : None,
                  'success' : False},
                 open(out_filename, 'wb'), -1)
-    jobrunner_config = json.load(open(jobrunner_config_filename, 
+    jobrunner_config = json.load(open(jobrunner_config_filename,
                                       'rb'))
 
-    
+
     # FIXME someday switch to storage handler
     # download the func data into memory
     s3_client = boto3.client("s3")
@@ -47,7 +47,7 @@ try:
     loaded_func_json = json.load(func_obj_stream['Body'])
 
     # save modules, before we unpickle actual function
-    PYTHON_MODULE_PATH=jobrunner_config['python_module_path']
+    PYTHON_MODULE_PATH = jobrunner_config['python_module_path']
     for m_filename, m_data in loaded_func_json['module_data'].items():
         m_path = os.path.dirname(m_filename)
 
@@ -78,7 +78,7 @@ try:
     if data_byte_range is not None:
         range_str = 'bytes={}-{}'.format(*data_byte_range)
         extra_get_args['Range'] = range_str
-    data_obj_stream = s3_client.get_object(Bucket=data_bucket, 
+    data_obj_stream = s3_client.get_object(Bucket=data_bucket,
                                            Key=data_key, **extra_get_args)
     # FIXME make this streaming
     loaded_data = pickle.loads(data_obj_stream['Body'].read())
