@@ -33,7 +33,7 @@ try:
                  'success' : False},
                 open(out_filename, 'wb'), -1)
     jobrunner_config = json.load(open(jobrunner_config_filename,
-                                      'rb'))
+                                      'r'))
 
 
     # FIXME someday switch to storage handler
