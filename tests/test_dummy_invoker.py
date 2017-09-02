@@ -29,26 +29,38 @@ class SimpleAsync(unittest.TestCase):
         res = fut.result() 
         self.assertEqual(res, np.sum(x))
 
-    def test_exception(self):
-        def throwexcept(x):
-            raise Exception("Throw me out!")
+    def test_simple_map(self):
 
-        wrenexec = pywren.default_executor()
-        fut = self.wrenexec.call_async(throwexcept, None)
-        self.wrenexec.invoker.run_jobs()
+        def plus_one(x):
+            return x + 1
+
+        x = np.arange(4)
+        futures = self.wrenexec.map(plus_one, x)
         
-        with pytest.raises(Exception) as execinfo:
-            res = fut.result() 
-        assert 'Throw me out!' in str(execinfo.value)
-
-
-    def test_subprocess(self):
-        def uname(x):
-            return subprocess.check_output("uname -a", shell=True)
-        
-        fut = self.wrenexec.call_async(uname, None)
         self.wrenexec.invoker.run_jobs()
+        res = pywren.get_all_results(futures)
+        np.testing.assert_array_equal(res, x + 1)
 
-        res = fut.result() 
+    # def test_exception(self):
+    #     def throwexcept(x):
+    #         raise Exception("Throw me out!")
+
+    #     wrenexec = pywren.default_executor()
+    #     fut = self.wrenexec.call_async(throwexcept, None)
+    #     self.wrenexec.invoker.run_jobs()
+        
+    #     with pytest.raises(Exception) as execinfo:
+    #         res = fut.result() 
+    #     assert 'Throw me out!' in str(execinfo.value)
+
+
+    # def test_subprocess(self):
+    #     def uname(x):
+    #         return subprocess.check_output("uname -a", shell=True)
+        
+    #     fut = self.wrenexec.call_async(uname, None)
+    #     self.wrenexec.invoker.run_jobs()
+
+    #     res = fut.result() 
 
 
