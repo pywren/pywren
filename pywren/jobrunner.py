@@ -5,7 +5,7 @@ import json
 import sys
 import traceback
 import boto3
-from pywren.wrenutil import WrappedStreamingBody
+import os
 
 from six.moves import cPickle as pickle
 from tblib import pickling_support
@@ -24,10 +24,9 @@ def b64str_to_bytes(str_data):
     return byte_data
 
 try:
-    func_filename = sys.argv[1]
-    data_filename = sys.argv[2]
-    out_filename = sys.argv[3]
-    jobrunner_config_filename = sys.argv[4]
+    jobrunner_config_filename = sys.argv[1]
+    out_filename = sys.argv[2]
+
 
     # initial output file in case job fails
     pickle.dump({'result' : None,
@@ -36,7 +35,7 @@ try:
     jobrunner_config = json.load(open(jobrunner_config_filename, 
                                       'rb'))
 
-
+    
     # FIXME someday switch to storage handler
     # download the func data into memory
     s3_client = boto3.client("s3")
@@ -46,6 +45,33 @@ try:
     data_byte_range = jobrunner_config['data_byte_range']
     func_obj_stream = s3_client.get_object(Bucket=func_bucket, Key=func_key)
     loaded_func_json = json.load(func_obj_stream['Body'])
+
+    # save modules, before we unpickle actual function
+    PYTHON_MODULE_PATH=jobrunner_config['python_module_path']
+    for m_filename, m_data in loaded_func_json['module_data'].items():
+        m_path = os.path.dirname(m_filename)
+
+        if len(m_path) > 0 and m_path[0] == "/":
+            m_path = m_path[1:]
+        to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
+        try:
+            os.makedirs(to_make)
+        except OSError as e:
+            if e.errno == 17:
+                pass
+            else:
+                raise e
+        full_filename = os.path.join(to_make, os.path.basename(m_filename))
+        #print "creating", full_filename
+        with open(full_filename, 'wb') as fid:
+            fid.write(b64str_to_bytes(m_data))
+
+    # logger.info("Finished writing {} module files".format(len(d['module_data'])))
+    # logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
+    # logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+
+
+    # now unpickle function; it will expect modules to be there
     loaded_func = pickle.loads(b64str_to_bytes(loaded_func_json['func']))
 
     extra_get_args = {}
@@ -56,8 +82,6 @@ try:
                                            Key=data_key, **extra_get_args)
     # FIXME make this streaming
     loaded_data = pickle.loads(data_obj_stream['Body'].read())
-
-    print("loading", func_filename, data_filename, out_filename)
 
     print("loaded")
     y = loaded_func(loaded_data)
