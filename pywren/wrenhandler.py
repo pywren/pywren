@@ -244,32 +244,33 @@ def generic_handler(event, context_dict):
         logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
         response_status['data_download_time'] = data_download_time
 
-        # now split
         d = json.load(open(func_filename, 'r'))
+        # clean up for modules
         shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
         os.mkdir(PYTHON_MODULE_PATH)
-        # get modules and save
-        for m_filename, m_data in d['module_data'].items():
-            m_path = os.path.dirname(m_filename)
 
-            if len(m_path) > 0 and m_path[0] == "/":
-                m_path = m_path[1:]
-            to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-            try:
-                os.makedirs(to_make)
-            except OSError as e:
-                if e.errno == 17:
-                    pass
-                else:
-                    raise e
-            full_filename = os.path.join(to_make, os.path.basename(m_filename))
-            #print "creating", full_filename
-            fid = open(full_filename, 'wb')
-            fid.write(b64str_to_bytes(m_data))
-            fid.close()
-        logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-        logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+        # # get modules and save
+        # for m_filename, m_data in d['module_data'].items():
+        #     m_path = os.path.dirname(m_filename)
+
+        #     if len(m_path) > 0 and m_path[0] == "/":
+        #         m_path = m_path[1:]
+        #     to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
+        #     try:
+        #         os.makedirs(to_make)
+        #     except OSError as e:
+        #         if e.errno == 17:
+        #             pass
+        #         else:
+        #             raise e
+        #     full_filename = os.path.join(to_make, os.path.basename(m_filename))
+        #     #print "creating", full_filename
+        #     fid = open(full_filename, 'wb')
+        #     fid.write(b64str_to_bytes(m_data))
+        #     fid.close()
+        # logger.info("Finished writing {} module files".format(len(d['module_data'])))
+        # logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
+        # logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
@@ -299,16 +300,15 @@ def generic_handler(event, context_dict):
                             'func_key' : func_key, 
                             'data_bucket' : s3_bucket, 
                             'data_key' : data_key, 
-                            'data_byte_range' : data_byte_range}
+                            'data_byte_range' : data_byte_range, 
+                            'python_module_path' : PYTHON_MODULE_PATH}
         with open(jobrunner_config_filename, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)
  
-        cmdstr = "{} {} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
-                                               jobrunner_path,
-                                               func_filename,
-                                               data_filename,
-                                               output_filename, 
-                                               jobrunner_config_filename)
+        cmdstr = "{} {} {} {}".format(CONDA_PYTHON_RUNTIME,
+                                      jobrunner_path,
+                                      jobrunner_config_filename,
+                                      output_filename)
 
         setup_time = time.time()
         response_status['setup_time'] = setup_time - start_time
