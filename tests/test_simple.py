@@ -308,9 +308,9 @@ class Limits(unittest.TestCase):
 
         TOO_BIG_COUNT = 100
         conf = pywren.wrenconfig.default()
-        if 'misc' not in conf:
-            conf['misc'] = {}
-        conf['misc']['map_item_limit'] = TOO_BIG_COUNT
+        if 'scheduler' not in conf:
+            conf['scheduler'] = {}
+        conf['scheduler']['map_item_limit'] = TOO_BIG_COUNT
         wrenexec = pywren.default_executor(config=conf)
 
         def plus_one(x):
