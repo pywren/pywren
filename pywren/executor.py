@@ -47,9 +47,9 @@ class Executor(object):
             self.serializer = serialize.SerializeIndependent()
 
         self.map_item_limit = None
-        if 'misc' in self.config:
-            if 'map_item_limit' in config['misc']:
-                self.map_item_limit = config['misc']['map_item_limit']
+        if 'scheduler' in self.config:
+            if 'map_item_limit' in config['scheduler']:
+                self.map_item_limit = config['scheduler']['map_item_limit']
 
     def put_data(self, data_key, data_str,
                  callset_id, call_id):

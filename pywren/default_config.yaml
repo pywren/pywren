@@ -17,7 +17,7 @@ runtime:
     s3_bucket: RUNTIME_BUCKET
     s3_key: RUNTIME_KEY
 
-misc:
+scheduler:
     map_item_limit: 10000
 
 standalone:
