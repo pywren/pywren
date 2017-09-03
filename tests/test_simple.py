@@ -299,3 +299,33 @@ class RuntimePaths(unittest.TestCase):
         assert "Current conda install" in res
 
 
+class Limits(unittest.TestCase):
+    """
+    Tests basic seatbelts
+    """
+    
+    def test_map_item_limit(self):
+
+        TOO_BIG_COUNT = 100
+        conf = pywren.wrenconfig.default()
+        if 'misc' not in conf:
+            conf['misc'] = {}
+        conf['misc']['map_item_limit'] = TOO_BIG_COUNT
+        wrenexec = pywren.default_executor(config=conf)
+
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures = wrenexec.map(plus_one, x)
+        pywren.get_all_results(futures)
+
+        # now too big
+        
+        with pytest.raises(ValueError) as excinfo:
+
+            x = np.arange(TOO_BIG_COUNT+1)
+            
+            futures = wrenexec.map(plus_one, x )           
+

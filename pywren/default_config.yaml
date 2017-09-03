@@ -3,11 +3,12 @@ account:
     aws_lambda_role: pywren_exec_role
     aws_region: AWS_REGION
 
+
 lambda:
     memory : 1536
     timeout : 300
     function_name : pywren1
-    
+
 s3:
     bucket: BUCKET_NAME
     pywren_prefix: pywren.jobs
@@ -15,6 +16,9 @@ s3:
 runtime:
     s3_bucket: RUNTIME_BUCKET
     s3_key: RUNTIME_KEY
+
+misc:
+    map_item_limit: 10000
 
 standalone:
     ec2_instance_type: m4.4xlarge
