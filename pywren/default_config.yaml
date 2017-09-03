@@ -7,7 +7,7 @@ lambda:
     memory : 1536
     timeout : 300
     function_name : pywren1
-    
+    map_item_limit : 10000    
 s3:
     bucket: BUCKET_NAME
     pywren_prefix: pywren.jobs

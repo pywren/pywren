@@ -181,8 +181,6 @@ def generic_handler(event, context_dict):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        func_filename = "/tmp/func.pickle"
-        data_filename = "/tmp/data.pickle"
         output_filename = "/tmp/output.pickle"
 
         runtime_s3_bucket = event['runtime']['s3_bucket']
@@ -213,64 +211,41 @@ def generic_handler(event, context_dict):
         func_key_size = get_key_size(s3_client, s3_bucket, func_key)
 
         free_disk_bytes = free_disk_space("/tmp")
-        if (func_key_size + data_key_size) > (free_disk_bytes - TMP_MIN_FREE_SPACE_BYTES):
-            raise Exception("ARGS_TOO_BIG",
-                            "data + func too large {:3.1f} MB (data={:3.1f}MB, func={:3.1f}MB)," \
-                            " free space on worker is {:3.1f} MB, " \
-                            " need at least {:3.1f} MB of free space headroom to run"\
-                            .format((func_key_size + data_key_size)/1e6,
-                                    data_key_size/1e6, func_key_size/1e6,
-                                    free_disk_bytes/1e6,
-                                    TMP_MIN_FREE_SPACE_BYTES/1e6))
+
+        # if (func_key_size + data_key_size) > (free_disk_bytes - TMP_MIN_FREE_SPACE_BYTES):
+        #     raise Exception("ARGS_TOO_BIG",
+        #                     "data + func too large {:3.1f} MB (data={:3.1f}MB, func={:3.1f}MB)," \
+        #                     " free space on worker is {:3.1f} MB, " \
+        #                     " need at least {:3.1f} MB of free space headroom to run"\
+        #                     .format((func_key_size + data_key_size)/1e6,
+        #                             data_key_size/1e6, func_key_size/1e6,
+        #                             free_disk_bytes/1e6,
+        #                             TMP_MIN_FREE_SPACE_BYTES/1e6))
         # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
-        s3_transfer.download_file(s3_bucket, func_key, func_filename)
-        func_download_time = time.time() - start_time
-        response_status['func_download_time'] = func_download_time
+        #s3_transfer.download_file(s3_bucket, func_key, func_filename)
+        #func_download_time = time.time() - start_time
+        #response_status['func_download_time'] = func_download_time
 
-        logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
+        #logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
 
-        if data_byte_range is None:
-            s3_transfer.download_file(s3_bucket, data_key, data_filename)
-        else:
-            range_str = 'bytes={}-{}'.format(*data_byte_range)
-            dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
-                                        Range=range_str)
-            data_fid = open(data_filename, 'wb')
-            data_fid.write(dres['Body'].read())
-            data_fid.close()
+        # if data_byte_range is None:
+        #     s3_transfer.download_file(s3_bucket, data_key, data_filename)
+        # else:
+        #     range_str = 'bytes={}-{}'.format(*data_byte_range)
+        #     dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
+        #                                 Range=range_str)
+        #     data_fid = open(data_filename, 'wb')
+        #     data_fid.write(dres['Body'].read())
+        #     data_fid.close()
 
-        data_download_time = time.time() - start_time
-        logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
-        response_status['data_download_time'] = data_download_time
+        # data_download_time = time.time() - start_time
+        # logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
+        # response_status['data_download_time'] = data_download_time
 
-        # d = json.load(open(func_filename, 'r'))
         # clean up for modules
         shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
         os.mkdir(PYTHON_MODULE_PATH)
-
-        # # get modules and save
-        # for m_filename, m_data in d['module_data'].items():
-        #     m_path = os.path.dirname(m_filename)
-
-        #     if len(m_path) > 0 and m_path[0] == "/":
-        #         m_path = m_path[1:]
-        #     to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-        #     try:
-        #         os.makedirs(to_make)
-        #     except OSError as e:
-        #         if e.errno == 17:
-        #             pass
-        #         else:
-        #             raise e
-        #     full_filename = os.path.join(to_make, os.path.basename(m_filename))
-        #     #print "creating", full_filename
-        #     fid = open(full_filename, 'wb')
-        #     fid.write(b64str_to_bytes(m_data))
-        #     fid.close()
-        # logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        # logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-        # logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
