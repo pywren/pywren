@@ -46,6 +46,11 @@ class Executor(object):
         else:
             self.serializer = serialize.SerializeIndependent()
 
+        self.map_item_limit = None
+        if 'scheduler' in self.config:
+            if 'map_item_limit' in config['scheduler']:
+                self.map_item_limit = config['scheduler']['map_item_limit']
+
     def put_data(self, data_key, data_str,
                  callset_id, call_id):
 
@@ -144,7 +149,8 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=None):
+            use_cached_runtime=True, overwrite_invoke_args=None,
+            exclude_modules=None):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -158,6 +164,12 @@ class Executor(object):
         data = list(iterdata)
         if not data:
             return []
+
+        if self.map_item_limit is not None and len(data) > self.map_item_limit:
+            raise ValueError("len(data) ={}, exceeding map item limit of {}"\
+                             "consider mapping over a smaller"\
+                             "number of items".format(len(data),
+                                                      self.map_item_limit))
 
         host_job_meta = {}
 
