@@ -12,11 +12,6 @@ from tblib import pickling_support
 
 pickling_support.install()
 
-# def s3_url_parse(url):
-#     if url[:5] != "s3://":
-#         raise Exception("improperly formatted s3 url: {}".format(url))
-#     bucket, key = url[5:].split("/", 1)
-#     return bucket, key
 
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
