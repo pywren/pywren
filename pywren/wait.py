@@ -105,7 +105,7 @@ def _wait(fs, THREADPOOL_SIZE):
     # repeat util all futures are done
     while still_not_done_futures:
         fs_samples = random.sample(still_not_done_futures,
-                                  min(num_samples, len(still_not_done_futures)))
+                                   min(num_samples, len(still_not_done_futures)))
         fs_statuses = pool.map(fetch_status, fs_samples)
 
         callids_found = [fs_samples[i].call_id for i in range(len(fs_samples))
