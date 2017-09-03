@@ -162,7 +162,10 @@ under `.git/commit/pre-commit` add:
 
 ```
 #!/usr/bin/env bash
-pylint `git diff --name-only --staged | grep .py$ | xargs`
+CHANGED_PYTHON_FILES=`git diff --name-only --staged | grep .py$ | xargs`
+if [ "$CHANGED_PYTHON_FILES" ]; then
+   pylint "${CHANGED_PYTHON_FILES}"
+fi
 ```
 
 This will run pylint on all files staged before the commit, and will error
