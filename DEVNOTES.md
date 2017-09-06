@@ -149,3 +149,25 @@ python setup.py register -r pypi
 python setup.py sdist upload -r pypi
 ```
 
+## Running pylint
+To run the pylint linter, invoke it from the top of the project
+
+```
+pylint pywren
+```
+
+A git commit hook can help prevent commiting code with errors. 
+
+under `.git/commit/pre-commit` add:
+
+```
+#!/usr/bin/env bash
+CHANGED_PYTHON_FILES=`git diff --name-only --staged | grep .py$ | xargs`
+if [ "$CHANGED_PYTHON_FILES" ]; then
+   pylint "${CHANGED_PYTHON_FILES}"
+fi
+```
+
+This will run pylint on all files staged before the commit, and will error
+if they fail. It's better to find out now than at travis check time. 
+
