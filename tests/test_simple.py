@@ -1,20 +1,17 @@
+import sys
+import time
+import subprocess
+import unittest
+
+from six.moves import cPickle as pickle
 import pytest
-import time
-import boto3 
-import uuid
 import numpy as np
-import time
-import os
 import pywren
 import pywren.runtime
-import subprocess
-import logging
-from six.moves import cPickle as pickle
 
-import unittest
-import numpy as np
+
 from flaky import flaky
-import sys
+
 
 class SimpleAsync(unittest.TestCase):
 
@@ -29,32 +26,31 @@ class SimpleAsync(unittest.TestCase):
         x = np.arange(10)
         fut = self.wrenexec.call_async(sum_list, x)
 
-        res = fut.result() 
+        res = fut.result()
         self.assertEqual(res, np.sum(x))
 
     def test_simple2(self):
-        
+
         def sum_list(x):
             return np.sum(x)
 
         x = np.arange(10)
         fut = self.wrenexec.call_async(sum_list, x)
 
-        res = fut.result() 
+        res = fut.result()
         self.assertEqual(res, np.sum(x))
 
     def test_exception(self):
         """
         Simple exception test
         """
-        def throwexcept(x):
+        def throwexcept(_):
             raise Exception("Throw me out!")
 
-        wrenexec = pywren.default_executor()
         fut = self.wrenexec.call_async(throwexcept, None)
 
         with pytest.raises(Exception) as execinfo:
-            res = fut.result() 
+            _ = fut.result()
         assert 'Throw me out!' in str(execinfo.value)
 
 
@@ -63,8 +59,8 @@ class SimpleAsync(unittest.TestCase):
         More complex exception
         """
 
-        def throw_exception(x):
-            1 / 0
+        def throw_exception(_):
+            _ = 1 / 0
             return 10
 
 
@@ -74,19 +70,36 @@ class SimpleAsync(unittest.TestCase):
 
         try:
             throw_exception(1)
-        except Exception as e:
+        except Exception as _:
 
-            exc_type_true, exc_value_true, exc_traceback_true = sys.exc_info()
+            exc_type_true, exc_value_true, _ = sys.exc_info()
 
 
         try:
             fut.result()
-        except Exception as e:
-            exc_type_wren, exc_value_wren, exc_traceback_wren = sys.exc_info()
+        except Exception as _:
+            exc_type_wren, exc_value_wren, _ = sys.exc_info()
 
         assert exc_type_wren == exc_type_true
         assert type(exc_value_wren) == type(exc_value_true)
 
+    def test_boto3(self):
+
+        c = pywren.wrenconfig.default()
+        def get_key(x):
+            import boto3
+            bucket, key = x
+            conn = boto3.client('s3')
+            obj = conn.get_object(Bucket=bucket, Key=key)
+            return len(obj['Body'].read())
+        runtime_bucket = c['runtime']['s3_bucket']
+        runtime_key = c['runtime']['s3_key']
+        fut = self.wrenexec.map(get_key, [(runtime_bucket,
+                                           runtime_key)],
+                                use_cached_runtime=False)[0]
+
+        res = fut.result()
+        assert res > 10000
 
 class SimpleMap(unittest.TestCase):
 
@@ -109,8 +122,8 @@ class SimpleMap(unittest.TestCase):
 
         result_count = 0
         while result_count < N:
-            
-            fs_dones, fs_notdones = pywren.wait(futures)
+
+            fs_dones, _ = pywren.wait(futures)
             result_count = len(fs_dones)
 
         res = np.array([f.result() for f in futures])
@@ -143,6 +156,9 @@ class SimpleMap(unittest.TestCase):
         res = np.array(pywren.get_all_results(futures))
         np.testing.assert_array_equal(res, x + 1)
 
+
+
+
 class SimpleReduce(unittest.TestCase):
 
     def setUp(self):
@@ -156,7 +172,7 @@ class SimpleReduce(unittest.TestCase):
 
         x = np.arange(N)
         futures = self.wrenexec.map(plus_one, x)
-        
+
         reduce_future = self.wrenexec.reduce(sum, futures)
 
         np.testing.assert_array_equal(reduce_future.result(), 55)
@@ -170,8 +186,8 @@ class RuntimeCaching(unittest.TestCase):
     def test_cached_runtime(self):
         """
         Test the runtime caching by manually running with it off
-        and then running with it on and comparing invocation times. 
-        Note that due to aws lambda internals this might not 
+        and then running with it on and comparing invocation times.
+        Note that due to aws lambda internals this might not
         do the right thing so we mark it as flaky
         """
 
@@ -180,21 +196,21 @@ class RuntimeCaching(unittest.TestCase):
 
         t1 = time.time()
         fut = self.wrenexec.map(test_add, [10], use_cached_runtime=False)[0]
-        res = fut.result() 
+        res = fut.result()
         t2 = time.time()
         non_cached_latency = t2-t1
 
-        assert fut.run_status['runtime_cached'] == False
+        assert fut.run_status['runtime_cached'] is False
         assert res == 17
 
         t1 = time.time()
         fut = self.wrenexec.map(test_add, [10], use_cached_runtime=True)[0]
-        res = fut.result() 
+        res = fut.result()
         t2 = time.time()
         cached_latency = t2-t1
 
         assert res == 17
-        assert fut.run_status['runtime_cached'] == True
+        assert fut.run_status['runtime_cached'] is True
 
         assert cached_latency < non_cached_latency
 
@@ -217,8 +233,8 @@ class SerializeFutures(unittest.TestCase):
 
         result_count = 0
         while result_count < N:
-            
-            fs_dones, fs_notdones = pywren.wait(futures)
+
+            fs_dones, _ = pywren.wait(futures)
             result_count = len(fs_dones)
 
         res = np.array([f.result() for f in futures])
@@ -232,11 +248,11 @@ class ConfigErrors(unittest.TestCase):
         for supported_version in pywren.wrenconfig.default_runtime.keys():
             if my_version_str != supported_version:
                 wrong_version = supported_version
-            
+
                 config = pywren.wrenconfig.default()
                 config['runtime']['s3_key'] = pywren.wrenconfig.default_runtime[wrong_version]
-                
-                    
+
+
                 with pytest.raises(Exception) as excinfo:
                     pywren.lambda_executor(config)
                 assert 'python version' in str(excinfo.value)
@@ -255,8 +271,8 @@ class WaitTest(unittest.TestCase):
 
         futures = pywren.default_executor().map(wait_x_sec_and_plus_one, x)
 
-        fs_dones, fs_notdones = pywren.wait(futures,
-                                        return_when=pywren.wren.ALL_COMPLETED)
+        fs_dones, dummy_fs_notdones = pywren.wait(futures,
+                                                  return_when=pywren.wren.ALL_COMPLETED)
         res = np.array([f.result() for f in fs_dones])
         np.testing.assert_array_equal(res, x+1)
 
@@ -273,8 +289,8 @@ class WaitTest(unittest.TestCase):
         fs_notdones = futures
         while (len(fs_notdones) > 0):
             fs_dones, fs_notdones = pywren.wait(fs_notdones,
-                                            return_when=pywren.wren.ANY_COMPLETED,
-                                            WAIT_DUR_SEC=1)
+                                                return_when=pywren.wren.ANY_COMPLETED,
+                                                WAIT_DUR_SEC=1)
             self.assertTrue(len(fs_dones) > 0)
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x+1)
@@ -295,7 +311,7 @@ class RuntimePaths(unittest.TestCase):
         wrenexec = pywren.default_executor()
         fut = wrenexec.call_async(run_command, cmd)
 
-        res = fut.result() 
+        res = fut.result()
         assert "Current conda install" in res
 
 
@@ -303,7 +319,7 @@ class Limits(unittest.TestCase):
     """
     Tests basic seatbelts
     """
-    
+
     def test_map_item_limit(self):
 
         TOO_BIG_COUNT = 100
@@ -322,10 +338,9 @@ class Limits(unittest.TestCase):
         pywren.get_all_results(futures)
 
         # now too big
-        
-        with pytest.raises(ValueError) as excinfo:
+
+        with pytest.raises(ValueError) as _:
 
             x = np.arange(TOO_BIG_COUNT+1)
-            
-            futures = wrenexec.map(plus_one, x )           
 
+            futures = wrenexec.map(plus_one, x)
