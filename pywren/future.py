@@ -95,7 +95,6 @@ class ResponseFuture(object):
             raise ValueError("job not yet invoked")
 
         if self._state == JobState.success:
-            assert self._return_val != None
             return self._return_val
 
         if self._state == JobState.error:
