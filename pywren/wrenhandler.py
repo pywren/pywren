@@ -329,18 +329,25 @@ def generic_handler(event, context_dict):
         response_status['host_submit_time'] = event['host_submit_time']
         response_status['server_info'] = get_server_info()
 
-        response_status.update(context_dict) 
+        response_status.update(context_dict)
+
     except Exception as e:
         # internal runtime exceptions
         response_status['exception'] = str(e)
         response_status['exception_args'] = e.args
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
+        func_filename = "/tmp/func_%s.pickle" % pid
+        data_filename = "/tmp/data_%s.pickle" % pid
+        output_filename = "/tmp/output_%s.pickle" % pid
         # creating new client in case the client has not been created
         s3_bucket = event['storage_config']['backend_config']['bucket']
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
-    
+        shutil.rmtree(PYTHON_MODULE_PATH.format(pid), True) # delete modules
+        os.remove(func_filename)
+        os.remove(data_filename)
+        os.remove(output_filename)
 
 if __name__ == "__main__":
     s3 = boto3.resource('s3')
