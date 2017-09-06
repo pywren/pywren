@@ -12,7 +12,8 @@ import json
 import shutil
 import sys
 import base64
-import random 
+import random
+import fcntl
 
 import traceback
 from threading import Thread
@@ -28,10 +29,9 @@ else:
     import version
     from Queue import Queue, Empty
 
-RAND_ID = random.randint(0, 100000)
-PYTHON_MODULE_PATH = "/tmp/pymodules_%s" % RAND_ID
-CONDA_RUNTIME_DIR = "/tmp/condaruntime_%s" % RAND_ID
-RUNTIME_LOC = "/tmp/runtimes_%s" % RAND_ID
+PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
+CONDA_RUNTIME_DIR = "/tmp/condaruntime"
+RUNTIME_LOC = "/tmp/runtimes"
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,10 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     Download the runtime if necessary
 
     return True if cached, False if not (download occured)
-
     """
 
+    lock = open("/tmp/runtime_download_lock", "a")
+    fcntl.lockf(lock,  fcntl.LOCK_EX)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                                   Key=runtime_s3_key)
@@ -82,9 +83,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
         os.unlink(CONDA_RUNTIME_DIR)
 
     shutil.rmtree(RUNTIME_LOC, True)
-    
     os.makedirs(runtime_etag_dir)
-    
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                     Key=runtime_s3_key)
 
@@ -95,8 +94,9 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     condatar.extractall(runtime_etag_dir)
 
-    # final operation 
+    # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
+    fcntl.lockf(lock, fcntl.LOCK_UN)
     return False
 
 
@@ -109,9 +109,9 @@ def b64str_to_bytes(str_data):
 def aws_lambda_handler(event, context):
     logger.setLevel(logging.INFO)
     context_dict = {
-        'aws_request_id' : context.aws_request_id, 
-        'log_group_name' : context.log_group_name, 
-        'log_stream_name' : context.log_stream_name, 
+        'aws_request_id' : context.aws_request_id,
+        'log_group_name' : context.log_group_name,
+        'log_stream_name' : context.log_stream_name,
     }
     return generic_handler(event, context_dict)
 
@@ -132,6 +132,7 @@ def generic_handler(event, context_dict):
     context_dict is generic infromation about the context
     that we are running in, provided by the scheduler
     """
+    pid = os.getpid()
 
     try:
         response_status = {'exception' : None}
@@ -158,9 +159,9 @@ def generic_handler(event, context_dict):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        func_filename = "/tmp/func_%s.pickle" % RAND_ID
-        data_filename = "/tmp/data_%s.pickle" % RAND_ID
-        output_filename = "/tmp/output_%s.pickle" % RAND_ID
+        func_filename = "/tmp/func_%s.pickle" % pid
+        data_filename = "/tmp/data_%s.pickle" % pid
+        output_filename = "/tmp/output_%s.pickle" % pid
 
         runtime_s3_bucket = event['runtime']['s3_bucket']
         runtime_s3_key = event['runtime']['s3_key']
@@ -185,7 +186,7 @@ def generic_handler(event, context_dict):
 
             KS =  get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime'] :
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
+            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC.format(pid)), shell=True)
 
 
         # get the input and save to disk 
@@ -212,15 +213,15 @@ def generic_handler(event, context_dict):
 
         # now split
         d = json.load(open(func_filename, 'r'))
-        shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
-        os.mkdir(PYTHON_MODULE_PATH)
+        shutil.rmtree(PYTHON_MODULE_PATH.format(pid), True) # delete old modules
+        os.mkdir(PYTHON_MODULE_PATH.format(pid))
         # get modules and save
         for m_filename, m_data in d['module_data'].items():
             m_path = os.path.dirname(m_filename)
 
             if len(m_path) > 0 and m_path[0] == "/":
                 m_path = m_path[1:]
-            to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
+            to_make = os.path.join(PYTHON_MODULE_PATH.format(pid), m_path)
             #print "to_make=", to_make, "m_path=", m_path
             try:
                 os.makedirs(to_make)
@@ -235,7 +236,7 @@ def generic_handler(event, context_dict):
             fid.write(b64str_to_bytes(m_data))
             fid.close()
         logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
+        logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH.format(pid)), shell=True))
         logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
@@ -250,7 +251,7 @@ def generic_handler(event, context_dict):
         jobrunner_path = os.path.join(cwd, "jobrunner.py")
 
         extra_env = event.get('extra_env', {})
-        extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
+        extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH.format(pid))
 
         call_id = event['call_id']
         callset_id = event['callset_id']
@@ -336,6 +337,7 @@ def generic_handler(event, context_dict):
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
         # creating new client in case the client has not been created
+        s3_bucket = event['storage_config']['backend_config']['bucket']
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
     
@@ -347,4 +349,4 @@ if __name__ == "__main__":
 
     condatar = tarfile.open(mode= "r:gz", 
                             fileobj = WrappedStreamingBody(res['Body'], res['ContentLength']))
-    condatar.extractall('/tmp/test1_%s/' % RAND_ID)
+    condatar.extractall('/tmp/test1_%s/' % pid)
