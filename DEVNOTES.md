@@ -149,6 +149,11 @@ python setup.py register -r pypi
 python setup.py sdist upload -r pypi
 ```
 
+### Generating release notes
+Generate release notes via
+https://skywinder.github.io/github-changelog-generator/
+
+
 ## Running pylint
 To run the pylint linter, invoke it from the top of the project
 
