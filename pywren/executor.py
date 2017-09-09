@@ -206,13 +206,8 @@ class Executor(object):
                         mod_paths.remove(mod_path)
 
         module_data = create_mod_data(mod_paths)
-        func_str_encoded = func_str
-        #debug_foo = {'func' : func_str_encoded,
-        #             'module_data' : module_data}
-
-        #pickle.dump(debug_foo, open("/tmp/py35.debug.pickle", 'wb'))
         ### Create func and upload
-        func_module_str = pickle.dumps({'func' : func_str_encoded,
+        func_module_str = pickle.dumps({'func' : func_str,
                                         'module_data' : module_data}, -1)
         host_job_meta['func_module_str_len'] = len(func_module_str)
 
