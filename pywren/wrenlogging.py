@@ -1,11 +1,9 @@
 import logging
 import logging.config
 
-# basically stolen from 
+# basically stolen from
 # https://fangpenlin.com/posts/2012/08/26/good-logging-practice-in-python/
 def default_config(log_level='INFO'):
-    logger = logging.getLogger(__name__)
-
     # load config from file
     # logging.config.fileConfig('logging.ini', disable_existing_loggers=False)
     # or, for dictConfig

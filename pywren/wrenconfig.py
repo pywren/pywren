@@ -1,5 +1,5 @@
 import os
-
+import copy
 
 
 GENERIC_HANDLER_NAME = "wrenhandler.generic_handler"
@@ -14,25 +14,31 @@ AWS_ROLE = "helloworld_exec_role"
 
 ROLE = "arn:aws:iam::{}:role/{}".format(AWS_ACCOUNT_ID, AWS_ROLE)
 
-AWS_REGION_DEFAULT ='us-west-2'
+AWS_REGION_DEFAULT = 'us-west-2'
 AWS_S3_BUCKET_DEFAULT = "pywren.data"
 AWS_S3_PREFIX_DEFAULT = "pywren.jobs"
 AWS_LAMBDA_ROLE_DEFAULT = 'pywren_exec_role_1'
 AWS_LAMBDA_FUNCTION_NAME_DEFAULT = 'pywren_1'
-AWS_SQS_QUEUE_DEFAULT='pywren-jobs-1'
+AWS_SQS_QUEUE_DEFAULT = 'pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
-default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz", 
-                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz", 
-                   '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
+default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
+                   '3.4' : "pywren.runtimes/default_3.4.meta.json",
+                   '3.5' : "pywren.runtimes/default_3.5.meta.json",
+                   '3.6' : "pywren.runtimes/default_3.6.meta.json"}
 
 def load(config_filename):
     import yaml
-    res =  yaml.safe_load(open(config_filename, 'r'))    
+    res = yaml.safe_load(open(config_filename, 'r'))
     # sanity check
     if res['s3']['bucket'] == 'BUCKET_NAME':
-        raise Exception("{} has bucket name as {} -- make sure you change the default bucket".format(config_filename, res['s3']['bucket']))
+        raise Exception(
+            "{} has bucket name as {} -- make sure you change the default bucket".format(
+                config_filename, res['s3']['bucket']))
+    if 'storage_backend' not in res:
+        res = patch_storage_config(res)
+
     return res
 
 def get_default_home_filename():
@@ -55,8 +61,19 @@ def get_default_config_filename():
 
     else:
         config_filename = get_default_home_filename()
-    
+
     return config_filename
+
+def patch_storage_config(config_data):
+    if 'storage_backend' in config_data:
+        raise Exception("storage_backend is already in the config")
+
+    patched_config = copy.deepcopy(config_data)
+    patched_config['storage_backend'] = 's3'
+    patched_config['storage_prefix'] = config_data['s3']['pywren_prefix']
+    patched_config['runtime']['runtime_storage'] = 's3'
+    return patched_config
+
 
 def default():
     """
@@ -69,9 +86,6 @@ def default():
         raise ValueError("could not find configuration file")
 
     config_data = load(config_filename)
-    config_data['storage_backend'] = 's3'
-    config_data['storage_prefix'] = config_data['s3']['pywren_prefix']
-    config_data['runtime']['runtime_storage'] = 's3'
     return config_data
 
 
@@ -87,19 +101,19 @@ def extract_storage_config(config):
 
 basic_role_policy = {
     "Version": "2012-10-17",
-    "Statement": [{
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": { "Service": "lambda.amazonaws.com"},
-        "Action": "sts:AssumeRole"}, 
-
+    "Statement": [
         {
-        "Sid": "",
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "ec2.amazonaws.com",
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {"Service": "lambda.amazonaws.com"},
+            "Action": "sts:AssumeRole"
         },
-        "Action": "sts:AssumeRole"}, 
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {"Service": "ec2.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        },
     ]
 }
 
@@ -117,8 +131,8 @@ more_permissions_policy = {
                 's3:Get*',
                 's3:*MultipartUpload*'
             ],
-                'Resource': '*'
-        }, 
+            'Resource': '*'
+        },
         {
             "Effect": "Allow",
             "Action": "logs:CreateLogGroup",
@@ -133,7 +147,7 @@ more_permissions_policy = {
             "Resource": [
                 "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:/aws/lambda/*:*"
             ]
-        }, 
+        },
         {
             "Effect": "Allow",
             "Action": "sts:AssumeRole",
@@ -159,6 +173,4 @@ more_permissions_policy = {
             ],
             "Effect": "Allow"
         }
-
-
-]}
+    ]}

@@ -34,13 +34,14 @@ install:
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest numba
   - source activate test-environment
-  - pip install glob2
+  - pip install glob2 pylint tornado
   - tests/install_pywren.sh
 
 
   
 before_script:
-  - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
+  - export EPOCH_STAMP=`date +%s`
+  - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_${EPOCH_STAMP}_${RANDOM_ID}
   - echo CLEAN BUILD ID IS $BUILD_GUID
   - export BUCKET_NAME=`echo pywren_travis_$BUILD_GUID | sed 's/_/-/g'`
   - echo $BUCKET_NAME
@@ -59,6 +60,7 @@ script:
   - tests/ec2_standalone_tests.sh
   - tests/ec2_macroreduce_tests.sh
   - tests/cmdline_tests.sh
+  - tests/run_pylint.sh
   
 
 after_script:
@@ -87,3 +89,4 @@ env:
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
     - RUN_COMMANDLINE=true
+    - RUN_PYLINT=true

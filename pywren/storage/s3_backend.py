@@ -1,5 +1,7 @@
 import botocore
-from .exceptions import *
+
+from .exceptions import StorageNoSuchKeyError
+
 
 class S3Backend(object):
     """
@@ -9,8 +11,8 @@ class S3Backend(object):
     def __init__(self, s3config):
         self.s3_bucket = s3config['bucket']
         self.session = botocore.session.get_session()
-        self.s3client = self.session.create_client('s3',
-                            config=botocore.client.Config(max_pool_connections=200))
+        self.s3client = self.session.create_client(
+            's3', config=botocore.client.Config(max_pool_connections=200))
 
     def put_object(self, key, data):
         """
@@ -30,7 +32,7 @@ class S3Backend(object):
         :rtype: str/bytes
         """
         try:
-            r = self.s3client.get_object(Bucket=self.s3_bucket, Key = key)
+            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
             data = r['Body'].read()
             return data
         except botocore.exceptions.ClientError as e:
@@ -58,9 +60,9 @@ class S3Backend(object):
     def list_keys_with_prefix(self, prefix):
         """
         Return a list of keys for the given prefix.
-        :param key: key of the object
-        :return: True if key exists, False if not exists
-        :rtype: A list of keys
+        :param prefix: Prefix to filter object names.
+        :return: List of keys in bucket that match the given prefix.
+        :rtype: list of str
         """
         paginator = self.s3client.get_paginator('list_objects_v2')
         operation_parameters = {'Bucket': self.s3_bucket,

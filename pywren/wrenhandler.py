@@ -1,33 +1,32 @@
-from six.moves import cPickle as pickle
-import botocore
-import boto3
-import tarfile
-import subprocess
-import os
-import time
 import base64
-import logging
-import uuid
 import json
+import logging
+import os
 import shutil
+import signal
+import subprocess
 import sys
 import base64
 import random
 import fcntl
 
+import tarfile
+import time
 import traceback
 from threading import Thread
-import signal
 
-if (sys.version_info > (3, 0)):
-    from . import wrenutil
-    from . import version
-    from queue import Queue, Empty
+import boto3
+import botocore
+
+if sys.version_info > (3, 0):
+    from queue import Queue, Empty # pylint: disable=import-error
+    from . import wrenutil # pylint: disable=relative-import
+    from . import version  # pylint: disable=relative-import
 
 else:
-    import wrenutil
-    import version
-    from Queue import Queue, Empty
+    from Queue import Queue, Empty # pylint: disable=import-error
+    import wrenutil # pylint: disable=relative-import
+    import version  # pylint: disable=relative-import
 
 PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
@@ -36,6 +35,9 @@ RUNTIME_LOC = "/tmp/runtimes"
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
+
+# Make sure we have at least 10 MB
+TMP_MIN_FREE_SPACE_BYTES = 10000000
 
 def get_key_size(s3client, bucket, key):
     try:
@@ -46,6 +48,13 @@ def get_key_size(s3client, bucket, key):
             return None
         else:
             raise e
+
+def free_disk_space(dirname):
+    """
+    Returns the number of free bytes on the mount point containing DIRNAME
+    """
+    s = os.statvfs(dirname)
+    return s.f_bsize * s.f_bavail
 
 def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
@@ -58,19 +67,20 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     fcntl.lockf(lock,  fcntl.LOCK_EX)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
-                                                  Key=runtime_s3_key)
+                                         Key=runtime_s3_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
     logger.debug("The etag is ={}".format(ETag))
     runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
     logger.debug("Runtime etag dir={}".format(runtime_etag_dir))
-    expected_target = os.path.join(runtime_etag_dir, 'condaruntime')    
+    expected_target = os.path.join(runtime_etag_dir, 'condaruntime')
     logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
-        if os.path.exists(CONDA_RUNTIME_DIR) :
+        if os.path.exists(CONDA_RUNTIME_DIR):
             if not os.path.islink(CONDA_RUNTIME_DIR):
-                raise Exception("{} is not a symbolic link, your runtime config is broken".format(CONDA_RUNTIME_DIR))
+                raise Exception("{} is not a symbolic link, your runtime config is broken".format(
+                    CONDA_RUNTIME_DIR))
 
             existing_link = os.readlink(CONDA_RUNTIME_DIR)
             if existing_link == expected_target:
@@ -87,13 +97,35 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                     Key=runtime_s3_key)
 
-    condatar = tarfile.open(mode= "r:gz", 
-                            fileobj = wrenutil.WrappedStreamingBody(res['Body'], 
-                                                                    res['ContentLength']))
+    os.makedirs(runtime_etag_dir)
 
+    res = s3_client.get_object(Bucket=runtime_s3_bucket,
+                               Key=runtime_s3_key)
 
-    condatar.extractall(runtime_etag_dir)
+    try:
 
+        condatar = tarfile.open(
+            mode="r:gz",
+            fileobj=wrenutil.WrappedStreamingBody(res['Body'],
+                                                  res['ContentLength']))
+        condatar.extractall(runtime_etag_dir)
+    except (OSError, IOError) as e:
+        # no difference, see https://stackoverflow.com/q/29347790/1073963
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        if e.args[0] == 28:
+
+            raise Exception("RUNTIME_TOO_BIG",
+                            "Ran out of space when untarring runtime")
+        else:
+            raise Exception("RUNTIME_ERROR", str(e))
+    except tarfile.ReadError as e:
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        raise Exception("RUNTIME_READ_ERROR", str(e))
+    except:
+        shutil.rmtree(runtime_etag_dir, True)
+        raise
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
     fcntl.lockf(lock, fcntl.LOCK_UN)
@@ -102,7 +134,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
 def b64str_to_bytes(str_data):
     str_ascii = str_data.encode('ascii')
-    byte_data= base64.b64decode(str_ascii)
+    byte_data = base64.b64decode(str_ascii)
     return byte_data
 
 
@@ -117,11 +149,11 @@ def aws_lambda_handler(event, context):
 
 def get_server_info():
 
-    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii") }
+    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii")}
     if os.path.exists("/proc"):
-        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(), 
-                            '/proc/meminfo': open("/proc/meminfo", 'r').read(), 
-                            '/proc/self/cgroup': open("/proc/meminfo", 'r').read(), 
+        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
+                            '/proc/meminfo': open("/proc/meminfo", 'r').read(),
+                            '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
 
 
@@ -134,18 +166,18 @@ def generic_handler(event, context_dict):
     """
     pid = os.getpid()
 
+    response_status = {'exception': None}
     try:
-        response_status = {'exception' : None}
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
         s3_client = boto3.client("s3")
         s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
         s3_bucket = event['storage_config']['backend_config']['bucket']
-        
+
         logger.info("invocation started")
 
-        # download the input 
+        # download the input
         status_key = event['status_key']
         func_key = event['func_key']
         data_key = event['data_key']
@@ -153,7 +185,7 @@ def generic_handler(event, context_dict):
         output_key = event['output_key']
 
         if version.__version__ != event['pywren_version']:
-            raise Exception("WRONGVERSION", "Pywren version mismatch", 
+            raise Exception("WRONGVERSION", "Pywren version mismatch",
                             version.__version__, event['pywren_version'])
 
         start_time = time.time()
@@ -167,7 +199,8 @@ def generic_handler(event, context_dict):
         runtime_s3_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
-            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(event['runtime_url'])
+            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(
+                event['runtime_url'])
         else:
             runtime_s3_bucket_used = runtime_s3_bucket
             runtime_s3_key_used = runtime_s3_key
@@ -175,21 +208,29 @@ def generic_handler(event, context_dict):
         job_max_runtime = event.get("job_max_runtime", 600) # default for lambda
 
         response_status['func_key'] = func_key
-        response_status['data_key'] = data_key 
+        response_status['data_key'] = data_key
         response_status['output_key'] = output_key
-        response_status['status_key'] = status_key 
+        response_status['status_key'] = status_key
 
-        KS =  get_key_size(s3_client, s3_bucket, data_key)
-        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
-        while KS is None:
-            logger.warn("WARNING COULD NOT GET FIRST KEY" )
-
-            KS =  get_key_size(s3_client, s3_bucket, data_key)
-        if not event['use_cached_runtime'] :
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC.format(pid)), shell=True)
-
-
-        # get the input and save to disk 
+        data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", data_key_size, "bytes" )
+        while data_key_size is None:
+            logger.warning("WARNING COULD NOT GET FIRST KEY")
+            data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+        if not event['use_cached_runtime']:
+            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
+        func_key_size = get_key_size(s3_client, s3_bucket, func_key)
+        free_disk_bytes = free_disk_space("/tmp")
+        if (func_key_size + data_key_size) > (free_disk_bytes - TMP_MIN_FREE_SPACE_BYTES):
+            raise Exception("ARGS_TOO_BIG",
+                            "data + func too large {:3.1f} MB (data={:3.1f}MB, func={:3.1f}MB)," \
+                            " free space on worker is {:3.1f} MB, " \
+                            " need at least {:3.1f} MB of free space headroom to run"\
+                            .format((func_key_size + data_key_size)/1e6,
+                                    data_key_size/1e6, func_key_size/1e6,
+                                    free_disk_bytes/1e6,
+                                    TMP_MIN_FREE_SPACE_BYTES/1e6))
+        # get the input and save to disk
         # FIXME here is we where we would attach the "canceled" metadata
         s3_transfer.download_file(s3_bucket, func_key, func_filename)
         func_download_time = time.time() - start_time
@@ -202,7 +243,7 @@ def generic_handler(event, context_dict):
         else:
             range_str = 'bytes={}-{}'.format(*data_byte_range)
             dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
-                                             Range=range_str)
+                                        Range=range_str)
             data_fid = open(data_filename, 'wb')
             data_fid.write(dres['Body'].read())
             data_fid.close()
@@ -241,7 +282,7 @@ def generic_handler(event, context_dict):
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
-        
+
         runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
                                                        runtime_s3_key_used)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
@@ -261,10 +302,10 @@ def generic_handler(event, context_dict):
         CONDA_PYTHON_PATH = CONDA_RUNTIME_DIR + "/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
-        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME, 
-                                         jobrunner_path, 
-                                         func_filename, 
-                                         data_filename, 
+        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
+                                         jobrunner_path,
+                                         func_filename,
+                                         data_filename,
                                          output_filename)
 
         setup_time = time.time()
@@ -280,7 +321,7 @@ def generic_handler(event, context_dict):
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
-        process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1, 
+        process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
                                    stdout=subprocess.PIPE, preexec_fn=os.setsid)
 
         logger.info("launched process")
@@ -297,25 +338,25 @@ def generic_handler(event, context_dict):
 
         stdout = b""
         while t.isAlive():
-            try: 
+            try:
                 line = q.get_nowait()
                 stdout += line
                 logger.info(line)
             except Empty:
-                time.sleep(PROCESS_STDOUT_SLEEP_SECS )
+                time.sleep(PROCESS_STDOUT_SLEEP_SECS)
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
-                logger.warn("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
+                logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)  
-                raise Exception("OUTATIME", 
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
 
         logger.info("command execution finished")
 
         s3_transfer.upload_file(output_filename, s3_bucket,
-                                   output_key)
+                                output_key)
         logger.debug("output uploaded to %s %s", s3_bucket, output_key)
 
         end_time = time.time()
@@ -330,7 +371,6 @@ def generic_handler(event, context_dict):
         response_status['server_info'] = get_server_info()
 
         response_status.update(context_dict)
-
     except Exception as e:
         # internal runtime exceptions
         response_status['exception'] = str(e)

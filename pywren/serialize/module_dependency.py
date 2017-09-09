@@ -1,7 +1,7 @@
 """
 BSD Licensed
 
-From 
+From
 https://github.com/cloudpipe/multyvac-fork/blob/master/multyvac/util/module_dependency.py
 
 """
@@ -26,7 +26,7 @@ class ModuleDependencyAnalyzer(object):
         self._logger = logging.getLogger('multyvac.dependency-analyzer')
         # Root modules that have been or are being inspected
         self._inspected_modules = set()
-        # Root modules that have yet to be inspected 
+        # Root modules that have yet to be inspected
         self._modules_to_inspect = set()
         # Root modules that should be ignored by this (Not sent or traversed)
         self._modules_to_ignore = set()
@@ -91,8 +91,8 @@ class ModuleDependencyAnalyzer(object):
             self._logger.debug('Could not find module %r, skipping',
                                root_module_name)
             return
-        suffix, mode, type = description
-        if type == imp.PY_SOURCE:
+        _, _, mod_type = description
+        if mod_type == imp.PY_SOURCE:
             self._paths_to_transmit.add(pathname)
             self._logger.debug('Module %r is source/compiled. Added path %r',
                                root_module_name, pathname)
@@ -128,21 +128,21 @@ class ModuleDependencyAnalyzer(object):
                     self._modules_to_inspect.add(source_imp)
                     self._logger.debug('Module %r Source import %r added '
                                        'to queue', root_module_name, source_imp)
-        elif type == imp.PKG_DIRECTORY:
+        elif mod_type == imp.PKG_DIRECTORY:
             self._logger.debug('Module %r is package. Recursing...',
                                root_module_name)
             if self._deep_inspect_path(pathname, root_module_name):
                 self._paths_to_transmit.add(pathname)
                 self._logger.debug('Module %r has no c-extensions. Added path %r',
                                    root_module_name, pathname)
-        elif type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
-                      imp.PY_COMPILED):
+        elif mod_type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
+                          imp.PY_COMPILED):
             self._logger.debug('Module %r is %s. Skipping.',
                                root_module_name,
-                               self._IMP_TYPE_NAMES[type])
+                               self._IMP_TYPE_NAMES[mod_type])
         else:
             raise Exception('Unrecognized module %r type %s'
-                            % (root_module_name, type))
+                            % (root_module_name, mod_type))
 
     def _deep_inspect_path(self, path, package_name):
         """
@@ -151,11 +151,11 @@ class ModuleDependencyAnalyzer(object):
         Adds module references to list of modules to be inspected.
         """
         ret = True
-        for _, submodule_name, is_pkg in pkgutil.iter_modules([path]):
+        for _, submodule_name, _ in pkgutil.iter_modules([path]):
             self._logger.debug('Inspecting submodule %r', submodule_name)
             fp, pathname, description = imp.find_module(submodule_name, [path])
-            suffix, mode, type = description
-            if type == imp.PY_SOURCE:
+            _, _, mod_type = description
+            if mod_type == imp.PY_SOURCE:
                 self._logger.debug('%r -> %r is source/compiled. '
                                    'Scanning imports.',
                                    package_name,
@@ -201,17 +201,17 @@ class ModuleDependencyAnalyzer(object):
                                            package_name,
                                            submodule_name,
                                            source_imp)
-            elif type == imp.PKG_DIRECTORY:
+            elif mod_type == imp.PKG_DIRECTORY:
                 self._logger.debug('%r -> %r is package. Recursing...',
                                    package_name, submodule_name)
                 ret = ret and self._deep_inspect_path(pathname, package_name)
-            elif type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
-                          imp.PY_COMPILED):
+            elif mod_type in (imp.C_EXTENSION, imp.C_BUILTIN, imp.PY_FROZEN,
+                              imp.PY_COMPILED):
 
                 self._logger.debug('%r -> %r is %s.',
                                    package_name,
                                    submodule_name,
-                                   self._IMP_TYPE_NAMES[type])
+                                   self._IMP_TYPE_NAMES[mod_type])
 
                 # Close the file handle that's been opened for us by find_module
                 fp.close()
@@ -221,14 +221,15 @@ class ModuleDependencyAnalyzer(object):
                 # Since this is a common case, we assume that the PY will be
                 # alongside the PYC for now, and ignore any issues that may
                 # arise.
-                if type != imp.PY_COMPILED:
+                if mod_type != imp.PY_COMPILED:
                     ret = False
             else:
                 raise Exception('Unrecognized module type %s' % submodule_name)
 
         return ret
 
-    def _is_relative_import(self, module_name, path):
+    @staticmethod
+    def _is_relative_import(module_name, path):
         """Checks if import is relative. Returns True if relative, False if
         absolute, and None if import could not be found."""
         try:
@@ -251,11 +252,12 @@ class ModuleDependencyAnalyzer(object):
         # 1. Import that doesn't exist. "Bad import".
         # 2. Since we're only scanning the AST, there's a good chance the
         #    import's inclusion is conditional, and would never be triggered.
-        #    For example, an import specific to an OS. 
+        #    For example, an import specific to an OS.
         return None
 
-    def _extract_root_module(self, module_name):
-        """Given a module name, returns only the root module by ignoring 
+    @staticmethod
+    def _extract_root_module(module_name):
+        """Given a module name, returns only the root module by ignoring
         everything including and after the leftmost "." if one exists."""
         return module_name.split('.')[0]
 
@@ -280,5 +282,3 @@ class ModuleDependencyAnalyzer(object):
             return imps
         else:
             return set()
-
-

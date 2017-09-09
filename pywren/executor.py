@@ -1,32 +1,26 @@
 from __future__ import absolute_import
+from __future__ import print_function
+
+import json
+import logging
+import random
+import time
+from multiprocessing.pool import ThreadPool
 
 import boto3
-import json
 
-from pywren.storage.storage_utils import create_func_key
-
-try:
-    from six.moves import cPickle as pickle
-except:
-    import pickle
-from multiprocessing.pool import ThreadPool
-import time
-import random
-import logging
-import botocore
-import glob2
-import os
-
+import pywren.runtime as runtime
+import pywren.storage as storage
 import pywren.version as version
 import pywren.wrenconfig as wrenconfig
 import pywren.wrenutil as wrenutil
-import pywren.runtime as runtime
-import pywren.storage as storage
-from pywren.serialize import cloudpickle, serialize
-from pywren.serialize import create_mod_data
+
 from pywren.future import ResponseFuture, JobState
-from pywren.wait import *
+from pywren.serialize import serialize, create_mod_data
 from pywren.storage import storage_utils
+from pywren.storage.storage_utils import create_func_key
+from pywren.wait import wait, ALL_COMPLETED
+
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +44,12 @@ class Executor(object):
             logger.info("using serializer with meta-supplied preinstalls")
             self.serializer = serialize.SerializeIndependent(self.runtime_meta_info['preinstalls'])
         else:
-            self.serializer =  serialize.SerializeIndependent()
+            self.serializer = serialize.SerializeIndependent()
+
+        self.map_item_limit = None
+        if 'scheduler' in self.config:
+            if 'map_item_limit' in config['scheduler']:
+                self.map_item_limit = config['scheduler']['map_item_limit']
 
     def put_data(self, data_key, data_str,
                  callset_id, call_id):
@@ -64,32 +63,33 @@ class Executor(object):
                          callset_id, call_id, extra_env,
                          extra_meta, data_byte_range, use_cached_runtime,
                          host_job_meta, job_max_runtime,
-                         overwrite_invoke_args = None):
+                         overwrite_invoke_args=None):
 
         # Pick a runtime url if we have shards.
         # If not the handler will construct it
         runtime_url = ""
         if ('urls' in self.runtime_meta_info and
                 isinstance(self.runtime_meta_info['urls'], list) and
-                    len(self.runtime_meta_info['urls']) > 1):
+                len(self.runtime_meta_info['urls']) > 1):
             num_shards = len(self.runtime_meta_info['urls'])
             logger.debug("Runtime is sharded, choosing from {} copies.".format(num_shards))
             random.seed()
             runtime_url = random.choice(self.runtime_meta_info['urls'])
 
-        arg_dict = {'storage_config' : self.storage.get_storage_config(),
-                    'func_key' : func_key,
-                    'data_key' : data_key,
-                    'output_key' : output_key,
-                    'status_key' : status_key,
-                    'callset_id': callset_id,
-                    'job_max_runtime' : job_max_runtime,
-                    'data_byte_range' : data_byte_range,
-                    'call_id' : call_id,
-                    'use_cached_runtime' : use_cached_runtime,
-                    'runtime' : self.config['runtime'],
-                    'pywren_version' : version.__version__,
-                    'runtime_url' : runtime_url }
+        arg_dict = {
+            'storage_config' : self.storage.get_storage_config(),
+            'func_key' : func_key,
+            'data_key' : data_key,
+            'output_key' : output_key,
+            'status_key' : status_key,
+            'callset_id': callset_id,
+            'job_max_runtime' : job_max_runtime,
+            'data_byte_range' : data_byte_range,
+            'call_id' : call_id,
+            'use_cached_runtime' : use_cached_runtime,
+            'runtime' : self.config['runtime'],
+            'pywren_version' : version.__version__,
+            'runtime_url' : runtime_url}
 
         if extra_env is not None:
             logger.debug("Extra environment vars {}".format(extra_env))
@@ -133,11 +133,12 @@ class Executor(object):
 
         return fut
 
-    def call_async(self, func, data, extra_env = None,
+    def call_async(self, func, data, extra_env=None,
                    extra_meta=None):
-        return self.map(func, [data],  extra_env, extra_meta)[0]
+        return self.map(func, [data], extra_env, extra_meta)[0]
 
-    def agg_data(self, data_strs):
+    @staticmethod
+    def agg_data(data_strs):
         ranges = []
         pos = 0
         for datum in data_strs:
@@ -146,9 +147,10 @@ class Executor(object):
             pos += l
         return b"".join(data_strs), ranges
 
-    def map(self, func, iterdata, extra_env = None, extra_meta = None,
+    def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args = None):
+            use_cached_runtime=True, overwrite_invoke_args=None,
+            exclude_modules=None):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -161,7 +163,13 @@ class Executor(object):
 
         data = list(iterdata)
         if not data:
-          return []
+            return []
+
+        if self.map_item_limit is not None and len(data) > self.map_item_limit:
+            raise ValueError("len(data) ={}, exceeding map item limit of {}"\
+                             "consider mapping over a smaller"\
+                             "number of items".format(len(data),
+                                                      self.map_item_limit))
 
         host_job_meta = {}
 
@@ -176,7 +184,7 @@ class Executor(object):
         data_size_bytes = sum(len(x) for x in data_strs)
         agg_data_key = None
         host_job_meta['agg_data'] = False
-        host_job_meta['data_size_bytes'] =  data_size_bytes
+        host_job_meta['data_size_bytes'] = data_size_bytes
 
         if data_size_bytes < wrenconfig.MAX_AGG_DATA_SIZE and data_all_as_one:
             agg_data_key = storage_utils.create_agg_data_key(self.storage.prefix, callset_id)
@@ -191,6 +199,11 @@ class Executor(object):
             # it exceeded max data size
             pass
 
+        if exclude_modules:
+            for module in exclude_modules:
+                for mod_path in list(mod_paths):
+                    if module in mod_path and mod_path in mod_paths:
+                        mod_paths.remove(mod_path)
 
         module_data = create_mod_data(mod_paths)
         func_str_encoded = wrenutil.bytes_to_b64str(func_str)
@@ -210,7 +223,7 @@ class Executor(object):
         host_job_meta['func_upload_timestamp'] = time.time()
         def invoke(data_str, callset_id, call_id, func_key,
                    host_job_meta,
-                   agg_data_key = None, data_byte_range=None ):
+                   agg_data_key=None, data_byte_range=None):
             data_key, output_key, status_key \
                 = storage_utils.create_keys(self.storage.prefix, callset_id, call_id)
 
@@ -235,7 +248,7 @@ class Executor(object):
                                          extra_meta, data_byte_range,
                                          use_cached_runtime, host_job_meta.copy(),
                                          self.job_max_runtime,
-                                         overwrite_invoke_args = overwrite_invoke_args)
+                                         overwrite_invoke_args=overwrite_invoke_args)
 
         N = len(data)
         call_result_objs = []
@@ -256,7 +269,7 @@ class Executor(object):
 
             call_result_objs.append(cb)
 
-        res =  [c.get() for c in call_result_objs]
+        res = [c.get() for c in call_result_objs]
         pool.close()
         pool.join()
         logger.info("map invoked {} {} pool join".format(callset_id, call_id))
@@ -268,7 +281,7 @@ class Executor(object):
         return res
 
     def reduce(self, function, list_of_futures,
-               extra_env = None, extra_meta = None):
+               extra_env=None, extra_meta=None):
         """
         Apply a function across all futures.
 
@@ -300,8 +313,10 @@ class Executor(object):
 
         log_events = logclient.get_log_events(
             logGroupName=log_group_name,
-            logStreamName=log_stream_name,)
-        if verbose: # FIXME use logger
+            logStreamName=log_stream_name)
+
+        # FIXME use logger
+        if verbose:
             print("log events returned")
         this_events_logs = []
         in_this_event = False

@@ -1,9 +1,11 @@
 from __future__ import absolute_import
-import json
 
-from .storage_utils import *
-from .exceptions import *
+import json
+import os
+
+from  .exceptions import StorageNoSuchKeyError, StorageOutputNotFoundError
 from .s3_backend import S3Backend
+from .storage_utils import create_status_key, create_output_key, status_key_suffix
 
 
 class Storage(object):
@@ -44,7 +46,7 @@ class Storage(object):
         """
         Put serialized function into storage.
         :param key: function key
-        :param data: serialized function
+        :param func: serialized function
         :return: None
         """
         return self.backend_handler.put_object(key, func)
@@ -104,8 +106,9 @@ def get_runtime_info(runtime_config):
     config = dict()
     config['bucket'] = runtime_config['s3_bucket']
     handler = S3Backend(config)
-
-    key = runtime_config['s3_key'].replace(".tar.gz", ".meta.json")
+    key = runtime_config['s3_key']
+    if '.tar.gz' in key:
+        key = key.replace(".tar.gz", ".meta.json")
     json_str = handler.get_object(key)
     runtime_meta = json.loads(json_str.decode("ascii"))
     return runtime_meta

@@ -1,6 +1,6 @@
 import sys
 
 if sys.version_info > (3, 0):
-    from .storage import *
+    from pywren.storage.storage import Storage, get_runtime_info
 else:
-    from storage import *
+    from pywren.storage.storage import Storage, get_runtime_info
