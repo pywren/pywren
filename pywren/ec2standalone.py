@@ -47,11 +47,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                                                                     aws_region,
                                                                     availability_zone))
 
-    ec2 = boto3.resource('ec2', region_name=aws_region)
-    image = ec2.Image(tgt_ami)
-
     if fast_io:
-        BlockDeviceMappings=[
+        BlockDeviceMappings = [
             {
                 'DeviceName': '/dev/xvda',
                 'Ebs': {
@@ -103,18 +100,18 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     iam = boto3.resource('iam')
     instance_profile = iam.InstanceProfile(instance_profile_name)
 
-    instance_profile_dict =  {'Name' : instance_profile.name}
+    instance_profile_dict = {'Name' : instance_profile.name}
 
     instances = _create_instances(number, aws_region,
                                   spot_price, ami=tgt_ami,
-                                  key_name = my_aws_key,
+                                  key_name=my_aws_key,
                                   instance_type=instance_type,
-                                  block_device_mappings = BlockDeviceMappings,
-                                  security_group_ids = [],
-                                  ebs_optimized = True,
-                                  instance_profile = instance_profile_dict,
-                                  availability_zone = availability_zone,
-                                  user_data = user_data) ###FIXME DEBUG DEBUG
+                                  block_device_mappings=BlockDeviceMappings,
+                                  security_group_ids=[],
+                                  ebs_optimized=True,
+                                  instance_profile=instance_profile_dict,
+                                  availability_zone=availability_zone,
+                                  user_data=user_data) ###FIXME DEBUG DEBUG
 
 
     # FIXME there's a race condition where we could end up with two
@@ -186,7 +183,7 @@ def _create_instances(num_instances,
             client = ec2.meta.client
 
 
-            LaunchSpecification={
+            LaunchSpecification = {
                 'ImageId': ami,
                 'KeyName': key_name,
                 'InstanceType': instance_type,
@@ -197,7 +194,7 @@ def _create_instances(num_instances,
             if availability_zone is not None:
                 LaunchSpecification['Placement'] = {"AvailabilityZone":availability_zone}
             if block_device_mappings is not None:
-                LaunchSpecification['BlockDeviceMappings'] =  block_device_mappings
+                LaunchSpecification['BlockDeviceMappings'] = block_device_mappings
 
             spot_requests = client.request_spot_instances(
                 SpotPrice=str(spot_price),
@@ -244,7 +241,7 @@ def _create_instances(num_instances,
             # TODO: If an exception is raised in here, some instances may be
             #       left stranded.
 
-            LaunchSpecification =  {
+            LaunchSpecification = {
                 "MinCount" : num_instances,
                 "MaxCount" : num_instances,
                 "ImageId" : ami,

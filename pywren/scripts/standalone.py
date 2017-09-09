@@ -3,21 +3,18 @@
 from __future__ import print_function
 
 import json
-import zipfile
-from glob2 import glob
-import io
-import time 
-import botocore
-from multiprocessing import Process
-from threading import Thread
-from pywren import wrenhandler
+import time
 import logging
 import math
 import os
 import shutil
 import subprocess
 import sys
-import platform 
+import platform
+
+from threading import Thread
+
+from glob2 import glob
 
 try:
     # For Python 3.0 and later
@@ -29,7 +26,6 @@ except ImportError:
 import boto3
 import click
 import watchtower
-from glob2 import glob
 
 import pywren
 from pywren import wrenhandler
@@ -38,9 +34,9 @@ logger = logging.getLogger(__name__)
 
 
 SQS_VISIBILITY_SEC = 10
-PROCESS_SLEEP_DUR_SEC=2
-AWS_REGION_DEBUG='us-west-2'
-QUEUE_SLEEP_DUR_SEC=2
+PROCESS_SLEEP_DUR_SEC = 2
+AWS_REGION_DEBUG = 'us-west-2'
+QUEUE_SLEEP_DUR_SEC = 2
 
 IDLE_TERMINATE_THRESHOLD = 0.95
 
@@ -117,7 +113,7 @@ def idle_granularity_valid(idle_terminate_granularity,
             queue_receive_message_timeout * 1.1)
 
 def server_runner(aws_region, sqs_queue_name,
-                  max_run_time, run_dir, server_name, log_stream_prefix,
+                  max_run_time, run_dir,
                   max_idle_time=None,
                   idle_terminate_granularity=None,
                   queue_receive_message_timeout=10):
@@ -148,9 +144,8 @@ def server_runner(aws_region, sqs_queue_name,
         if len(response) > 0:
             m = response[0]
             logger.info("Dispatching message_id={}".format(m.message_id))
-            
-            process_message(m, local_message_i, max_run_time, run_dir, 
-                            aws_region, server_name, log_stream_prefix)
+
+            process_message(m, local_message_i, max_run_time, run_dir)
             message_count += 1
             last_processed_timestamp = time.time()
             idle_time = 0
@@ -171,18 +166,15 @@ def server_runner(aws_region, sqs_queue_name,
                         my_uptime, idle_time, time_frac, terminate_thold_sec))
 
                 if time_frac > terminate_thold_sec:
-                    logger.info("Instance has been up for {:.0f} and inactive for {:.0f}, terminating".format(my_uptime, 
-                                                                                                              idle_time))
-                    ec2_self_terminate(idle_time, my_uptime, message_count, in_minutes=1)
-                    # sometimes these appear to hang, so we are skipping them and instead calling sys.exit
-                    #for h in logger.handlers:
-                    #    h.flush()
+                    logger.info("Instance has been up for {:.0f}"
+                                "and inactive for {:.0f}, terminating".format(my_uptime,
+                                                                              idle_time))
+                    ec2_self_terminate(idle_time, my_uptime,
+                                       message_count, in_minutes=1)
+
                     sys.exit(0)
 
-def process_message(m, local_message_i, max_run_time, run_dir,
-                    aws_region,
-                    server_name, log_stream_prefix):
-
+def process_message(m, local_message_i, max_run_time, run_dir):
 
     event = json.loads(m.body)
 
@@ -190,8 +182,10 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     callset_id = event['callset_id']
 
     extra_env_debug = event.get('extra_env', {})
-    unique_job_id = "{}:{}:{}".format(m.message_id, call_id, callset_id)
-    logger.info("processing message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
+
+    logger.info("processing message_id={} "
+                "callset_id={} call_id={}".format(m.message_id, callset_id,
+                                                  call_id))
 
     # FIXME this is all for debugging
     if 'DEBUG_THROW_EXCEPTION' in extra_env_debug:
@@ -200,9 +194,8 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     message_id = m.message_id
 
     # id this in a thread: pywren.wrenhandler.generic_handler(event)
-    p =  Thread(target=job_handler, args=(event, local_message_i, 
-                                           run_dir, aws_region, server_name, 
-                                           log_stream_prefix))
+    p = Thread(target=job_handler, args=(event, local_message_i,
+                                         run_dir))
     # is thread done
     p.start()
 
@@ -214,19 +207,22 @@ def process_message(m, local_message_i, max_run_time, run_dir,
         time_since_visibility_update = time.time() - last_visibility_update_time
         est_visibility_left = SQS_VISIBILITY_SEC - time_since_visibility_update
         if est_visibility_left < (PROCESS_SLEEP_DUR_SEC*1.5):
-            logger.debug("{} - {:3.1f}s since last visibility update, setting to {:3.1f} sec".format(message_id, time_since_visibility_update, 
-                                                                                                              SQS_VISIBILITY_SEC))
+            logger.debug("{} - {:3.1f}s since last visibility update, "
+                         "setting to {:3.1f} sec".format(message_id,
+                                                         time_since_visibility_update,
+                                                         SQS_VISIBILITY_SEC))
             last_visibility_update_time = time.time()
-            response = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
+            _ = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
 
 
         if not p.is_alive():
             logger.debug("{} - attempting to join process".format(message_id))
-            # FIXME will this join ever hang? 
+            # FIXME will this join ever hang?
             p.join()
             break
         else:
-            logger.debug("{} - {:3.1f}s since visibility update, sleeping".format(message_id, time_since_visibility_update))
+            logger.debug("{} - {:3.1f}s since visibility update, "
+                         "sleeping".format(message_id, time_since_visibility_update))
             time.sleep(PROCESS_SLEEP_DUR_SEC)
 
         run_time = time.time() - start_time
@@ -234,8 +230,9 @@ def process_message(m, local_message_i, max_run_time, run_dir,
     # if p.exitcode is None:
     #     logger.warn("{} - attempting to manuall terminate process ".format(message_id))
     #     p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE # FIXME does not work with thread
-    #     logger.warn("{} - Had to manually terminate process ".format(message_id)) 
-    logger.info("deleting message_id={} callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
+    #     logger.warn("{} - Had to manually terminate process ".format(message_id))
+    logger.info("deleting message_id={} "
+                "callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
 
     m.delete()
@@ -245,9 +242,8 @@ def copy_runtime(tgt_dir):
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
-def job_handler(event, job_i, run_dir, aws_region, 
-                server_name, log_stream_prefix, 
-                extra_context = None, 
+def job_handler(event, job_i, run_dir,
+                extra_context=None,
                 delete_taskdir=True):
     """
     Run a deserialized job in run_dir
@@ -255,20 +251,19 @@ def job_handler(event, job_i, run_dir, aws_region,
     Just for debugging
     """
 
-    debug_pid = open("/tmp/pywren.scripts.standalone.{}.{}.log".format(os.getpid(), 
+    debug_pid = open("/tmp/pywren.scripts.standalone.{}.{}.log".format(os.getpid(),
                                                                        time.time()), 'w')
 
     call_id = event['call_id']
     callset_id = event['callset_id']
-    print "subprocess job_handler job i=", job_i, "pid=", os.getpid(), "callset_id=", callset_id, "call_id=", call_id
     logger.info("jobhandler_thread callset_id={} call_id={}".format(callset_id, call_id))
 
     #session = boto3.session.Session(region_name=aws_region)
-    # we do this here instead of in the global context 
+    # we do this here instead of in the global context
     # because of how multiprocessing works
-    # handler = watchtower.CloudWatchLogHandler(send_interval=20, 
-    #                                           log_group="pywren.standalone", 
-    #                                           stream_name=log_stream_prefix + "-{logger_name}", 
+    # handler = watchtower.CloudWatchLogHandler(send_interval=20,
+    #                                           log_group="pywren.standalone",
+    #                                           stream_name=log_stream_prefix + "-{logger_name}",
     #                                           boto3_session=session,
     #                                           max_batch_count=10)
     # log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
@@ -295,15 +290,18 @@ def job_handler(event, job_i, run_dir, aws_region,
         context.update(extra_context)
 
     os.chdir(task_run_dir)
-    
+
     try:
         debug_pid.write("invoking generic_handler\n")
-        logger.debug("jobhandler_thread callset_id={} call_id={} invoking".format(callset_id, call_id))
+        logger.debug("jobhandler_thread callset_id={} call_id={} invoking".format(callset_id,
+                                                                                  call_id))
 
         wrenhandler.generic_handler(event, context)
     except Exception as e:
-        logger.warn("jobhandler_thread callset_id={} call_id={} exception={}".format(callset_id, call_id, str(e)))
-        
+        logger.warning("jobhandler_thread callset_id={} "
+                       "call_id={} exception={}".format(callset_id,
+                                                        call_id, str(e)))
+
     finally:
         debug_pid.write("generic handler finally\n")
 
@@ -344,16 +342,17 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
 
     if platform.node() != 'c65':
-        
+
         instance = get_my_ec2_instance(aws_region)
         ec2_metadata = get_my_ec2_meta(instance)
         server_name = ec2_metadata['Name']
         log_stream_prefix = ec2_metadata['instance_id']
     else:
-        server_name='c65'
-        log_stream_prefix='millennium-c65'
+        server_name = 'c65'
+        log_stream_prefix = 'millennium-c65'
 
-    log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+    log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
+                     .format(server_name)
 
     formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
 
@@ -377,7 +376,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name,
                   max_run_time, os.path.abspath(run_dir),
-                  server_name, log_stream_prefix,
+                  #server_name, log_stream_prefix,
                   max_idle_time,
                   idle_terminate_granularity,
                   queue_receive_message_timeout)
