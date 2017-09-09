@@ -97,11 +97,6 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                     Key=runtime_s3_key)
 
-    os.makedirs(runtime_etag_dir)
-
-    res = s3_client.get_object(Bucket=runtime_s3_bucket,
-                               Key=runtime_s3_key)
-
     try:
 
         condatar = tarfile.open(
