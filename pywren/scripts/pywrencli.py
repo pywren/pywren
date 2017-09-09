@@ -443,8 +443,8 @@ def log_url(ctx):
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
-def standalone_launch_instances(ctx, number, max_idle_time,
-                                idle_terminate_granularity,
+def standalone_launch_instances(ctx, number, max_idle_time, spot_price,
+                                idle_terminate_granularity, parallelism,
                                 pywren_git_branch, pywren_git_commit):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
