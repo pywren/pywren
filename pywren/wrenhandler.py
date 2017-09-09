@@ -217,8 +217,6 @@ def generic_handler(event, context_dict):
         while data_key_size is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
             data_key_size = get_key_size(s3_client, s3_bucket, data_key)
-        if not event['use_cached_runtime']:
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
         func_key_size = get_key_size(s3_client, s3_bucket, func_key)
         free_disk_bytes = free_disk_space("/tmp")
         if (func_key_size + data_key_size) > (free_disk_bytes - TMP_MIN_FREE_SPACE_BYTES):
