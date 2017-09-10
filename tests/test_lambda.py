@@ -96,12 +96,9 @@ def test_too_big_runtime():
         f.result()
 
 @lamb   
-def test_too_big_args():
+def test_big_args():
     """
-    This is a test where the data is too large
-    to fit on the temporary space on the lambdas. 
-    Again, somewhat brittle, lambda specific, and will
-    break when they change the available /tmp space limits. 
+    This is a test to see if we can upload large args
 
     Note this test takes a long time because of the large amount of
     data that must be uploaded. 
@@ -113,20 +110,18 @@ def test_too_big_args():
 
     data = "0"*(DATA_MB*1000000)
 
+    ## data argument large
     def simple_foo(x):
         return 1.0
     
-    
     f = wrenexec.call_async(simple_foo, data)
-    with pytest.raises(Exception) as excinfo:
-        f.result()
-    assert excinfo.value.args[1] == 'ARGS_TOO_BIG'
-
+    assert f.result() == 1.0
+    
+    ## func large
     def simple_foo_2(x):
         #capture data in the closure
         return len(data)
 
     f = wrenexec.call_async(simple_foo_2, None)
-    with pytest.raises(Exception) as excinfo:
-        f.result()
-    assert excinfo.value.args[1] == 'ARGS_TOO_BIG'
+    assert f.result() == len(data)
+    

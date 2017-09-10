@@ -29,6 +29,18 @@ class SimpleAsync(unittest.TestCase):
         res = fut.result() 
         self.assertEqual(res, np.sum(x))
 
+    def test_simple_map(self):
+
+        def plus_one(x):
+            return x + 1
+
+        x = np.arange(4)
+        futures = self.wrenexec.map(plus_one, x)
+        
+        self.wrenexec.invoker.run_jobs()
+        res = pywren.get_all_results(futures)
+        np.testing.assert_array_equal(res, x + 1)
+
     def test_exception(self):
         def throwexcept(x):
             raise Exception("Throw me out!")
