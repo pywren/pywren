@@ -1,3 +1,4 @@
+# pylint: skip-file
 """
 This class is defined to override standard pickle functionality
 
