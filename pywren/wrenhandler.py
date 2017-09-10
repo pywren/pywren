@@ -208,9 +208,6 @@ def generic_handler(event, context_dict):
 
         free_disk_bytes = free_disk_space("/tmp")
         response_status['free_disk_bytes'] = free_disk_bytes
-        # clean up for modules
-        shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
-        os.mkdir(PYTHON_MODULE_PATH)
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
