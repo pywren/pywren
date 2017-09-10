@@ -221,7 +221,7 @@ def generic_handler(event, context_dict):
         jobrunner_path = os.path.join(cwd, "jobrunner.py")
 
         extra_env = event.get('extra_env', {})
-        extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
+        extra_env['PYTHONPATH'] = "{}".format(os.getcwd())
 
         call_id = event['call_id']
         callset_id = event['callset_id']

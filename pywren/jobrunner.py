@@ -6,7 +6,6 @@ import json
 import sys
 import boto3
 
-
 from six.moves import cPickle as pickle
 from tblib import pickling_support
 
@@ -48,9 +47,10 @@ try:
 
     # save modules, before we unpickle actual function
     PYTHON_MODULE_PATH = jobrunner_config['python_module_path']
-    # clean up for modules
+
     shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
     os.mkdir(PYTHON_MODULE_PATH)
+    sys.path.append(PYTHON_MODULE_PATH)
 
     for m_filename, m_data in loaded_func_all['module_data'].items():
         m_path = os.path.dirname(m_filename)
