@@ -50,6 +50,7 @@ stats_fid = open(jobrunner_stats_filename, 'w')
 
 def write_stat(stat, val):
     stats_fid.write("{} {:f}\n".format(stat, val))
+    stats_fid.flush()
 
 try:
     func_download_time_t1 = time.time()
