@@ -37,7 +37,7 @@ def lambda_executor(config=None, job_max_runtime=280):
     return Executor(invoker, config, job_max_runtime)
 
 
-def dummy_executor(config=None, job_max_runtime=100):
+def dummy_executor(config=None, job_max_runtime=300):
     if config is None:
         config = wrenconfig.default()
 
