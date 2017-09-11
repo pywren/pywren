@@ -10,7 +10,7 @@ fi
 n=0
 until [ $n -ge 5 ]
 do
-    aws iam get-instance-profile --instance-profile-name pywren_travis_$BUILD_GUID && break  # substitute your command here
+    aws iam get-instance-profile --instance-profile-name pywren_travis_$BUILD_GUID > /dev/null && break
     echo "instance profile was not available, retrying"
     n=$[$n+1]
     sleep 10
