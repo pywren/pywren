@@ -28,6 +28,7 @@ PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
+JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner.stats.txt"
 
 logger = logging.getLogger(__name__)
 
@@ -240,10 +241,14 @@ def generic_handler(event, context_dict):
                             'data_byte_range' : data_byte_range,
                             'python_module_path' : PYTHON_MODULE_PATH,
                             'output_bucket' : s3_bucket,
-                            'output_key' : output_key}
+                            'output_key' : output_key,
+                            'stats_filename' : JOBRUNNER_STATS_FILENAME}
 
         with open(JOBRUNNER_CONFIG_FILENAME, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)
+
+        if os.path.exists(JOBRUNNER_STATS_FILENAME):
+            os.remove(JOBRUNNER_STATS_FILENAME)
 
         cmdstr = "{} {} {}".format(CONDA_PYTHON_RUNTIME,
                                    jobrunner_path,
@@ -296,6 +301,13 @@ def generic_handler(event, context_dict):
 
         logger.info("command execution finished")
 
+        if os.path.exists(JOBRUNNER_STATS_FILENAME):
+            with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
+                for l in fid.readlines():
+                    key, value = l.strip().split(" ")
+                    float_value = float(value)
+                    response_status[key] = float_value
+
         end_time = time.time()
 
         response_status['stdout'] = stdout.decode("ascii")
@@ -317,15 +329,3 @@ def generic_handler(event, context_dict):
         # creating new client in case the client has not been created
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                       Body=json.dumps(response_status))
-
-
-if __name__ == "__main__":
-    s3 = boto3.resource('s3')
-    # s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz',
-    #                              '/tmp/condaruntime.tar.gz')
-    s3_res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
-
-    condatar_test = tarfile.open(
-        mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(s3_res['Body'], s3_res['ContentLength']))
-    condatar_test.extractall('/tmp/test1/')
