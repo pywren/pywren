@@ -16,6 +16,7 @@ import unittest
 import numpy as np
 from flaky import flaky
 import sys
+import os
 
 
 lamb = pytest.mark.skipif(
@@ -124,4 +125,19 @@ def test_big_args():
 
     f = wrenexec.call_async(simple_foo_2, None)
     assert f.result() == len(data)
-    
+
+@lamb
+def test_lambda_env_vars():
+    """
+    Test if we are setting the environment variables 
+    we expect 
+    """
+    def get_env(_):
+        return dict(os.environ)
+
+    wrenexec = pywren.default_executor()
+    fut = wrenexec.call_async(get_env, None)
+
+    res = fut.result() 
+    assert res["OMP_NUM_THREADS"] == "1"
+

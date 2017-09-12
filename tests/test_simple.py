@@ -329,3 +329,21 @@ class Limits(unittest.TestCase):
             
             futures = wrenexec.map(plus_one, x )           
 
+
+class EnvVars(unittest.TestCase):
+    """
+    Can we set the environment vars to map?
+    """
+    def test_env(self):
+
+        def get_env(_):
+            return dict(os.environ)
+
+        wrenexec = pywren.default_executor()
+        extra_env = {"HELLO" : "WORLD"}
+        fut = wrenexec.call_async(get_env, None,
+                                  extra_env=extra_env)
+
+        res = fut.result()
+        assert "HELLO" in res.keys()
+        assert res["HELLO"] == "WORLD"

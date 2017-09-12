@@ -136,7 +136,10 @@ def aws_lambda_handler(event, context):
         'log_group_name' : context.log_group_name,
         'log_stream_name' : context.log_stream_name,
     }
-    return generic_handler(event, context_dict)
+    # MKL does not currently play nicely with
+    # containers in determining correct # of processors
+    custom_handler_env = {'OMP_NUM_THREADS' : '1'}
+    return generic_handler(event, context_dict, custom_handler_env)
 
 def get_server_info():
 
@@ -150,10 +153,15 @@ def get_server_info():
 
     return server_info
 
-def generic_handler(event, context_dict):
+def generic_handler(event, context_dict, custom_handler_env=None):
     """
+    event is from the invoker, and contains job information
+
     context_dict is generic infromation about the context
     that we are running in, provided by the scheduler
+
+    custom_handler_env are environment variables we should set
+    based on the platform we are on.
     """
 
     response_status = {'exception': None}
@@ -258,8 +266,9 @@ def generic_handler(event, context_dict):
         response_status['setup_time'] = setup_time - start_time
 
         local_env = os.environ.copy()
+        if custom_handler_env is not None:
+            local_env.update(custom_handler_env)
 
-        local_env["OMP_NUM_THREADS"] = "1"
         local_env.update(extra_env)
 
         local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
