@@ -18,11 +18,20 @@ from __future__ import absolute_import
 
 import json
 import os
+<<<<<<< HEAD
 import threading
 
+=======
+import sys
+import threading
+>>>>>>> create local invocation
 import botocore
 import botocore.session
 from pywren import local
+from six.moves import queue
+
+
+
 
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -106,3 +115,39 @@ class DummyInvoker(object):
         self.thread = threading.Thread(target=self.run_jobs,
                                        args=(MAXJOBS, run_dir))
         self.thread.start()
+
+class LocalInvoker(object):
+    """
+    An invoker which spawns a thread that then waits for jobs on a queue
+    """
+
+    def __init__(self, run_dir="/tmp/task"):
+
+
+        if not sys.platform.startswith('linux'):
+            raise RuntimeError("LocalInvoker can only be run under linux")
+
+        self.queue = queue.Queue()
+        self.thread = threading.Thread(target=self._thread_runner)
+        self.thread.start()
+        self.run_dir = run_dir
+
+    def _thread_runner(self):
+        BLOCK_SEC_MAX = 10
+        while True:
+            try:
+                res = self.queue.get(True, BLOCK_SEC_MAX)
+                jobs = [res]
+
+                local.local_handler(jobs, self.run_dir,
+                                    {'invoker' : 'LocalInvoker'})
+                self.queue.task_done()
+
+            except queue.Empty:
+                pass
+
+    def invoke(self, payload):
+        self.queue.put(payload)
+
+    def config(self): # pylint: disable=no-self-use
+        return {}
