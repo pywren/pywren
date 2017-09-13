@@ -55,18 +55,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
     ec2 = boto3.resource('ec2', region_name=aws_region)
     ec2_client = boto3.client('ec2', region_name=aws_region)
 
-    BlockDeviceMappings=[
-        {
-            'DeviceName': '/dev/xvda',
-            'Ebs': {
-                'VolumeSize': default_volume_size,
-                'DeleteOnTermination': True,
-                'VolumeType': 'standard',
-                'SnapshotId' : 'snap-c87f35ec'
-            },
-        ]
-    else:
-        BlockDeviceMappings = None
+    BlockDeviceMappings = None
     template_file = sd('ec2standalone.cloudinit.template')
 
     user_data_template = open(template_file, 'r').read()
