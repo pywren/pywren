@@ -25,6 +25,7 @@ from glob2 import glob
 
 import pywren
 from pywren import wrenhandler
+import random
 
 logger = logging.getLogger(__name__)
 
