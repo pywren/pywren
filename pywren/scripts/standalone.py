@@ -34,7 +34,7 @@ import random
 logger = logging.getLogger(__name__)
 
 
-SQS_VISIBILITY_INCREMENT_SEC = 10
+SQS_VISIBILITY_SEC = 10
 RANDOM_CLOUDWATCH_SLEEP_SEC= 120
 PROCESS_SLEEP_DUR_SEC = 2
 AWS_REGION_DEBUG = 'us-west-2'
