@@ -475,7 +475,8 @@ def standalone_launch_instances(ctx, number, max_idle_time, spot_price,
 
     print("launched master:")
     ec2standalone.prettyprint_instances(master_inst_list)
-
+    use_fast_io = sc.get("fast_io", False)
+    availability_zone = sc.get("availability_zone", None)
     inst_list = ec2standalone.launch_instances(number,
                                                sc['target_ami'], aws_region,
                                                sc['ec2_ssh_key'],

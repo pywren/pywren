@@ -306,7 +306,7 @@ def generic_handler(event, context_dict):
 
         local_env = os.environ.copy()
 
-        local_env["OMP_NUM_THREADS"] = "1"
+        #local_env["OMP_NUM_THREADS"] = "1"
         local_env.update(extra_env)
 
         local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
