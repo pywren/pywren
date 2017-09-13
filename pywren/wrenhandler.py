@@ -378,9 +378,9 @@ def generic_handler(event, context_dict):
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                   Body=json.dumps(response_status))
         shutil.rmtree(PYTHON_MODULE_PATH.format(pid), True) # delete modules
-        os.remove(func_filename)
-        os.remove(data_filename)
-        os.remove(output_filename)
+        #os.remove(func_filename)
+        #os.remove(data_filename)
+        #os.remove(output_filename)
 
 if __name__ == "__main__":
     s3 = boto3.resource('s3')
