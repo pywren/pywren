@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 
 SQS_VISIBILITY_INCREMENT_SEC = 10
+RANDOM_CLOUDWATCH_SLEEP_SEC= 120
 PROCESS_SLEEP_DUR_SEC = 2
 AWS_REGION_DEBUG = 'us-west-2'
 QUEUE_SLEEP_DUR_SEC = 2
@@ -226,22 +227,22 @@ def job_handler(job, job_i, run_dir, aws_region,
     session = boto3.session.Session(region_name=aws_region)
     # we do this here instead of in the global context
     # because of how multiprocessing works
-    handler = watchtower.CloudWatchLogHandler(send_interval=20,
-                                              log_group="pywren.standalone",
-                                              stream_name=log_stream_prefix + "-{logger_name}",
-                                              boto3_session=session,
-                                              max_batch_count=10)
-    log_format_str = '{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
-
-    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
-    handler.setFormatter(formatter)
-
-
-    wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
-    wren_log.setLevel(logging.DEBUG)
-    wren_log.propagate = 0
-    wren_log.addHandler(handler)
-
+#    handler = watchtower.CloudWatchLogHandler(send_interval=20,
+#                                              log_group="pywren.standalone",
+#                                              stream_name=log_stream_prefix + "-{logger_name}",
+#                                              boto3_session=session,
+#                                              max_batch_count=10)
+#    log_format_str = '{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
+#
+#    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+#    handler.setFormatter(formatter)
+#
+#
+#    wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
+#    wren_log.setLevel(logging.DEBUG)
+#    wren_log.propagate = 0
+#    wren_log.addHandler(handler)
+#
     original_dir = os.getcwd()
 
 
@@ -285,6 +286,8 @@ def job_handler(job, job_i, run_dir, aws_region,
 def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
            idle_terminate_granularity, queue_receive_message_timeout):
 
+    rand_sleep = int(random.random() * RANDOM_CLOUDWATCH_SLEEP_SEC)
+    time.sleep(rand_sleep)
     session = boto3.session.Session(region_name=aws_region)
 
     # make boto quiet locally FIXME is there a better way of doing this?
