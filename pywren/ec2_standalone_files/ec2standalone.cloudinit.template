@@ -1,15 +1,15 @@
 #cloud-config
-#repo_update: true
-#repo_upgrade: all
-    
+repo_update: true
+repo_upgrade: all
+
 packages:
   - tmux
   - emacs
   - gcc
   - g++
-  - git 
+  - git
   - htop
-  
+
 runcmd:
   # first and always, cloudwatch agent
   - [ curl,  "https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py", "-O"]
@@ -27,7 +27,7 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren checkout {git_checkout_string}"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "sudo yum install -y cmake gcc-c++ boost-devel"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "sudo yum install -y cmake gcc-c++ boost-devel tbb tbb-devel"]
   - [ sudo, -Hu, ec2-user, sh, -c, "sudo pip install boto3"]
   - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pxgao/ucache.git /home/ec2-user/ucache"]
   - [ sudo, -Hu, ec2-user, sh, -c, "cd /home/ec2-user/ucache; cmake .; make; cmake .;make"]
