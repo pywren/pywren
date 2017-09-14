@@ -347,3 +347,34 @@ class EnvVars(unittest.TestCase):
         res = fut.result()
         assert "HELLO" in res.keys()
         assert res["HELLO"] == "WORLD"
+
+class Futures(unittest.TestCase):
+
+    def setUp(self):
+        self.wrenexec = pywren.default_executor()
+
+    def test_status(self):
+
+        def sum_list(x):
+            return np.sum(x)
+
+        def sum_error(_):
+            raise Exception("whaaaa")
+
+        x = np.arange(10)
+        fut = self.wrenexec.call_async(sum_list, x)
+        assert not fut.succeeded()
+        assert not fut.errored()
+        res = fut.result()
+        self.assertEqual(res, np.sum(x))
+        assert fut.succeeded()
+        assert not fut.errored()
+
+
+        fut = self.wrenexec.call_async(sum_error, x)
+        assert not fut.succeeded()
+        assert not fut.errored()
+        with pytest.raises(Exception):
+            _ = fut.result()
+        assert not fut.succeeded()
+        assert fut.errored()

@@ -73,6 +73,12 @@ class ResponseFuture(object):
             return False
         return True
 
+    def succeeded(self):
+        return self._state == JobState.success
+
+    def errored(self):
+        return self._state == JobState.error
+
     def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
 
