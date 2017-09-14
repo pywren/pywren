@@ -10,7 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
-import platform
+import random
 
 from threading import Thread
 
@@ -33,9 +33,9 @@ from pywren import wrenhandler
 logger = logging.getLogger(__name__)
 
 # Creating cloudwatch logstreams is rate-limited so we have
-# to jitter the startup a bit so we dont' hammer the 
-# cloudwatch endpoint when starting > 200 instances. 
-STARTUP_JITTER_SEC= 60
+# to jitter the startup a bit so we dont' hammer the
+# cloudwatch endpoint when starting > 200 instances.
+STARTUP_JITTER_SEC = 60
 
 
 SQS_VISIBILITY_SEC = 10
@@ -56,16 +56,6 @@ def get_my_ec2_instance(aws_region):
 
     for instance in instances:
         return instance
-
-# def get_my_ec2_uptime():
-#     instance = get_my_ec2_instance()
-
-#     launch_time = instance.launch_time
-#     time_delta =  datetime.datetime.now(launch_time.tzinfo) - launch_time
-#     print launch_time, time_delta
-#     #hour_frac = (time_delta.total_seconds() % 3600) / 3600
-
-#     return time_delta.total_seconds()
 
 def tags_to_dict(d):
     if d is None:
@@ -232,10 +222,6 @@ def process_message(m, local_message_i, max_run_time, run_dir):
 
         run_time = time.time() - start_time
 
-    # if p.exitcode is None:
-    #     logger.warn("{} - attempting to manuall terminate process ".format(message_id))
-    #     p.terminate()  # FIXME PRINT LOTS OF ERRORS HERE # FIXME does not work with thread
-    #     logger.warn("{} - Had to manually terminate process ".format(message_id))
     logger.info("deleting message_id={} "
                 "callset_id={} call_id={}".format(m.message_id, callset_id, call_id))
 
@@ -262,25 +248,6 @@ def job_handler(event, job_i, run_dir,
     call_id = event['call_id']
     callset_id = event['callset_id']
     logger.info("jobhandler_thread callset_id={} call_id={}".format(callset_id, call_id))
-
-    #session = boto3.session.Session(region_name=aws_region)
-    # we do this here instead of in the global context
-    # because of how multiprocessing works
-    # handler = watchtower.CloudWatchLogHandler(send_interval=20,
-    #                                           log_group="pywren.standalone",
-    #                                           stream_name=log_stream_prefix + "-{logger_name}",
-    #                                           boto3_session=session,
-    #                                           max_batch_count=10)
-    # log_format_str ='{} %(asctime)s - %(name)s - %(levelname)s - %(message)s'.format(server_name)
-
-    # formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
-    # handler.setFormatter(formatter)
-
-
-    # wren_log = pywren.wrenhandler.logger # logging.getLogger('pywren.wrenhandler')
-    # wren_log.setLevel(logging.DEBUG)
-    # wren_log.propagate = 0
-    # wren_log.addHandler(handler)
 
     original_dir = os.getcwd()
 
@@ -350,13 +317,13 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
 
-    # NOTE : This assumes EC2 but in the future we could run on 
+    # NOTE : This assumes EC2 but in the future we could run on
     # millennium if we set the log stream correctly
     instance = get_my_ec2_instance(aws_region)
     ec2_metadata = get_my_ec2_meta(instance)
     server_name = ec2_metadata['Name']
     log_stream_prefix = ec2_metadata['instance_id']
-    
+
     log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
                      .format(server_name)
 
