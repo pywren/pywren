@@ -84,7 +84,15 @@ class DummyInvoker(object):
 
 class LocalInvoker(object):
     """
-    An invoker which spawns a thread that then waits for jobs on a queue
+    An invoker which spawns a thread that then waits 
+    for jobs on a queue. This is a more self-contained invoker in that
+    it doesn't require the run_jobs() of the dummy invoker, but also
+    needs to be explictly shut down due to python threading semantics. 
+
+    
+
+    Note this invoker must be created independently and passed in
+    
     """
 
     def __init__(self, run_dir="/tmp/task"):
@@ -97,9 +105,14 @@ class LocalInvoker(object):
 
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._thread_runner)
-        self.thread.start()
         self.run_dir = run_dir
 
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.quit()
 
     def quit(self):
         self.running = False
