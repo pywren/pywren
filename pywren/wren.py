@@ -82,11 +82,15 @@ def remote_executor(config=None, job_max_runtime=3600):
 
     return Executor(invoker, config, job_max_runtime)
 
-def local_executor(config=None, job_max_runtime=300):
+def local_executor(invoker_object=None, 
+                   config=None, job_max_runtime=300):
     if config is None:
         config = wrenconfig.default()
-    run_dir = config.get("local_run_dir", "/tmp/task")
-    invoker = invokers.LocalInvoker(run_dir=run_dir)
+    if invoker_object is None:
+        run_dir = config.get("local_run_dir", "/tmp/task")
+        invoker = invokers.LocalInvoker(run_dir=run_dir)
+    else:
+        invoker = invoker_object
     return Executor(invoker, config, job_max_runtime)
 
 standalone_executor = remote_executor
