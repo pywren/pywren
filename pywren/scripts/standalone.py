@@ -32,6 +32,11 @@ from pywren import wrenhandler
 
 logger = logging.getLogger(__name__)
 
+# Creating cloudwatch logstreams is rate-limited so we have
+# to jitter the startup a bit so we dont' hammer the 
+# cloudwatch endpoint when starting > 200 instances. 
+STARTUP_JITTER_SEC= 60
+
 
 SQS_VISIBILITY_SEC = 10
 PROCESS_SLEEP_DUR_SEC = 2
@@ -333,6 +338,10 @@ def job_handler(event, job_i, run_dir,
 def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
            idle_terminate_granularity, queue_receive_message_timeout):
 
+
+    rand_sleep = random.random() * STARTUP_JITTER_SEC
+    time.sleep(rand_sleep)
+
     session = boto3.session.Session(region_name=aws_region)
 
     # make boto quiet locally FIXME is there a better way of doing this?
@@ -341,16 +350,13 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
 
-    if platform.node() != 'c65':
-
-        instance = get_my_ec2_instance(aws_region)
-        ec2_metadata = get_my_ec2_meta(instance)
-        server_name = ec2_metadata['Name']
-        log_stream_prefix = ec2_metadata['instance_id']
-    else:
-        server_name = 'c65'
-        log_stream_prefix = 'millennium-c65'
-
+    # NOTE : This assumes EC2 but in the future we could run on 
+    # millennium if we set the log stream correctly
+    instance = get_my_ec2_instance(aws_region)
+    ec2_metadata = get_my_ec2_meta(instance)
+    server_name = ec2_metadata['Name']
+    log_stream_prefix = ec2_metadata['instance_id']
+    
     log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
                      .format(server_name)
 
