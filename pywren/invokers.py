@@ -127,14 +127,21 @@ class LocalInvoker(object):
         if not sys.platform.startswith('linux'):
             raise RuntimeError("LocalInvoker can only be run under linux")
 
+        self.running = True
+
         self.queue = queue.Queue()
         self.thread = threading.Thread(target=self._thread_runner)
         self.thread.start()
         self.run_dir = run_dir
 
+
+    def quit(self):
+        self.running = False
+        self.thread.join()
+
     def _thread_runner(self):
         BLOCK_SEC_MAX = 10
-        while True:
+        while self.running:
             try:
                 res = self.queue.get(True, BLOCK_SEC_MAX)
                 jobs = [res]
