@@ -14,7 +14,7 @@ import tarfile
 import time
 import traceback
 from threading import Thread
-from urllib.request import urlopen
+from urllib2 import urlopen
 
 import boto3
 import botocore
