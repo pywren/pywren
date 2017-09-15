@@ -69,9 +69,7 @@ class ResponseFuture(object):
     def done(self):
         if self._state in [JobState.success, JobState.error]:
             return True
-        if self.result(check_only=True) is None:
-            return False
-        return True
+        return self.result(check_only=True)
 
     def succeeded(self):
         return self._state == JobState.success
@@ -82,6 +80,10 @@ class ResponseFuture(object):
     def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
 
+        check_only = True implies we only check if the job is completed. 
+
+        # FIXME check_only is the worst API and should be refactored
+        # out to be part of done()
 
         From the python docs:
 
@@ -126,7 +128,9 @@ class ResponseFuture(object):
 
         if check_only is True:
             if call_status is None:
-                return None
+                return False
+            else:
+                return True
 
         while call_status is None:
             time.sleep(self.GET_RESULT_SLEEP_SECS)
@@ -160,7 +164,9 @@ class ResponseFuture(object):
                         logger.error(call_status['exception_traceback'])
                     raise Exception(exception_str, *exception_args)
                 return None
+            
 
+        # FIXME this shouldn't be called if check_only is True
         call_output_time = time.time()
         call_invoker_result = pickle.loads(storage_handler.get_call_output(
             self.callset_id, self.call_id))
@@ -178,7 +184,7 @@ class ResponseFuture(object):
 
         self._call_invoker_result = call_invoker_result
 
-
+        
 
         if call_success:
 
