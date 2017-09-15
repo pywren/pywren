@@ -80,7 +80,7 @@ class ResponseFuture(object):
     def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
 
-        check_only = True implies we only check if the job is completed. 
+        check_only = True implies we only check if the job is completed.
 
         # FIXME check_only is the worst API and should be refactored
         # out to be part of done()
@@ -101,6 +101,10 @@ class ResponseFuture(object):
         """
         if self._state == JobState.new:
             raise ValueError("job not yet invoked")
+
+        if check_only:
+            if self._state == JobState.success or self._state == JobState.error:
+                return True
 
         if self._state == JobState.success:
             return self._return_val
@@ -126,7 +130,7 @@ class ResponseFuture(object):
         if timeout is not None:
             raise NotImplementedError()
 
-        if check_only is True:
+        if check_only:
             if call_status is None:
                 return False
             else:
@@ -164,7 +168,6 @@ class ResponseFuture(object):
                         logger.error(call_status['exception_traceback'])
                     raise Exception(exception_str, *exception_args)
                 return None
-            
 
         # FIXME this shouldn't be called if check_only is True
         call_output_time = time.time()
@@ -184,36 +187,34 @@ class ResponseFuture(object):
 
         self._call_invoker_result = call_invoker_result
 
-        
-
         if call_success:
 
             self._return_val = call_invoker_result['result']
             self._set_state(JobState.success)
             return self._return_val
-
-        elif throw_except:
-
-            self._exception = call_invoker_result['result']
-            self._traceback = (call_invoker_result['exc_type'],
-                               call_invoker_result['exc_value'],
-                               call_invoker_result['exc_traceback'])
-
-            self._state = JobState.error
-            if call_invoker_result.get('pickle_fail', False):
-                logging.warning(
-                    "there was an error pickling. The original exception: " + \
-                        "{}\nThe pickling exception: {}".format(
-                            call_invoker_result['exc_value'],
-                            str(call_invoker_result['pickle_exception'])))
-
-                reraise(Exception, call_invoker_result['exc_value'],
-                        call_invoker_result['exc_traceback'])
-            else:
-                # reraise the exception
-                reraise(*self._traceback)
         else:
-            return None  # nothing, don't raise, no value
+            self._set_state(JobState.error)
+            if throw_except:
+
+                self._exception = call_invoker_result['result']
+                self._traceback = (call_invoker_result['exc_type'],
+                                   call_invoker_result['exc_value'],
+                                   call_invoker_result['exc_traceback'])
+
+                if call_invoker_result.get('pickle_fail', False):
+                    logging.warning(
+                        "there was an error pickling. The original exception: " + \
+                            "{}\nThe pickling exception: {}".format(
+                                call_invoker_result['exc_value'],
+                                str(call_invoker_result['pickle_exception'])))
+
+                    reraise(Exception, call_invoker_result['exc_value'],
+                            call_invoker_result['exc_traceback'])
+                else:
+                    # reraise the exception
+                    reraise(*self._traceback)
+            else:
+                return None  # nothing, don't raise, no value
 
     def exception(self, timeout=None):
         raise NotImplementedError()
