@@ -1,19 +1,20 @@
 import base64
+import base64
+import fcntl
 import json
 import logging
 import os
+import random
 import shutil
 import signal
 import subprocess
 import sys
-import base64
-import random
-import fcntl
 
 import tarfile
 import time
 import traceback
 from threading import Thread
+from urllib.request import urlopen
 
 import boto3
 import botocore
@@ -38,6 +39,18 @@ PROCESS_STDOUT_SLEEP_SECS = 2
 
 # Make sure we have at least 10 MB
 TMP_MIN_FREE_SPACE_BYTES = 10000000
+
+INSTANCE_ID_URL = "http://169.254.169.254/latest/meta-data/instance-id"
+def get_my_ec2_instance_id(aws_region="us-west-2"):
+
+    try:
+        ec2 = boto3.resource('ec2', region_name=aws_region)
+
+        instance_id = urlopen(INSTANCE_ID_URL).read()
+        return instance_id.decode('utf-8')
+    except:
+        return ""
+
 
 def get_key_size(s3client, bucket, key):
     try:
@@ -291,6 +304,7 @@ def generic_handler(event, context_dict):
         callset_id = event['callset_id']
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
+        response_status['instance_id'] = get_my_ec2_instance_id()
 
         CONDA_PYTHON_PATH = CONDA_RUNTIME_DIR + "/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
@@ -355,7 +369,6 @@ def generic_handler(event, context_dict):
         end_time = time.time()
 
         response_status['stdout'] = stdout.decode("ascii")
-
 
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
