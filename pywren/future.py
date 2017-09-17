@@ -194,12 +194,12 @@ class ResponseFuture(object):
             return self._return_val
         else:
             self._set_state(JobState.error)
-            if throw_except:
+            self._exception = call_invoker_result['result']
+            self._traceback = (call_invoker_result['exc_type'],
+                               call_invoker_result['exc_value'],
+                               call_invoker_result['exc_traceback'])
 
-                self._exception = call_invoker_result['result']
-                self._traceback = (call_invoker_result['exc_type'],
-                                   call_invoker_result['exc_value'],
-                                   call_invoker_result['exc_traceback'])
+            if throw_except:
 
                 if call_invoker_result.get('pickle_fail', False):
                     logging.warning(
