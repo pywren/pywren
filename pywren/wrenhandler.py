@@ -230,7 +230,7 @@ def generic_handler(event, context_dict):
         response_status['status_key'] = status_key
 
         data_key_size = get_key_size(s3_client, s3_bucket, data_key)
-        logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", data_key_size, "bytes" )
+        logger.info("bucket=" + str(s3_bucket) +  "key=" + str(data_key) +   " status: " + str(data_key_size) +  " bytes" )
         while data_key_size is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
             data_key_size = get_key_size(s3_client, s3_bucket, data_key)
