@@ -402,7 +402,6 @@ def generic_handler(event, context_dict):
         shutil.rmtree(PYTHON_MODULE_PATH.format(pid), True) # delete modules
         os.remove(func_filename)
         os.remove(data_filename)
-        os.remove(output_filename)
 
 if __name__ == "__main__":
     s3 = boto3.resource('s3')
