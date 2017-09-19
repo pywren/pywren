@@ -358,6 +358,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
     wren_log = pywren.wrenhandler.logger
     wren_log.addHandler(handler)
+    wren_log.setLevel(logging.DEBUG)
 
     wren_log.addHandler(debug_stream_handler)
 

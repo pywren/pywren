@@ -39,6 +39,7 @@ CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
