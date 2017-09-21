@@ -35,6 +35,7 @@ try:
                  'success' : True,
                  'sys.path' : sys.path},
                 open(out_filename, 'wb'), -1)
+    sys.exit(0)
 
 
 except Exception as e:
@@ -58,6 +59,7 @@ except Exception as e:
 
         # this is just to make sure they can be unpickled
         pickle.load(open(out_filename, 'rb'))
+        sys.exit(1)
 
     except Exception as pickle_exception:
         pickle.dump({'result' : str(e),
@@ -70,3 +72,4 @@ except Exception as e:
                      'pickle_exception' : pickle_exception,
                      'success' : False},
                     open(out_filename, 'wb'), -1)
+        sys.exit(1)
