@@ -71,7 +71,8 @@ class S3Backend(object):
 
         key_list = []
         for page in page_iterator:
-            for item in page['Contents']:
-                key_list.append(item['Key'])
+            if 'Contents' in page:
+                for item in page['Contents']:
+                    key_list.append(item['Key'])
 
         return key_list
