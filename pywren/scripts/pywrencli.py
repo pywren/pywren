@@ -336,12 +336,11 @@ def create_queue(ctx):
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
-    config = pywren.wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
     sqs = boto3.resource('sqs', region_name=AWS_REGION)
-
+    print("creating queue {}".format(SQS_QUEUE_NAME))
     sqs.create_queue(QueueName=SQS_QUEUE_NAME,
                      Attributes={'VisibilityTimeout' : "20"})
 
