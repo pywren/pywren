@@ -176,3 +176,10 @@ fi
 This will run pylint on all files staged before the commit, and will error
 if they fail. It's better to find out now than at travis check time. 
 
+## debugging module import errors
+To debug module import errors use:
+```
+dep_log = logging.getLogger('multyvac.dependency-analyzer')
+dep_log.setLevel('DEBUG')
+```
+

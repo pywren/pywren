@@ -2,10 +2,15 @@ from __future__ import absolute_import
 
 import json
 import os
-
+import sys
+import threading
 import botocore
 import botocore.session
 from pywren import local
+from six.moves import queue
+
+
+
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -76,3 +81,59 @@ class DummyInvoker(object):
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
+
+class LocalInvoker(object):
+    """
+    An invoker which spawns a thread that then waits 
+    for jobs on a queue. This is a more self-contained invoker in that
+    it doesn't require the run_jobs() of the dummy invoker, but also
+    needs to be explictly shut down due to python threading semantics. 
+
+    
+
+    Note this invoker must be created independently and passed in
+    
+    """
+
+    def __init__(self, run_dir="/tmp/task"):
+
+
+        if not sys.platform.startswith('linux'):
+            raise RuntimeError("LocalInvoker can only be run under linux")
+
+        self.running = True
+
+        self.queue = queue.Queue()
+        self.thread = threading.Thread(target=self._thread_runner)
+        self.run_dir = run_dir
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.quit()
+
+    def quit(self):
+        self.running = False
+        self.thread.join()
+
+    def _thread_runner(self):
+        BLOCK_SEC_MAX = 10
+        while self.running:
+            try:
+                res = self.queue.get(True, BLOCK_SEC_MAX)
+                jobs = [res]
+
+                local.local_handler(jobs, self.run_dir,
+                                    {'invoker' : 'LocalInvoker'})
+                self.queue.task_done()
+
+            except queue.Empty:
+                pass
+
+    def invoke(self, payload):
+        self.queue.put(payload)
+
+    def config(self): # pylint: disable=no-self-use
+        return {}
