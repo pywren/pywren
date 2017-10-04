@@ -172,5 +172,12 @@ more_permissions_policy = {
                 "arn:aws:logs:AWS_REGION:AWS_ACCOUNT_ID:log-group:*:*"
             ],
             "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
         }
     ]}

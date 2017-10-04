@@ -10,6 +10,7 @@ import tarfile
 import time
 import traceback
 from threading import Thread
+from multiprocessing.pool import ThreadPool
 
 import boto3
 import botocore
@@ -129,8 +130,24 @@ def b64str_to_bytes(str_data):
     return byte_data
 
 
+def invoke_tasks(function_name, tasks):
+    logger.info("invoking tasks")
+    lambda_client = boto3.client('lambda')
+    pool = ThreadPool(min(64, len(tasks)))
+    def invoke(event):
+        lambda_client.invoke(FunctionName=function_name,
+                             InvocationType='Event',
+                             Payload=event)
+    pool.map(invoke, tasks)
+    pool.close()
+    pool.join()
+
+
 def aws_lambda_handler(event, context):
     logger.setLevel(logging.INFO)
+    if 'task_type' in event and event['task_type'] == 'invoke':
+        return invoke_tasks(event['function_name'], event['tasks'])
+
     context_dict = {
         'aws_request_id' : context.aws_request_id,
         'log_group_name' : context.log_group_name,

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
+import json
 import logging
 import random
 import time
@@ -56,21 +57,21 @@ class Executor(object):
 
         self.storage.put_data(data_key, data_str)
         logger.info("call_async {} {} data upload complete {}".format(callset_id, call_id,
-                                                                      data_key))
 
-    def invoke_with_keys(self, func_key, data_key, output_key,
-                         status_key,
-                         callset_id, call_id, extra_env,
-                         extra_meta, data_byte_range, use_cached_runtime,
-                         host_job_meta, job_max_runtime,
-                         overwrite_invoke_args=None):
+                                                                      data_key))
+    def create_invoke_payload(self, func_key, data_key, output_key,
+                              status_key,
+                              callset_id, call_id, extra_env,
+                              extra_meta, data_byte_range, use_cached_runtime,
+                              job_max_runtime,
+                              overwrite_invoke_args=None):
 
         # Pick a runtime url if we have shards.
         # If not the handler will construct it
         runtime_url = ""
         if ('urls' in self.runtime_meta_info and
                 isinstance(self.runtime_meta_info['urls'], list) and
-                len(self.runtime_meta_info['urls']) >= 1):
+                    len(self.runtime_meta_info['urls']) >= 1):
             num_shards = len(self.runtime_meta_info['urls'])
             logger.debug("Runtime is sharded, choosing from {} copies.".format(num_shards))
             random.seed()
@@ -102,35 +103,77 @@ class Executor(object):
                     raise ValueError("Key {} already in dict".format(k))
                 arg_dict[k] = v
 
-        host_submit_time = time.time()
-        arg_dict['host_submit_time'] = host_submit_time
-
-        logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
-        lambda_invoke_time_start = time.time()
-
         # overwrite explicit args, mostly used for testing via injection
         if overwrite_invoke_args is not None:
             arg_dict.update(overwrite_invoke_args)
 
-        # do the invocation
-        self.invoker.invoke(arg_dict)
+        return arg_dict
+
+    def invoke_via_lambda(self, host_job_meta, payloads):
+        host_submit_time = time.time()
+
+        callset_id = payloads[0]['callset_id']
+        start_call_id = payloads[0]['call_id']
+        end_call_id = payloads[-1]['call_id']
+        logger.info("call_async {} {}-{} invoke (via lambda) "
+                    .format(callset_id, start_call_id, end_call_id))
+        lambda_invoke_time_start = time.time()
+
+        event = {}
+        event['task_type'] = 'invoke'
+        event['function_name'] = self.invoker.config()['lambda_function_name']
+        event['tasks'] = []
+        for p in payloads:
+            p['host_submit_time'] = host_submit_time
+            event['tasks'].append(json.dumps(p))
+        self.invoker.invoke(event)
 
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
 
-
         host_job_meta.update(self.invoker.config())
-
-        logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
-
-
-        host_job_meta.update(arg_dict)
+        logger.info("call_async {} {}-{} invoke complete (via lambda) "
+                    .format(callset_id, start_call_id, end_call_id))
 
         storage_path = storage_utils.get_storage_path(self.storage_config)
-        fut = ResponseFuture(call_id, callset_id, host_job_meta, storage_path)
+
+        futures = []
+        for p in payloads:
+            new_host_job_meta = host_job_meta.copy()
+            new_host_job_meta.update(p)
+            f = ResponseFuture(p['call_id'], p['callset_id'], new_host_job_meta, storage_path)
+            f._set_state(JobState.invoked)
+            futures.append(f)
+        return futures
+
+
+    def invoke_direct(self, host_job_meta, payload):
+        host_submit_time = time.time()
+
+        callset_id = payload['callset_id']
+        call_id = payload['call_id']
+
+        logger.info("call_async {} {} lambda invoke ".format(callset_id, call_id))
+        lambda_invoke_time_start = time.time()
+
+        payload['host_submit_time'] = host_submit_time
+
+        # do the invocation
+        self.invoker.invoke(payload)
+
+        host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
+        host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
+
+        host_job_meta.update(self.invoker.config())
+        logger.info("call_async {} {} lambda invoke complete".format(callset_id, call_id))
+
+        new_host_job_meta = host_job_meta.copy()
+        new_host_job_meta.update(payload)
+
+        storage_path = storage_utils.get_storage_path(self.storage_config)
+        fut = ResponseFuture(call_id, callset_id, new_host_job_meta, storage_path)
 
         fut._set_state(JobState.invoked)
-
         return fut
 
     def call_async(self, func, data, extra_env=None,
@@ -150,7 +193,7 @@ class Executor(object):
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
             use_cached_runtime=True, overwrite_invoke_args=None,
-            exclude_modules=None):
+            exclude_modules=None, fast_invoke_via_lambda=True, fast_invoke_threshold=100):
         """
         # FIXME work with an actual iterable instead of just a list
 
@@ -216,8 +259,9 @@ class Executor(object):
         self.storage.put_func(func_key, func_module_str)
         host_job_meta['func_upload_time'] = time.time() - func_upload_time
         host_job_meta['func_upload_timestamp'] = time.time()
-        def invoke(data_str, callset_id, call_id, func_key,
-                   host_job_meta,
+
+
+        def create_key_and_payload(data_str, callset_id, call_id, func_key,
                    agg_data_key=None, data_byte_range=None):
             data_key, output_key, status_key \
                 = storage_utils.create_keys(self.storage.prefix, callset_id, call_id)
@@ -236,14 +280,16 @@ class Executor(object):
             else:
                 data_key = agg_data_key
 
-            return self.invoke_with_keys(func_key, data_key,
-                                         output_key,
-                                         status_key,
-                                         callset_id, call_id, extra_env,
-                                         extra_meta, data_byte_range,
-                                         use_cached_runtime, host_job_meta.copy(),
-                                         self.job_max_runtime,
-                                         overwrite_invoke_args=overwrite_invoke_args)
+            payload = self.create_invoke_payload(func_key, data_key,
+                                 output_key,
+                                 status_key,
+                                 callset_id, call_id, extra_env,
+                                 extra_meta, data_byte_range,
+                                 use_cached_runtime,
+                                 self.job_max_runtime,
+                                 overwrite_invoke_args=overwrite_invoke_args)
+            payload['task_type'] = 'execution'
+            return payload
 
         N = len(data)
         call_result_objs = []
@@ -254,26 +300,35 @@ class Executor(object):
             if agg_data_key is not None:
                 data_byte_range = agg_data_ranges[i]
 
-            cb = pool.apply_async(invoke, (data_strs[i], callset_id,
+            cb = pool.apply_async(create_key_and_payload, (data_strs[i], callset_id,
                                            call_id, func_key,
-                                           host_job_meta.copy(),
                                            agg_data_key,
                                            data_byte_range))
-
-            logger.info("map {} {} apply async".format(callset_id, call_id))
-
             call_result_objs.append(cb)
 
-        res = [c.get() for c in call_result_objs]
+        payloads = [c.get() for c in call_result_objs]
+
+        call_result_objs = []
+
+        if fast_invoke_via_lambda and len(payloads) >= fast_invoke_threshold:
+            k = int((len(payloads))**(0.5))
+            for i in range(0, len(payloads), k):
+                cb = pool.apply_async(self.invoke_via_lambda, (host_job_meta, payloads[i:i+k]))
+                call_result_objs.append(cb)
+            invoke_res = [c.get() for c in call_result_objs]
+            futures = [f for flist in invoke_res for f in flist]
+        else:
+            for payload in payloads:
+                cb = pool.apply_async(self.invoke_direct, (host_job_meta, payload))
+                call_result_objs.append(cb)
+            futures = [c.get() for c in call_result_objs]
+
         pool.close()
         pool.join()
-        logger.info("map invoked {} {} pool join".format(callset_id, call_id))
-
-        # FIXME take advantage of the callset to return a lot of these
+        # logger.info("map invoked {} {} pool join".format(callset_id, call_id))
 
         # note these are just the invocation futures
-
-        return res
+        return futures
 
     def reduce(self, function, list_of_futures,
                extra_env=None, extra_meta=None):

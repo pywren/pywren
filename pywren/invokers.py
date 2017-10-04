@@ -18,7 +18,7 @@ class LambdaInvoker(object):
         self.region_name = region_name
         self.lambda_function_name = lambda_function_name
         self.lambclient = self.session.create_client('lambda',
-                                                     region_name=region_name)
+                                            region_name=region_name)
         self.TIME_LIMIT = True
 
     def invoke(self, payload):
@@ -30,6 +30,7 @@ class LambdaInvoker(object):
                                InvocationType='Event')
         # FIXME check response
         return {}
+
 
     def config(self):
         """
