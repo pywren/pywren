@@ -6,8 +6,6 @@
 Welcome to pywren documentation!
 ==================================
 
-foo bar bas blah blah blah blah
-
 .. code-block:: python
 
   def my_function(b):
@@ -23,9 +21,5 @@ foo bar bas blah blah blah blah
    :caption: Contents:
    :maxdepth: 1
 
-   getting-started.rst
    pywren.rst
-   examples.rst
-   design.rst
-   help.rst
    
