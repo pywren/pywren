@@ -1,25 +1,21 @@
-.. pywren documentation master file, created by
-   sphinx-quickstart on Mon Aug 21 13:11:55 2017.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Documentation
+=============
 
-Welcome to pywren documentation!
-==================================
+Executor
+-----------------------
+The primary object in pywren is an `executor`. The standard way to get everything set up is to import pywren, and call the `default_executor` function.
 
-.. code-block:: python
+.. automethod:: pywren.wren.default_executor
 
-  def my_function(b):
-    x = np.random.normal(0, b, 1024)
-    A = np.random.normal(0, b, (1024, 1024))
-    return np.dot(A, x)
+`default_executor()` reads your `pywren_config` and returns `executor` object that's ready to go.
+We can use this `executor` to run `map`, which applies a function to a list of data in the cloud.
 
-  pwex = pywren.default_executor()
-  res = pwex.map(my_function, np.linspace(0.1, 100, 1000))
+.. automethod:: pywren.executor.Executor.map
 
 
-.. toctree::
-   :caption: Contents:
-   :maxdepth: 1
+Waiting for the results
+--------------------------
 
-   pywren.rst
-   
+.. autofunction:: pywren.wait.wait
+.. autofunction:: pywren.wren.get_all_results
+

@@ -18,6 +18,9 @@ def default_executor(**kwargs):
 
     :param config: Default `None`. This is defaults to `~/.pywren_config`
     :param job_max_runtime: Max time per lambda. Default 200
+    Usage::
+      >>> import pywren
+      >>> pwex = pywren.default_executor()
     """
     executor_str = 'lambda'
     if 'PYWREN_EXECUTOR' in os.environ:
@@ -73,6 +76,10 @@ def get_all_results(fs):
     :param fs: a list of futures.
     :return: A list of the results of each futures
     :rtype: list
+    Usage::
+      >>> pwex = pywren.default_executor()
+      >>> futures = pwex.map(foo, data)
+      >>> results = get_all_results(futures)
     """
     wait(fs, return_when=ALL_COMPLETED)
     return [f.result() for f in fs]
