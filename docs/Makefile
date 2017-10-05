@@ -26,13 +26,6 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 update:
-ifdef PYWREN_DOCS
 	$(MAKE) html
-#	${MKDIR_P} ${PYWREN_DOCS}
-#	cp -r ./_build/html/* ${PYWREN_DOCS}
 	find ./_build/html/ -type f -name '*.html' | xargs sed -i  '' 's/<h1 class="logo"><a href="index.html">/<h1 class="logo"><a href="http:\/\/pywren.io\/">/g'
 	sed -i  '' 's/<h1 class="logo"><a href="#">/<h1 class="logo"><a href="http:\/\/pywren.io\/">/g' ./_build/html/index.html
-else
-	@echo 1>&2 "PYWREN_DOCS must be set to the root of the pywren documentation website repo."
-	false
-endif

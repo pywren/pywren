@@ -13,6 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 def default_executor(**kwargs):
+    """
+    Initialize and return an executor object.
+
+    :param config: Default `None`. This is defaults to `~/.pywren_config`
+    :param job_max_runtime: Max time per lambda. Default 200
+    """
     executor_str = 'lambda'
     if 'PYWREN_EXECUTOR' in os.environ:
         executor_str = os.environ['PYWREN_EXECUTOR']
@@ -64,7 +70,9 @@ def get_all_results(fs):
     call result on each one individually, and return those
     results.
 
-    Will throw an exception if any future threw an exception
+    :param fs: a list of futures.
+    :return: A list of the results of each futures
+    :rtype: list
     """
     wait(fs, return_when=ALL_COMPLETED)
     return [f.result() for f in fs]

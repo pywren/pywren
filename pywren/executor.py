@@ -25,10 +25,10 @@ from pywren.wait import wait, ALL_COMPLETED
 logger = logging.getLogger(__name__)
 
 
+"""
+Theoretically will allow for cross-AZ invocations
+"""
 class Executor(object):
-    """
-    Theoretically will allow for cross-AZ invocations
-    """
 
     def __init__(self, invoker, config, job_max_runtime):
         self.invoker = invoker
@@ -146,13 +146,18 @@ class Executor(object):
             invoke_pool_threads=64, data_all_as_one=True,
             use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=None):
         """
-        # FIXME work with an actual iterable instead of just a list
+        :param func: the function to map over the data
+        :param iterdata: An iterable of input data to the mapped function
+        :param extra_env: extra env
+        :param extra_meta: extra meta
+        :param invoke_pool_threads: 
+        :param data_all_as_one: upload the data as a single object; fewer tcp transactions (good) but potentially higher latency for workers (bad)
+        :param use_cached_runtime: if runtime has been cached, use that. When set to False, redownloads runtime. Default true
+        :param overwrite_invoke_args: bar
+        :param exclude_modules: foo
+        :return: A list with size `len(iterdata)` of futures for each job
+        :rtype:  list of futures.
 
-        data_all_as_one : upload the data as a single object; fewer
-        tcp transactions (good) but potentially higher latency for workers (bad)
-
-        use_cached_runtime : if runtime has been cached, use that. When set
-        to False, redownloads runtime.
         """
 
         data = list(iterdata)

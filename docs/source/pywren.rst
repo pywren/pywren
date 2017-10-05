@@ -1,27 +1,15 @@
 Documentation
 =============
 
-pywren\.ec2standalone module
-----------------------------
-
-.. automodule:: pywren.ec2standalone
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-pywren\.executor module
+Executor
 -----------------------
 
-.. automodule:: pywren.executor
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automethod:: pywren.wren.default_executor
+.. automethod:: pywren.executor.Executor.map
 
-pywren\.wait module
--------------------
+Waiting for the results
+--------------------------
 
-.. automodule:: pywren.wait
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. autofunction:: pywren.wait.wait
+.. autofunction:: pywren.wren.get_all_results
 
