@@ -10,6 +10,7 @@ import tarfile
 import time
 import traceback
 from threading import Thread
+import io
 
 import boto3
 import botocore
@@ -92,14 +93,13 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                Key=runtime_s3_key)
-
+    res_buffer = res['Body'].read()
     try:
-
-        condatar = tarfile.open(
-            mode="r:gz",
-            fileobj=wrenutil.WrappedStreamingBody(res['Body'],
-                                                  res['ContentLength']))
+        res_buffer_io = io.BytesIO(res_buffer)
+        condatar = tarfile.open(mode="r:gz", fileobj=res_buffer_io)
         condatar.extractall(runtime_etag_dir)
+        del res_buffer_io # attempt to clear this proactively
+        del res_buffer
     except (OSError, IOError) as e:
         # no difference, see https://stackoverflow.com/q/29347790/1073963
         # do the cleanup
