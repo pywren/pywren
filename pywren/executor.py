@@ -158,6 +158,8 @@ class Executor(object):
         :return: A list with size `len(iterdata)` of futures for each job
         :rtype:  list of futures.
 
+        Usage::
+          >>> futures = pwex.map(foo, data_list)
         """
 
         data = list(iterdata)

@@ -15,7 +15,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
          WAIT_DUR_SEC=5):
     """
     Wait for the Future instances `fs` to complete. Returns a 2-tuple of
-    sets. The first set contains the futures that completed
+    lists. The first lists contains the futures that completed
     (finished or cancelled) before the wait completed. The second
     contains uncompleted futures.
 
@@ -23,7 +23,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     :param return_when: One of `ALL_COMPLETED`, `ANY_COMPLETED`, `ALWAYS`
     :param THREADPOOL_SIZE: Number of threads to use. Default 64
     :param WAIT_DUR_SEC: Time to sleep before checking futures again.
-    :return: List of futures
+    :return: list of completed futures, list of uncompleted futures.
     :rtype: tuple of list
     """
 
