@@ -147,18 +147,18 @@ class Executor(object):
             use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=None):
         """
         :param func: the function to map over the data
-        :param iterdata: An iterable of input data to the mapped function
+        :param iterdata: An iterable of input data
         :param extra_env: foo
         :param extra_meta: foo
         :param invoke_pool_threads: Number of threads to use to invoke.
         :param data_all_as_one: upload the data as a single object; fewer tcp transactions (good) but potentially higher latency for workers (bad)
-        :param use_cached_runtime: if runtime has been cached, use that. When set to False, redownloads runtime. Default true
+        :param use_cached_runtime: Use cached runtime whenever possible. Default true
         :param overwrite_invoke_args: bar
         :param exclude_modules: foo
         :return: A list with size `len(iterdata)` of futures for each job
         :rtype:  list of futures.
 
-        Usage::
+        Usage
           >>> futures = pwex.map(foo, data_list)
         """
 
