@@ -18,6 +18,7 @@ def default_executor(**kwargs):
 
     :param config: Settings passed in here will override those in `pywren_config`. Default None.
     :param job_max_runtime: Max time per lambda. Default 200
+
     Usage
       >>> import pywren
       >>> pwex = pywren.default_executor()
@@ -69,13 +70,14 @@ standalone_executor = remote_executor
 
 def get_all_results(fs):
     """
-    Take in a list of futures and block until they are repeated,
+    Take in a list of futures and block until they are completed.
     call result on each one individually, and return those
     results.
 
     :param fs: a list of futures.
     :return: A list of the results of each futures
     :rtype: list
+
     Usage
       >>> pwex = pywren.default_executor()
       >>> futures = pwex.map(foo, data)

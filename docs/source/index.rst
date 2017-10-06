@@ -12,6 +12,11 @@ We can use this `executor` to run `map`, which applies a function to a list of d
 
 .. automethod:: pywren.executor.Executor.map
 
+`map` returns a list of `futures`, and which can return their `result` when the task is complete. 
+
+.. autoclass:: pywren.future.ResponseFuture
+
+    .. automethod:: pywren.future.ResponseFuture.result
 
 Waiting for the results
 --------------------------

@@ -75,20 +75,17 @@ class ResponseFuture(object):
 
     def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
-
-
-        From the python docs:
-
-        Return the value returned by the call. If the call hasn't yet
-        completed then this method will wait up to timeout seconds. If
-        the call hasn't completed in timeout seconds then a
-        TimeoutError will be raised. timeout can be an int or float.If
-        timeout is not specified or None then there is no limit to the
-        wait time.
-
+        Return the value returned by the call.
+        If the call raised an exception, this method will raise the same exception
         If the future is cancelled before completing then CancelledError will be raised.
 
-        If the call raised then this method will raise the same exception.
+        :param timeout: This method will wait up to timeout seconds if call hasn't completed before raising a TimeoutError. If None, wait indefinitely. Default None.
+        :param check_only: Return None immediately if job is not complete. Default False.
+        :param throw_except: Reraise exception if call raised. Default true.
+        :param storage_handler: Storage handler to poll cloud storage. Default None.
+        :return: Result of the call.
+        :raises CancelledError: If the job is cancelled before completed.
+        :raises TimeoutError: If job is not complete after `timeout` seconds.
 
         """
         if self._state == JobState.new:
