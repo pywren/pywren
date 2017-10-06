@@ -23,8 +23,15 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     :param return_when: One of `ALL_COMPLETED`, `ANY_COMPLETED`, `ALWAYS`
     :param THREADPOOL_SIZE: Number of threads to use. Default 64
     :param WAIT_DUR_SEC: Time interval between each check.
-    :return: list of completed futures, list of uncompleted futures.
-    :rtype: tuple of list
+    :return: `(fs_dones, fs_notdones)` where `fs_dones` is a list of futures that have completed, and `fs_notdones` is a list of futures that have not completed.
+    :rtype: 2-tuple of lists
+    
+    Usage 
+      >>> futures = pwex.map(foo, data)
+      >>> dones, not_dones = wait(futures, ALL_COMPLETED)
+      >>> # not_dones should be an empty list.
+      >>> results = [f.result() for f in dones]
+
     """
 
     #FIXME:  this will eventually provide an optimization for checking if a large

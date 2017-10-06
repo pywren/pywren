@@ -23,7 +23,7 @@ Waiting for the results
 
 .. autofunction:: pywren.wait.wait
 
-If you want to get all of the results, you can simply call `get_all_results`
+Alternatively, if you want to wait for everything to finish and then get all of the results, you can simply call `get_all_results`
 
 .. autofunction:: pywren.wren.get_all_results
 
