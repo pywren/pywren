@@ -148,13 +148,13 @@ class Executor(object):
         """
         :param func: the function to map over the data
         :param iterdata: An iterable of input data
-        :param extra_env: foo
-        :param extra_meta: foo
+        :param extra_env: Additional environment variables for lambda environment. Default None.
+        :param extra_meta: Additional metadata to pass to lambda. Default None.
         :param invoke_pool_threads: Number of threads to use to invoke.
-        :param data_all_as_one: upload the data as a single object; fewer tcp transactions (good) but potentially higher latency for workers (bad)
+        :param data_all_as_one: upload the data as a single object
         :param use_cached_runtime: Use cached runtime whenever possible. Default true
-        :param overwrite_invoke_args: bar
-        :param exclude_modules: foo
+        :param overwrite_invoke_args: Overwrite other args. Mainly used for testing.
+        :param exclude_modules: Explicitly keep these modules from pickled dependencies.
         :return: A list with size `len(iterdata)` of futures for each job
         :rtype:  list of futures.
 

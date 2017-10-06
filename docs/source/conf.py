@@ -41,6 +41,9 @@ extensions = ['sphinx.ext.autodoc',
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+# Keep module names out of function signatures.
+add_module_names = False
+
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
