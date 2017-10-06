@@ -28,3 +28,53 @@ Alternatively, if you want to wait for everything to finish and then get all of 
 .. autofunction:: pywren.wren.get_all_results
 
 
+Standalone Mode
+---------------
+
+To run pywren in standalone mode, run
+
+.. code-block:: bash
+
+  pywren standalone launch_instances 50 --pywren_git_branch=master  --spot_price=1.0
+
+This launches EC2 instances to run pywren. Once the instances are ready, you can run pywren as usual. 
+
+.. code-block:: python
+
+  >>> import pywren
+  >>> pwex = pywren.standalone_executor()
+  >>> futures = pwex.map(func, data)
+
+If you set `max_idle_time` when launching, the ec2 instances will terminate themselves. Otherwise, you need to explicitly shut them down.
+
+
+.. code-block:: bash
+
+  pywren standalone terminate_instances
+
+
+Standalone Commands
+-------------------
+
+.. code-block:: bash
+
+  # Launch EC2 instances.
+  > pywren standalone launch_instances --help
+
+    Usage: pywren standalone launch_instances [OPTIONS] [NUMBER]
+
+    Options:
+      --max_idle_time INTEGER         instance queue idle time before checking
+                                      self-termination
+      --idle_terminate_granularity INTEGER
+                                      granularity of billing (sec)
+      --pywren_git_branch TEXT        which branch to use on the stand-alone
+      --pywren_git_commit TEXT        which git to use on the stand-alone
+                                      (superceeds pywren_git_branch
+
+  # List all running EC2 instances.
+  > pywren standalone list_instances
+
+  # Shut down all running EC2 instances.
+  > pywren standalone terminate_instances 
+

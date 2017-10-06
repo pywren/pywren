@@ -19,7 +19,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     (finished or cancelled) before the wait completed. The second
     contains uncompleted futures.
 
-    :param fs: Futures to wait on.
+    :param fs: A list of futures.
     :param return_when: One of `ALL_COMPLETED`, `ANY_COMPLETED`, `ALWAYS`
     :param THREADPOOL_SIZE: Number of threads to use. Default 64
     :param WAIT_DUR_SEC: Time interval between each check.

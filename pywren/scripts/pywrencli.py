@@ -439,6 +439,9 @@ def log_url(ctx):
 def standalone_launch_instances(ctx, number, max_idle_time,
                                 idle_terminate_granularity,
                                 pywren_git_branch, pywren_git_commit):
+    """
+    Launch EC2 instances for standalone executor.
+    """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
