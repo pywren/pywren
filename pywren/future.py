@@ -79,7 +79,8 @@ class ResponseFuture(object):
         If the call raised an exception, this method will raise the same exception
         If the future is cancelled before completing then CancelledError will be raised.
 
-        :param timeout: This method will wait up to timeout seconds if call hasn't completed before raising a TimeoutError. If None, wait indefinitely. Default None.
+        :param timeout: This method will wait up to timeout seconds if call hasn't completed before raising
+            a TimeoutError. If None, wait indefinitely. Default None.
         :param check_only: Return None immediately if job is not complete. Default False.
         :param throw_except: Reraise exception if call raised. Default true.
         :param storage_handler: Storage handler to poll cloud storage. Default None.
