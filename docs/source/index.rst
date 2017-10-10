@@ -70,7 +70,8 @@ Standalone Commands
                                       granularity of billing (sec)
       --pywren_git_branch TEXT        which branch to use on the stand-alone
       --pywren_git_commit TEXT        which git to use on the stand-alone
-                                      (superceeds pywren_git_branch
+                                      (supercedes pywren_git_branch)
+      --spot_price FLOAT              use spot instances, at this reserve price
 
   # List all running EC2 instances.
   > pywren standalone list_instances
