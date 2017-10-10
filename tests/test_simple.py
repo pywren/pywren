@@ -280,50 +280,6 @@ class WaitTest(unittest.TestCase):
         np.testing.assert_array_equal(res, x+1)
 
 
-class RuntimeSharding(unittest.TestCase):
-    """
-    The purpose of runtime sharding is to increase simultaneous
-    throughput for reading the runtimes, thus it's
-    hard to test in a unit test case. But we can test
-    that the metadata propagates properly and we actually
-    download the real key
-    """
-    def test_no_shard(self):
-        config = pywren.wrenconfig.default()
-        old_key = config['runtime']['s3_key']
-        prefix, tar_gz = os.path.split(old_key)
-        # Use the staging key to test as it doesn't have shards
-        config['runtime']['s3_key'] = os.path.join("pywren.runtime.staging", tar_gz)
-        wrenexec = pywren.default_executor(config=config)
-
-        def test_func(x):
-            return x + 1
-
-        future = wrenexec.call_async(test_func, 7)
-        result = future.result()
-        base_runtime_key = config['runtime']['s3_key']
-        self.assertEqual(future.run_status['runtime_s3_key_used'],
-                         base_runtime_key)
-
-    def test_shard(self):
-        config = pywren.wrenconfig.default()
-        old_key = config['runtime']['s3_key']
-        prefix, tar_gz = os.path.split(old_key)
-        # Use a runtime that has shards
-        config['runtime']['s3_key'] = os.path.join("pywren.runtime", tar_gz)
-        wrenexec = pywren.default_executor(config=config)
-
-        def test_func(x):
-            return x + 1
-
-        base_runtime_key = config['runtime']['s3_key']
-
-        future = wrenexec.call_async(test_func, 7)
-        result = future.result()
-        # NOTE: There is some probability we will hit the base key ? 
-        self.assertNotEqual(future.run_status['runtime_s3_key_used'], 
-                         base_runtime_key)
-
 class RuntimePaths(unittest.TestCase):
     """
     Test to make sure that we have the correct python and
@@ -343,3 +299,51 @@ class RuntimePaths(unittest.TestCase):
         assert "Current conda install" in res
 
 
+class Limits(unittest.TestCase):
+    """
+    Tests basic seatbelts
+    """
+    
+    def test_map_item_limit(self):
+
+        TOO_BIG_COUNT = 100
+        conf = pywren.wrenconfig.default()
+        if 'scheduler' not in conf:
+            conf['scheduler'] = {}
+        conf['scheduler']['map_item_limit'] = TOO_BIG_COUNT
+        wrenexec = pywren.default_executor(config=conf)
+
+        def plus_one(x):
+            return x + 1
+        N = 10
+
+        x = np.arange(N)
+        futures = wrenexec.map(plus_one, x)
+        pywren.get_all_results(futures)
+
+        # now too big
+        
+        with pytest.raises(ValueError) as excinfo:
+
+            x = np.arange(TOO_BIG_COUNT+1)
+            
+            futures = wrenexec.map(plus_one, x )           
+
+
+class EnvVars(unittest.TestCase):
+    """
+    Can we set the environment vars to map?
+    """
+    def test_env(self):
+
+        def get_env(_):
+            return dict(os.environ)
+
+        wrenexec = pywren.default_executor()
+        extra_env = {"HELLO" : "WORLD"}
+        fut = wrenexec.call_async(get_env, None,
+                                  extra_env=extra_env)
+
+        res = fut.result()
+        assert "HELLO" in res.keys()
+        assert res["HELLO"] == "WORLD"

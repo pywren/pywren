@@ -34,13 +34,14 @@ install:
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest numba
   - source activate test-environment
-  - pip install glob2 pylint tornado
+  - pip install glob2 pylint tornado awscli
   - tests/install_pywren.sh
 
 
   
 before_script:
-  - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_$RANDOM_ID
+  - export EPOCH_STAMP=`date +%s`
+  - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_${EPOCH_STAMP}_${RANDOM_ID}
   - echo CLEAN BUILD ID IS $BUILD_GUID
   - export BUCKET_NAME=`echo pywren_travis_$BUILD_GUID | sed 's/_/-/g'`
   - echo $BUCKET_NAME

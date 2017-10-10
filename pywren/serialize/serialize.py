@@ -16,8 +16,6 @@ else:
     PY3 = True
 
 # pylint: disable=wrong-import-position
-import numpy as np
-
 from pywren.serialize.cloudpickle import CloudPickler
 from pywren.serialize.module_dependency import ModuleDependencyAnalyzer
 from pywren.serialize import default_preinstalls
@@ -77,7 +75,7 @@ if __name__ == "__main__":
     serialize = SerializeIndependent()
 
     def foo(x):
-        y = np.arange(3) + x
+        y = x + 10
         return y + 1
 
     sb, paths = serialize(foo, 6)

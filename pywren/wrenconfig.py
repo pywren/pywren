@@ -1,5 +1,5 @@
 import os
-
+import copy
 
 
 GENERIC_HANDLER_NAME = "wrenhandler.generic_handler"
@@ -23,9 +23,10 @@ AWS_SQS_QUEUE_DEFAULT = 'pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
-default_runtime = {'2.7' : "pywren.runtime/pywren_runtime-2.7-default.tar.gz",
-                   '3.5' : "pywren.runtime/pywren_runtime-3.5-default.tar.gz",
-                   '3.6' : "pywren.runtime/pywren_runtime-3.6-default.tar.gz"}
+default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
+                   '3.4' : "pywren.runtimes/default_3.4.meta.json",
+                   '3.5' : "pywren.runtimes/default_3.5.meta.json",
+                   '3.6' : "pywren.runtimes/default_3.6.meta.json"}
 
 def load(config_filename):
     import yaml
@@ -35,6 +36,9 @@ def load(config_filename):
         raise Exception(
             "{} has bucket name as {} -- make sure you change the default bucket".format(
                 config_filename, res['s3']['bucket']))
+    if 'storage_backend' not in res:
+        res = patch_storage_config(res)
+
     return res
 
 def get_default_home_filename():
@@ -60,6 +64,17 @@ def get_default_config_filename():
 
     return config_filename
 
+def patch_storage_config(config_data):
+    if 'storage_backend' in config_data:
+        raise Exception("storage_backend is already in the config")
+
+    patched_config = copy.deepcopy(config_data)
+    patched_config['storage_backend'] = 's3'
+    patched_config['storage_prefix'] = config_data['s3']['pywren_prefix']
+    patched_config['runtime']['runtime_storage'] = 's3'
+    return patched_config
+
+
 def default():
     """
     First checks .pywren_config
@@ -71,9 +86,6 @@ def default():
         raise ValueError("could not find configuration file")
 
     config_data = load(config_filename)
-    config_data['storage_backend'] = 's3'
-    config_data['storage_prefix'] = config_data['s3']['pywren_prefix']
-    config_data['runtime']['runtime_storage'] = 's3'
     return config_data
 
 

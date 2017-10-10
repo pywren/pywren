@@ -10,6 +10,7 @@ import tarfile
 import time
 import traceback
 from threading import Thread
+import io
 
 import boto3
 import botocore
@@ -27,6 +28,8 @@ else:
 PYTHON_MODULE_PATH = "/tmp/pymodules"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
+JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
+JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner.stats.txt"
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +44,13 @@ def get_key_size(s3client, bucket, key):
             return None
         else:
             raise e
+
+def free_disk_space(dirname):
+    """
+    Returns the number of free bytes on the mount point containing DIRNAME
+    """
+    s = os.statvfs(dirname)
+    return s.f_bsize * s.f_bavail
 
 def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
@@ -83,12 +93,30 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     res = s3_client.get_object(Bucket=runtime_s3_bucket,
                                Key=runtime_s3_key)
+    res_buffer = res['Body'].read()
+    try:
+        res_buffer_io = io.BytesIO(res_buffer)
+        condatar = tarfile.open(mode="r:gz", fileobj=res_buffer_io)
+        condatar.extractall(runtime_etag_dir)
+        del res_buffer_io # attempt to clear this proactively
+        del res_buffer
+    except (OSError, IOError) as e:
+        # no difference, see https://stackoverflow.com/q/29347790/1073963
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        if e.args[0] == 28:
 
-    condatar = tarfile.open(
-        mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(res['Body'], res['ContentLength']))
-
-    condatar.extractall(runtime_etag_dir)
+            raise Exception("RUNTIME_TOO_BIG",
+                            "Ran out of space when untarring runtime")
+        else:
+            raise Exception("RUNTIME_ERROR", str(e))
+    except tarfile.ReadError as e:
+        # do the cleanup
+        shutil.rmtree(runtime_etag_dir, True)
+        raise Exception("RUNTIME_READ_ERROR", str(e))
+    except:
+        shutil.rmtree(runtime_etag_dir, True)
+        raise
 
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
@@ -108,7 +136,10 @@ def aws_lambda_handler(event, context):
         'log_group_name' : context.log_group_name,
         'log_stream_name' : context.log_stream_name,
     }
-    return generic_handler(event, context_dict)
+    # MKL does not currently play nicely with
+    # containers in determining correct # of processors
+    custom_handler_env = {'OMP_NUM_THREADS' : '1'}
+    return generic_handler(event, context_dict, custom_handler_env)
 
 def get_server_info():
 
@@ -122,10 +153,15 @@ def get_server_info():
 
     return server_info
 
-def generic_handler(event, context_dict):
+def generic_handler(event, context_dict, custom_handler_env=None):
     """
+    event is from the invoker, and contains job information
+
     context_dict is generic infromation about the context
     that we are running in, provided by the scheduler
+
+    custom_handler_env are environment variables we should set
+    based on the platform we are on.
     """
 
     response_status = {'exception': None}
@@ -134,7 +170,6 @@ def generic_handler(event, context_dict):
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
         s3_client = boto3.client("s3")
-        s3_transfer = boto3.s3.transfer.S3Transfer(s3_client)
         s3_bucket = event['storage_config']['backend_config']['bucket']
 
         logger.info("invocation started")
@@ -153,10 +188,6 @@ def generic_handler(event, context_dict):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        func_filename = "/tmp/func.pickle"
-        data_filename = "/tmp/data.pickle"
-        output_filename = "/tmp/output.pickle"
-
         runtime_s3_bucket = event['runtime']['s3_bucket']
         runtime_s3_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
@@ -174,65 +205,18 @@ def generic_handler(event, context_dict):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        KS = get_key_size(s3_client, s3_bucket, data_key)
-        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", KS, "bytes" )
-        while KS is None:
+        data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+        #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", data_key_size, "bytes" )
+        while data_key_size is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
 
-            KS = get_key_size(s3_client, s3_bucket, data_key)
+            data_key_size = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
             subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
 
 
-        # get the input and save to disk
-        # FIXME here is we where we would attach the "canceled" metadata
-        s3_transfer.download_file(s3_bucket, func_key, func_filename)
-        func_download_time = time.time() - start_time
-        response_status['func_download_time'] = func_download_time
-
-        logger.info("func download complete, took {:3.2f} sec".format(func_download_time))
-
-        if data_byte_range is None:
-            s3_transfer.download_file(s3_bucket, data_key, data_filename)
-        else:
-            range_str = 'bytes={}-{}'.format(*data_byte_range)
-            dres = s3_client.get_object(Bucket=s3_bucket, Key=data_key,
-                                        Range=range_str)
-            data_fid = open(data_filename, 'wb')
-            data_fid.write(dres['Body'].read())
-            data_fid.close()
-
-        data_download_time = time.time() - start_time
-        logger.info("data data download complete, took {:3.2f} sec".format(data_download_time))
-        response_status['data_download_time'] = data_download_time
-
-        # now split
-        d = json.load(open(func_filename, 'r'))
-        shutil.rmtree(PYTHON_MODULE_PATH, True) # delete old modules
-        os.mkdir(PYTHON_MODULE_PATH)
-        # get modules and save
-        for m_filename, m_data in d['module_data'].items():
-            m_path = os.path.dirname(m_filename)
-
-            if len(m_path) > 0 and m_path[0] == "/":
-                m_path = m_path[1:]
-            to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
-            #print "to_make=", to_make, "m_path=", m_path
-            try:
-                os.makedirs(to_make)
-            except OSError as e:
-                if e.errno == 17:
-                    pass
-                else:
-                    raise e
-            full_filename = os.path.join(to_make, os.path.basename(m_filename))
-            #print "creating", full_filename
-            fid = open(full_filename, 'wb')
-            fid.write(b64str_to_bytes(m_data))
-            fid.close()
-        logger.info("Finished writing {} module files".format(len(d['module_data'])))
-        logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-        logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+        free_disk_bytes = free_disk_space("/tmp")
+        response_status['free_disk_bytes'] = free_disk_bytes
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
@@ -246,7 +230,7 @@ def generic_handler(event, context_dict):
         jobrunner_path = os.path.join(cwd, "jobrunner.py")
 
         extra_env = event.get('extra_env', {})
-        extra_env['PYTHONPATH'] = "{}:{}".format(os.getcwd(), PYTHON_MODULE_PATH)
+        extra_env['PYTHONPATH'] = "{}".format(os.getcwd())
 
         call_id = event['call_id']
         callset_id = event['callset_id']
@@ -256,18 +240,35 @@ def generic_handler(event, context_dict):
         CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
-        cmdstr = "{} {} {} {} {}".format(CONDA_PYTHON_RUNTIME,
-                                         jobrunner_path,
-                                         func_filename,
-                                         data_filename,
-                                         output_filename)
+        # pass a full json blob
+
+        jobrunner_config = {'func_bucket' : s3_bucket,
+                            'func_key' : func_key,
+                            'data_bucket' : s3_bucket,
+                            'data_key' : data_key,
+                            'data_byte_range' : data_byte_range,
+                            'python_module_path' : PYTHON_MODULE_PATH,
+                            'output_bucket' : s3_bucket,
+                            'output_key' : output_key,
+                            'stats_filename' : JOBRUNNER_STATS_FILENAME}
+
+        with open(JOBRUNNER_CONFIG_FILENAME, 'w') as jobrunner_fid:
+            json.dump(jobrunner_config, jobrunner_fid)
+
+        if os.path.exists(JOBRUNNER_STATS_FILENAME):
+            os.remove(JOBRUNNER_STATS_FILENAME)
+
+        cmdstr = "{} {} {}".format(CONDA_PYTHON_RUNTIME,
+                                   jobrunner_path,
+                                   JOBRUNNER_CONFIG_FILENAME)
 
         setup_time = time.time()
         response_status['setup_time'] = setup_time - start_time
 
         local_env = os.environ.copy()
+        if custom_handler_env is not None:
+            local_env.update(custom_handler_env)
 
-        local_env["OMP_NUM_THREADS"] = "1"
         local_env.update(extra_env)
 
         local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
@@ -309,9 +310,12 @@ def generic_handler(event, context_dict):
 
         logger.info("command execution finished")
 
-        s3_transfer.upload_file(output_filename, s3_bucket,
-                                output_key)
-        logger.debug("output uploaded to %s %s", s3_bucket, output_key)
+        if os.path.exists(JOBRUNNER_STATS_FILENAME):
+            with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
+                for l in fid.readlines():
+                    key, value = l.strip().split(" ")
+                    float_value = float(value)
+                    response_status[key] = float_value
 
         end_time = time.time()
 
@@ -334,15 +338,3 @@ def generic_handler(event, context_dict):
         # creating new client in case the client has not been created
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                       Body=json.dumps(response_status))
-
-
-if __name__ == "__main__":
-    s3 = boto3.resource('s3')
-    # s3.meta.client.download_file('ericmjonas-public', 'condaruntime.tar.gz',
-    #                              '/tmp/condaruntime.tar.gz')
-    s3_res = s3.meta.client.get_object(Bucket='ericmjonas-public', Key='condaruntime.tar.gz')
-
-    condatar_test = tarfile.open(
-        mode="r:gz",
-        fileobj=wrenutil.WrappedStreamingBody(s3_res['Body'], s3_res['ContentLength']))
-    condatar_test.extractall('/tmp/test1/')

@@ -1,11 +1,11 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import json
 import logging
 import random
 import time
 from multiprocessing.pool import ThreadPool
+from six.moves import cPickle as pickle
 
 import boto3
 
@@ -46,6 +46,11 @@ class Executor(object):
         else:
             self.serializer = serialize.SerializeIndependent()
 
+        self.map_item_limit = None
+        if 'scheduler' in self.config:
+            if 'map_item_limit' in config['scheduler']:
+                self.map_item_limit = config['scheduler']['map_item_limit']
+
     def put_data(self, data_key, data_str,
                  callset_id, call_id):
 
@@ -65,7 +70,7 @@ class Executor(object):
         runtime_url = ""
         if ('urls' in self.runtime_meta_info and
                 isinstance(self.runtime_meta_info['urls'], list) and
-                len(self.runtime_meta_info['urls']) > 1):
+                len(self.runtime_meta_info['urls']) >= 1):
             num_shards = len(self.runtime_meta_info['urls'])
             logger.debug("Runtime is sharded, choosing from {} copies.".format(num_shards))
             random.seed()
@@ -144,7 +149,8 @@ class Executor(object):
 
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
-            use_cached_runtime=True, overwrite_invoke_args=None, exclude_modules=None):
+            use_cached_runtime=True, overwrite_invoke_args=None,
+            exclude_modules=None):
         """
         :param func: the function to map over the data
         :param iterdata: An iterable of input data
@@ -165,6 +171,12 @@ class Executor(object):
         data = list(iterdata)
         if not data:
             return []
+
+        if self.map_item_limit is not None and len(data) > self.map_item_limit:
+            raise ValueError("len(data) ={}, exceeding map item limit of {}"\
+                             "consider mapping over a smaller"\
+                             "number of items".format(len(data),
+                                                      self.map_item_limit))
 
         host_job_meta = {}
 
@@ -201,14 +213,9 @@ class Executor(object):
                         mod_paths.remove(mod_path)
 
         module_data = create_mod_data(mod_paths)
-        func_str_encoded = wrenutil.bytes_to_b64str(func_str)
-        #debug_foo = {'func' : func_str_encoded,
-        #             'module_data' : module_data}
-
-        #pickle.dump(debug_foo, open("/tmp/py35.debug.pickle", 'wb'))
         ### Create func and upload
-        func_module_str = json.dumps({'func' : func_str_encoded,
-                                      'module_data' : module_data})
+        func_module_str = pickle.dumps({'func' : func_str,
+                                        'module_data' : module_data}, -1)
         host_job_meta['func_module_str_len'] = len(func_module_str)
 
         func_upload_time = time.time()

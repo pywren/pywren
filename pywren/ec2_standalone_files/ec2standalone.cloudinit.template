@@ -1,6 +1,6 @@
 #cloud-config
-repo_update: true
-repo_upgrade: all
+#repo_update: true
+#repo_upgrade: all
     
 packages:
   - tmux
@@ -15,6 +15,7 @@ runcmd:
   - [ curl,  "https://s3.amazonaws.com/aws-cloudwatch/downloads/latest/awslogs-agent-setup.py", "-O"]
   - chmod +x ./awslogs-agent-setup.py
   - ./awslogs-agent-setup.py -n -r {aws_region} -c /etc/cloud-agent.conf
+  - sudo /etc/init.d/ntpd restart
   - pip install supervisor
   - [ sudo, -Hu, ec2-user, sh, -c, "wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]

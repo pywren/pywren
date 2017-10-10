@@ -1,8 +1,5 @@
-import sys
+from __future__ import absolute_import
 
-if sys.version_info > (3, 0):
-    from pywren.serialize.cloudpickle.cloudpickle import CloudPickler
-else:
-    from pywren.serialize.cloudpickle.cloudpickle import CloudPickler
+from pywren.serialize.cloudpickle.cloudpickle import CloudPickler
 
-__version__ = '0.2.2'
+__version__ = '0.4.0'

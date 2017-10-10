@@ -98,7 +98,12 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         print('No matching runtime package for python version ', pythonver)
         print('Python 2.7 runtime will be used for remote.')
         pythonver = '2.7'
+
+    runtime_bucket = 'pywren-public-{}'.format(aws_region)
+    default_yaml = default_yaml.replace("RUNTIME_BUCKET",
+                                        runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
+
     default_yaml = default_yaml.replace("RUNTIME_KEY", k)
 
     # print out message about the stuff you need to do
@@ -331,12 +336,11 @@ def create_queue(ctx):
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
-    config = pywren.wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
     sqs = boto3.resource('sqs', region_name=AWS_REGION)
-
+    print("creating queue {}".format(SQS_QUEUE_NAME))
     sqs.create_queue(QueueName=SQS_QUEUE_NAME,
                      Attributes={'VisibilityTimeout' : "20"})
 
@@ -364,16 +368,15 @@ def test_function(ctx):
     Simple single-function test
     """
     config_filename = ctx.obj['config_filename']
-    pywren.wrenconfig.load(config_filename)
+    config = pywren.wrenconfig.load(config_filename)
 
-    wrenexec = pywren.default_executor()
+    wrenexec = pywren.default_executor(config=config)
     def hello_world(_):
         return "Hello world"
 
-
     fut = wrenexec.call_async(hello_world, None)
+    res = fut.result(storage_handler=wrenexec.storage)
 
-    res = fut.result()
     click.echo("function returned: {}".format(res))
 
 @click.command()
@@ -436,12 +439,12 @@ def log_url(ctx):
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
+@click.option('--spot_price', default=None, type=float,
+              help='use spot instances, at this reserve price')
 def standalone_launch_instances(ctx, number, max_idle_time,
                                 idle_terminate_granularity,
-                                pywren_git_branch, pywren_git_commit):
-    """
-    Launch EC2 instances for standalone executor.
-    """
+                                pywren_git_branch, pywren_git_commit,
+                                spot_price):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
@@ -453,18 +456,25 @@ def standalone_launch_instances(ctx, number, max_idle_time,
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
 
-    inst_list = ec2standalone.launch_instances(
-        number,
-        sc['target_ami'], aws_region,
-        sc['ec2_ssh_key'],
-        sc['ec2_instance_type'],
-        sc['instance_name'],
-        sc['instance_profile_name'],
-        sc['sqs_queue_name'],
-        sc['max_idle_time'],
-        idle_terminate_granularity=sc['idle_terminate_granularity'],
-        pywren_git_branch=pywren_git_branch,
-        pywren_git_commit=pywren_git_commit)
+    use_fast_io = sc.get("fast_io", False)
+
+    availability_zone = sc.get("availability_zone", None)
+
+    inst_list = ec2standalone.launch_instances(number,
+                                               sc['target_ami'], aws_region,
+                                               sc['ec2_ssh_key'],
+                                               sc['ec2_instance_type'],
+                                               sc['instance_name'],
+                                               sc['instance_profile_name'],
+                                               sc['sqs_queue_name'],
+                                               sc['max_idle_time'],
+                                               idle_terminate_granularity=\
+                                               sc['idle_terminate_granularity'],
+                                               pywren_git_branch=pywren_git_branch,
+                                               pywren_git_commit=pywren_git_commit,
+                                               availability_zone=availability_zone,
+                                               fast_io=use_fast_io,
+                                               spot_price=spot_price)
 
     print("launched:")
     ec2standalone.prettyprint_instances(inst_list)

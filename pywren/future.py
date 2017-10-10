@@ -93,7 +93,6 @@ class ResponseFuture(object):
             raise ValueError("job not yet invoked")
 
         if self._state == JobState.success:
-            assert self._return_val != None
             return self._return_val
 
         if self._state == JobState.error:
@@ -135,7 +134,7 @@ class ResponseFuture(object):
         if call_status['exception'] is not None:
             # the wrenhandler had an exception
             exception_str = call_status['exception']
-            print(call_status)
+
             exception_args = call_status['exception_args']
             if exception_args[0] == "WRONGVERSION":
                 if throw_except:
