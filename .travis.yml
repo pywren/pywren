@@ -38,7 +38,6 @@ install:
   - tests/install_pywren.sh
   - tests/run_pylint.sh
 
-  
 before_script:
   - export EPOCH_STAMP=`date +%s`
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_${EPOCH_STAMP}_${RANDOM_ID}
