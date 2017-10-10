@@ -35,7 +35,7 @@ To run pywren in standalone mode, run
 
 .. code-block:: bash
 
-  pywren standalone launch_instances 50 --pywren_git_branch=master  --spot_price=1.0
+  pywren standalone launch_instances 50 --pywren_git_branch=master
 
 This launches EC2 instances to run pywren. Once the instances are ready, you can run pywren as usual. 
 
