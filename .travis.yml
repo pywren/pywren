@@ -34,11 +34,10 @@ install:
   - conda info -a
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION numpy pytest cython nose boto3 PyYAML Click pytest numba
   - source activate test-environment
-  - pip install glob2 pylint tornado awscli
+  - pip install glob2 pylint tornado awscli pylint
   - tests/install_pywren.sh
+  - tests/run_pylint.sh
 
-
-  
 before_script:
   - export EPOCH_STAMP=`date +%s`
   - export BUILD_GUID=`echo $TRAVIS_JOB_NUMBER | sed 's/\./_/g'`_${EPOCH_STAMP}_${RANDOM_ID}
@@ -60,9 +59,7 @@ script:
   - tests/ec2_standalone_tests.sh
   - tests/ec2_macroreduce_tests.sh
   - tests/cmdline_tests.sh
-  - tests/run_pylint.sh
   
-
 after_script:
   # always make sure we do this cleanup if we can
   - pywren delete_queue
@@ -89,4 +86,3 @@ env:
     - RUN_LAMBDA=true
     - RUN_MACROREDUCE=true
     - RUN_COMMANDLINE=true
-    - RUN_PYLINT=true
