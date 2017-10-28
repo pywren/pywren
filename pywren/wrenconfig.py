@@ -28,6 +28,12 @@ default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
                    '3.5' : "pywren.runtimes/default_3.5.meta.json",
                    '3.6' : "pywren.runtimes/default_3.6.meta.json"}
 
+AWS_RUNTIME_REGIONS = {'us-west-1' : 'pywren-public-us-west-1',
+                       'us-east-1' : 'pywren-public-us-east-1',
+                       'us-west-2' : 'pywren-public-us-west-2',
+                       'us-east-2' : 'pywren-public-us-east-2',
+                       'ap-northeast-2' : 'pywren-public-ap-northeast-2'}
+
 def load(config_filename):
     import yaml
     res = yaml.safe_load(open(config_filename, 'r'))
