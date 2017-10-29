@@ -150,7 +150,8 @@ class ResponseFuture(object):
                 return None
             elif exception_args[0] == "RETCODE":
                 if throw_except:
-                    raise Exception("python process failed, returned a non-zero return code (check stdout for information)")
+                    raise Exception("python process failed, returned a non-zero return code"
+                                    "(check stdout for information)")
                 return None
             else:
                 if throw_except:
