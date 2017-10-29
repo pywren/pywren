@@ -97,10 +97,10 @@ class SimpleAsync(unittest.TestCase):
         wrenexec = pywren.default_executor()
 
         fut = wrenexec.call_async(just_die, 1)
-        #with pytest.raises(Exception) as execinfo:
-        res = fut.result() 
-        #assert 'python process exited with non-zero return value' in str(execinfo.value)
 
+        with pytest.raises(Exception) as execinfo:
+            res = fut.result() 
+        assert 'non-zero return code' in str(execinfo.value)
 
 class SimpleMap(unittest.TestCase):
 
