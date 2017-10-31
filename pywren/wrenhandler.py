@@ -62,7 +62,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     """
 
     lock = open("/tmp/runtime_download_lock", "a")
-    fcntl.lockf(lock,  fcntl.LOCK_EX)
+    fcntl.lockf(lock, fcntl.LOCK_EX)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                          Key=runtime_s3_key)
