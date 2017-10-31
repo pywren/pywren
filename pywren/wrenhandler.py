@@ -1,4 +1,5 @@
 import base64
+import fcntl
 import json
 import logging
 import os
@@ -25,7 +26,7 @@ else:
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
 
-PYTHON_MODULE_PATH = "/tmp/pymodules"
+PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime"
 RUNTIME_LOC = "/tmp/runtimes"
 JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
@@ -60,6 +61,8 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     """
 
+    lock = open("/tmp/runtime_download_lock", "a")
+    fcntl.lockf(lock,  fcntl.LOCK_EX)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                          Key=runtime_s3_key)
@@ -120,6 +123,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     # final operation
     os.symlink(expected_target, CONDA_RUNTIME_DIR)
+    fcntl.lockf(lock, fcntl.LOCK_UN)
     return False
 
 
@@ -163,6 +167,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
     custom_handler_env are environment variables we should set
     based on the platform we are on.
     """
+    pid = os.getpid()
 
     response_status = {'exception': None}
     try:
@@ -247,7 +252,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                             'data_bucket' : s3_bucket,
                             'data_key' : data_key,
                             'data_byte_range' : data_byte_range,
-                            'python_module_path' : PYTHON_MODULE_PATH,
+                            'python_module_path' : PYTHON_MODULE_PATH.format(pid),
                             'output_bucket' : s3_bucket,
                             'output_key' : output_key,
                             'stats_filename' : JOBRUNNER_STATS_FILENAME}

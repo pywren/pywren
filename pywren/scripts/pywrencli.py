@@ -435,6 +435,8 @@ def log_url(ctx):
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int,
               help='granularity of billing (sec)')
+@click.option('--parallelism', default=1, type=int,
+              help='Number of worker per machine')
 @click.option('--pywren_git_branch', default='master', type=str,
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
@@ -474,6 +476,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                pywren_git_commit=pywren_git_commit,
                                                availability_zone=availability_zone,
                                                fast_io=use_fast_io,
+                                               parallelism=sc['parallelism'],
                                                spot_price=spot_price)
 
     print("launched:")

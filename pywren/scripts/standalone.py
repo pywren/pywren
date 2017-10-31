@@ -315,41 +315,46 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
+    def async_log_setup():
+        ''' None of this stuff should be on the critical path to launching an instance
+            * Instances should start dequeuing from SQS queue as soon as possible and shouldn't have to wait for rest of spot cluster to come up so they have a valid ec2_metadata['Name'] 
+            * If there are any exceptions in this function, we should exponentially backoff and try again until we succeed, this is critical because if this doesn't happen we end up clogging all EC2 resources
+        '''
+        sucesss = False
+        backoff_time = 5
+        while (not success):
+            try:
+                time.sleep(backoff_time)
+                instance = get_my_ec2_instance(aws_region)
+                ec2_metadata = get_my_ec2_meta(instance)
+                server_name = ec2_metadata['Name']
+                log_stream_prefix = ec2_metadata['instance_id']
 
-    # NOTE : This assumes EC2 but in the future we could run on
-    # millennium if we set the log stream correctly
-    try:
-        instance = get_my_ec2_instance(aws_region)
-        ec2_metadata = get_my_ec2_meta(instance)
-        server_name = ec2_metadata['Name']
-        log_stream_prefix = ec2_metadata['instance_id']
-    except:
-        instance = ""
-        ec2_metadata = ""
-        server_name =  ""
-        log_stream_prefix = ""
+                log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
+                                 .format(server_name)
 
-    log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
-                     .format(server_name)
-
-    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+                formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
 
 
-    handler = watchtower.CloudWatchLogHandler(send_interval=20,
-                                              log_group="pywren.standalone",
-                                              stream_name=log_stream_prefix + "-{logger_name}",
-                                              boto3_session=session,
-                                              max_batch_count=10)
+                handler = watchtower.CloudWatchLogHandler(send_interval=20,
+                                                          log_group="pywren.standalone",
+                                                          stream_name=log_stream_prefix + "-{logger_name}",
+                                                          boto3_session=session,
+                                                          max_batch_count=10)
 
-    debug_stream_handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+                debug_stream_handler = logging.StreamHandler()
+                handler.setFormatter(formatter)
+                logger.addHandler(handler)
+                logger.setLevel(logging.DEBUG)
+                wren_log = pywren.wrenhandler.logger
+                wren_log.addHandler(handler)
+                wren_log.addHandler(debug_stream_handler)
+                success = True
+            except:
+                backoff_time *= 2
 
-    wren_log = pywren.wrenhandler.logger
-    wren_log.addHandler(handler)
-
-    wren_log.addHandler(debug_stream_handler)
+    log_setup = Thread(target=async_log_setup)
+    log_setup.start()
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name,
