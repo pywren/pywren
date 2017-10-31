@@ -443,7 +443,7 @@ def log_url(ctx):
               help='which git to use on the stand-alone (superceeds pywren_git_branch')
 @click.option('--spot_price', default=None, type=float,
               help='use spot instances, at this reserve price')
-def standalone_launch_instances(ctx, number, max_idle_time,
+def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                 idle_terminate_granularity,
                                 pywren_git_branch, pywren_git_commit,
                                 spot_price):
@@ -476,7 +476,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                pywren_git_commit=pywren_git_commit,
                                                availability_zone=availability_zone,
                                                fast_io=use_fast_io,
-                                               parallelism=sc['parallelism'],
+                                               parallelism=parallelism,
                                                spot_price=spot_price)
 
     print("launched:")
