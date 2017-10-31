@@ -339,9 +339,7 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                                  .format(server_name)
 
                 formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
-                stream_name = log_stream_prefix + "-{logger_name}",
-
-
+                stream_name = log_stream_prefix + "-{logger_name}"
                 handler = watchtower.CloudWatchLogHandler(send_interval=20,
                                                           log_group="pywren.standalone",
                                                           stream_name=stream_name,
