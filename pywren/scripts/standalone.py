@@ -359,6 +359,8 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
     log_setup = Thread(target=async_log_setup)
     log_setup.start()
+    pid = os.getpid()
+    run_dir = run_dir + "_" + str(pid)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name,
