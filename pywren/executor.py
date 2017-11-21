@@ -157,7 +157,7 @@ class Executor(object):
         :param extra_env: Additional environment variables for lambda environment. Default None.
         :param extra_meta: Additional metadata to pass to lambda. Default None.
         :param invoke_pool_threads: Number of threads to use to invoke.
-        :param data_all_as_one: upload the data as a single object
+        :param data_all_as_one: upload the data as a single object. Default True
         :param use_cached_runtime: Use cached runtime whenever possible. Default true
         :param overwrite_invoke_args: Overwrite other args. Mainly used for testing.
         :param exclude_modules: Explicitly keep these modules from pickled dependencies.

@@ -37,7 +37,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
 
     """
 
-    #FIXME:  this will eventually provide an optimization for checking if a large
+    # FIXME:  this will eventually provide an optimization for checking if a large
     # number of futures have completed without too much network traffic
     # by exploiting the callset
 

@@ -18,6 +18,7 @@ def default_executor(**kwargs):
 
     :param config: Settings passed in here will override those in `pywren_config`. Default None.
     :param job_max_runtime: Max time per lambda. Default 200
+    :return `executor` object.
 
     Usage
       >>> import pywren

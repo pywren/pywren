@@ -35,9 +35,9 @@ To run pywren in standalone mode, run
 
 .. code-block:: bash
 
-  pywren standalone launch_instances 50
+  pywren standalone launch_instances 2
 
-This launches EC2 instances to run pywren. Once the instances are ready, you can run pywren as usual. 
+This launches EC2 instances to run pywren. Once the instances are ready, you can run pywren as usual. The instance type is set in the `pywren_config` file, under the `standalone` key. By default, the instance type is set to `m4.4xlarge`.
 
 .. code-block:: python
 
