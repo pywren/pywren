@@ -22,6 +22,7 @@ import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
 sys.path.insert(0, os.path.abspath('.'))
+import pywren
 
 # -- General configuration ------------------------------------------------
 
@@ -63,7 +64,7 @@ author = u'Eric Jonas, Qifan Pu, Shivaram Venkataraman, Vaishaal Shankar, Allan 
 # built documents.
 #
 # The short X.Y version.
-version = u'0.3'
+version = pywren.__version__
 # The full version, including alpha/beta/rc tags.
 release = u'0.3'
 
