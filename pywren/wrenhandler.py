@@ -2,6 +2,7 @@ import base64
 import json
 import logging
 import os
+import uuid
 import shutil
 import signal
 import subprocess
@@ -32,6 +33,7 @@ JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
 JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner.stats.txt"
 
 logger = logging.getLogger(__name__)
+container_id = str(uuid.uuid4())
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
@@ -184,6 +186,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         if version.__version__ != event['pywren_version']:
             raise Exception("WRONGVERSION", "Pywren version mismatch",
                             version.__version__, event['pywren_version'])
+
+        reponse_status['container_id'] = container_id
 
         start_time = time.time()
         response_status['start_time'] = start_time
