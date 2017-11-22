@@ -167,6 +167,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
     """
 
     response_status = {'exception': None}
+    response_status['container_id'] = container_id
+
     try:
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
@@ -186,8 +188,6 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         if version.__version__ != event['pywren_version']:
             raise Exception("WRONGVERSION", "Pywren version mismatch",
                             version.__version__, event['pywren_version'])
-
-        reponse_status['container_id'] = container_id
 
         start_time = time.time()
         response_status['start_time'] = start_time

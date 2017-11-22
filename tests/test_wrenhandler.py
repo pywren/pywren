@@ -69,5 +69,14 @@ class General(unittest.TestCase):
         with pytest.raises(Exception) as excinfo:
             res = fut.result() 
 
+    def test_container_id(self):
+
+        def foo(x):
+            import time.sleep(1)
+
+        futs = self.wrenexec.map(foo, [None]*2)
+        pywren.wait(futs)
+        container_ids = [fut.run_status['container_id'] for fut in futs]
+        assert (len(container_ids) == 2 and container_ids[0] != container_ids[1])
             
 
