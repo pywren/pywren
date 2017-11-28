@@ -196,7 +196,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         storage_config = {
             'storage_prefix' : event['storage_config']['storage_prefix'],
-            'storage_backend' : event['storage_config']['storage_backend']
+            'storage_backend' : event['storage_config']['storage_backend'],
             'backend_config': backend_config
         }
 
