@@ -38,7 +38,9 @@ def load(config_filename):
                 config_filename, res['s3']['bucket']))
     if 'storage_backend' not in res:
         res = patch_storage_config(res)
-
+    elif res['storage_backend'] == 's3':
+        res['storage_prefix'] = res['s3']['pywren_prefix']
+        res['runtime']['runtime_storage'] = 's3'
     return res
 
 def get_default_home_filename():
