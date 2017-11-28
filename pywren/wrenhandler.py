@@ -18,13 +18,13 @@ if sys.version_info > (3, 0):
     from queue import Queue, Empty # pylint: disable=import-error
     from . import wrenutil # pylint: disable=relative-import
     from . import version  # pylint: disable=relative-import
-    from .storage.storage import Storage
+    from storage.storage import Storage # pylint: disable=relative-import
 
 else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
-    from storage.storage import Storage
+    from storage.storage import Storage # pylint: disable=relative-import
 
 if sys.platform == 'win32':
     TEMP = r"D:\local\Temp"

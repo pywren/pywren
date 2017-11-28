@@ -5,7 +5,7 @@ import shutil
 import json
 import sys
 import time
-from storage.storage import Storage
+from storage.storage import Storage # pylint: disable=relative-import
 
 
 from six.moves import cPickle as pickle
@@ -72,7 +72,7 @@ try:
             if len(m_path) > 0 and m_path[0] == "\\":
                 m_path = m_path[1:]
             # fix windows forward slash delimeter
-            m_path = os.path.join(*filter(lambda x: len(x) > 0, m_path.split("/")))
+            m_path = os.path.join([x for x in m_path.split("/") if len(x) > 0])
 
         else:
             if len(m_path) > 0 and m_path[0] == "/":
