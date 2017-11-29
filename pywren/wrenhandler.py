@@ -41,6 +41,11 @@ RUNTIME_LOC = os.path.join(TEMP, "runtimes")
 JOBRUNNER_CONFIG_FILENAME = os.path.join(TEMP, "jobrunner.config.json")
 JOBRUNNER_STATS_FILENAME = os.path.join(TEMP, "jobrunner.stats.txt")
 
+if sys.platform == 'win32':
+    CONDA_PYTHON_PATH = r"D:\home\site\wwwroot\conda\Miniconda2"
+else:
+    CONDA_PYTHON_PATH = os.path.join(CONDA_RUNTIME_DIR, "bin")
+
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
@@ -177,8 +182,6 @@ def generic_handler(event, context_dict, custom_handler_env=None):
     context_dict is generic infromation about the context
     that we are running in, provided by the scheduler
 
-    storage_handler is the storage object that we use for IO
-
     custom_handler_env are environment variables we should set
     based on the platform we are on.
     """
@@ -263,10 +266,6 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
 
-        if sys.platform == 'win32':
-            CONDA_PYTHON_PATH = r"D:\home\site\wwwroot\conda\Miniconda2"
-        else:
-            CONDA_PYTHON_PATH = os.path.join(CONDA_RUNTIME_DIR, "bin")
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
         # pass a full json blob
@@ -344,7 +343,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 if sys.platform.startswith('linux'):
                     os.killpg(os.getpgid(process.pid), signal.SIGTERM)
                 else:
-                    pass
+                    os.kill(process.pid, signal.SIGTERM)
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
