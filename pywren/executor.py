@@ -25,10 +25,10 @@ from pywren.wait import wait, ALL_COMPLETED
 logger = logging.getLogger(__name__)
 
 
+"""
+Theoretically will allow for cross-AZ invocations
+"""
 class Executor(object):
-    """
-    Theoretically will allow for cross-AZ invocations
-    """
 
     def __init__(self, invoker, config, job_max_runtime):
         self.invoker = invoker
@@ -152,13 +152,20 @@ class Executor(object):
             use_cached_runtime=True, overwrite_invoke_args=None,
             exclude_modules=None):
         """
-        # FIXME work with an actual iterable instead of just a list
+        :param func: the function to map over the data
+        :param iterdata: An iterable of input data
+        :param extra_env: Additional environment variables for lambda environment. Default None.
+        :param extra_meta: Additional metadata to pass to lambda. Default None.
+        :param invoke_pool_threads: Number of threads to use to invoke.
+        :param data_all_as_one: upload the data as a single object. Default True
+        :param use_cached_runtime: Use cached runtime whenever possible. Default true
+        :param overwrite_invoke_args: Overwrite other args. Mainly used for testing.
+        :param exclude_modules: Explicitly keep these modules from pickled dependencies.
+        :return: A list with size `len(iterdata)` of futures for each job
+        :rtype:  list of futures.
 
-        data_all_as_one : upload the data as a single object; fewer
-        tcp transactions (good) but potentially higher latency for workers (bad)
-
-        use_cached_runtime : if runtime has been cached, use that. When set
-        to False, redownloads runtime.
+        Usage
+          >>> futures = pwex.map(foo, data_list)
         """
 
         data = list(iterdata)

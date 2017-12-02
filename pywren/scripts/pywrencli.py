@@ -438,7 +438,7 @@ def log_url(ctx):
 @click.option('--pywren_git_branch', default='master', type=str,
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
-              help='which git to use on the stand-alone (superceeds pywren_git_branch')
+              help='which git to use on the stand-alone (supercedes pywren_git_branch)')
 @click.option('--spot_price', default=None, type=float,
               help='use spot instances, at this reserve price')
 def standalone_launch_instances(ctx, number, max_idle_time,
