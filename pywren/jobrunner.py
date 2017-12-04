@@ -5,7 +5,7 @@ import shutil
 import json
 import sys
 import time
-import boto3
+from storage.storage import Storage # pylint: disable=relative-import
 
 
 from six.moves import cPickle as pickle
@@ -28,10 +28,9 @@ jobrunner_config_filename = sys.argv[1]
 
 jobrunner_config = json.load(open(jobrunner_config_filename, 'r'))
 
-
 # FIXME someday switch to storage handler
 # download the func data into memory
-s3_client = boto3.client("s3")
+storage_handler = Storage(jobrunner_config['storage_config'])
 
 func_bucket = jobrunner_config['func_bucket']
 func_key = jobrunner_config['func_key']
@@ -54,8 +53,8 @@ def write_stat(stat, val):
 
 try:
     func_download_time_t1 = time.time()
-    func_obj_stream = s3_client.get_object(Bucket=func_bucket, Key=func_key)
-    loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
+    func_obj = storage_handler.get_object(func_key)
+    loaded_func_all = pickle.loads(func_obj)
     func_download_time_t2 = time.time()
     write_stat('func_download_time',
                func_download_time_t2-func_download_time_t1)
@@ -69,10 +68,17 @@ try:
 
     for m_filename, m_data in loaded_func_all['module_data'].items():
         m_path = os.path.dirname(m_filename)
+        if sys.platform == 'win32':
+            if len(m_path) > 0 and m_path[0] == "\\":
+                m_path = m_path[1:]
+            # fix windows forward slash delimeter
+            m_path = os.path.join([x for x in m_path.split("/") if len(x) > 0])
 
-        if len(m_path) > 0 and m_path[0] == "/":
-            m_path = m_path[1:]
+        else:
+            if len(m_path) > 0 and m_path[0] == "/":
+                m_path = m_path[1:]
         to_make = os.path.join(PYTHON_MODULE_PATH, m_path)
+
         try:
             os.makedirs(to_make)
         except OSError as e:
@@ -93,16 +99,10 @@ try:
     # now unpickle function; it will expect modules to be there
     loaded_func = pickle.loads(loaded_func_all['func'])
 
-    extra_get_args = {}
-    if data_byte_range is not None:
-        range_str = 'bytes={}-{}'.format(*data_byte_range)
-        extra_get_args['Range'] = range_str
-
     data_download_time_t1 = time.time()
-    data_obj_stream = s3_client.get_object(Bucket=data_bucket,
-                                           Key=data_key, **extra_get_args)
+    data_obj = storage_handler.get_object(data_key, data_byte_range)
     # FIXME make this streaming
-    loaded_data = pickle.loads(data_obj_stream['Body'].read())
+    loaded_data = pickle.loads(data_obj)
     data_download_time_t2 = time.time()
     write_stat('data_download_time',
                data_download_time_t2-data_download_time_t1)
@@ -148,9 +148,7 @@ except Exception as e:
                                        'success' : False})
 finally:
     output_upload_timestamp_t1 = time.time()
-    s3_client.put_object(Body=pickled_output,
-                         Bucket=output_bucket,
-                         Key=output_key)
+    storage_handler.put_data(output_key, pickled_output)
     output_upload_timestamp_t2 = time.time()
     write_stat("output_upload_time",
                output_upload_timestamp_t2 - output_upload_timestamp_t1)

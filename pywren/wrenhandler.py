@@ -9,60 +9,84 @@ import sys
 import tarfile
 import time
 import traceback
+import platform
+
 from threading import Thread
 import io
-
-import boto3
-import botocore
 
 if sys.version_info > (3, 0):
     from queue import Queue, Empty # pylint: disable=import-error
     from . import wrenutil # pylint: disable=relative-import
     from . import version  # pylint: disable=relative-import
+    from storage.storage import Storage # pylint: disable=relative-import
 
 else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
+    from storage.storage import Storage # pylint: disable=relative-import
 
-PYTHON_MODULE_PATH = "/tmp/pymodules"
-CONDA_RUNTIME_DIR = "/tmp/condaruntime"
-RUNTIME_LOC = "/tmp/runtimes"
-JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
-JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner.stats.txt"
+if sys.platform == 'win32':
+    TEMP = r"D:\local\Temp"
+    PATH_DELIMETER = ";"
+    import ctypes
+
+else:
+    TEMP = "/tmp"
+    PATH_DELIMETER = ":"
+
+PYTHON_MODULE_PATH = os.path.join(TEMP, "pymodules")
+CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime")
+RUNTIME_LOC = os.path.join(TEMP, "runtimes")
+JOBRUNNER_CONFIG_FILENAME = os.path.join(TEMP, "jobrunner.config.json")
+JOBRUNNER_STATS_FILENAME = os.path.join(TEMP, "jobrunner.stats.txt")
+
+if sys.platform == 'win32':
+    CONDA_PYTHON_PATH = r"D:\home\site\wwwroot\conda\Miniconda2"
+else:
+    CONDA_PYTHON_PATH = os.path.join(CONDA_RUNTIME_DIR, "bin")
 
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 
-def get_key_size(s3client, bucket, key):
-    try:
-        a = s3client.head_object(Bucket=bucket, Key=key)
-        return a['ContentLength']
-    except botocore.exceptions.ClientError as e:
-        if e.response['Error']['Code'] == "404":
-            return None
-        else:
-            raise e
 
 def free_disk_space(dirname):
     """
     Returns the number of free bytes on the mount point containing DIRNAME
     """
-    s = os.statvfs(dirname)
-    return s.f_bsize * s.f_bavail
+    if sys.platform == 'win32':
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dirname),
+                                                   None, None, ctypes.pointer(free_bytes))
+        return free_bytes.value / 1024 / 1024
+    else:
+        s = os.statvfs(dirname)
+        return s.f_bsize * s.f_bavail
 
-def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
+def download_runtime_if_necessary(runtime_bucket, runtime_key):
     """
     Download the runtime if necessary
-
     return True if cached, False if not (download occured)
-
     """
+    if sys.platform == 'win32':
+        return True
+
+    # Set up storage handler for runtime.
+    backend_config = {
+        'bucket': runtime_bucket
+    }
+
+    storage_config = {
+        'storage_prefix' : None,
+        'storage_backend' : 's3',
+        'backend_config': backend_config
+    }
+    storage_handler = Storage(storage_config)
 
     # get runtime etag
-    runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
-                                         Key=runtime_s3_key)
+    runtime_meta = storage_handler.head_object(runtime_key)
+
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
     logger.debug("The etag is ={}".format(ETag))
@@ -91,9 +115,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     os.makedirs(runtime_etag_dir)
 
-    res = s3_client.get_object(Bucket=runtime_s3_bucket,
-                               Key=runtime_s3_key)
-    res_buffer = res['Body'].read()
+    res_buffer = storage_handler.get_object(runtime_key)
     try:
         res_buffer_io = io.BytesIO(res_buffer)
         condatar = tarfile.open(mode="r:gz", fileobj=res_buffer_io)
@@ -139,17 +161,17 @@ def aws_lambda_handler(event, context):
     # MKL does not currently play nicely with
     # containers in determining correct # of processors
     custom_handler_env = {'OMP_NUM_THREADS' : '1'}
+
     return generic_handler(event, context_dict, custom_handler_env)
 
 def get_server_info():
 
-    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii")}
+    server_info = {'uname' : " ".join(platform.uname()),
+                   'cpuinfo': platform.processor()}
     if os.path.exists("/proc"):
-        server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
-                            '/proc/meminfo': open("/proc/meminfo", 'r').read(),
+        server_info.update({'/proc/meminfo': open("/proc/meminfo", 'r').read(),
                             '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
-
 
     return server_info
 
@@ -169,9 +191,19 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
                                        "yet.").format(event['storage_config']['storage_backend']))
-        s3_client = boto3.client("s3")
-        s3_bucket = event['storage_config']['backend_config']['bucket']
 
+        # construct storage handler
+        backend_config = {
+            'bucket': event['storage_config']['backend_config']['bucket']
+        }
+
+        storage_config = {
+            'storage_prefix' : event['storage_config']['storage_prefix'],
+            'storage_backend' : event['storage_config']['storage_backend'],
+            'backend_config': backend_config
+        }
+
+        storage_handler = Storage(storage_config)
         logger.info("invocation started")
 
         # download the input
@@ -188,15 +220,13 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         start_time = time.time()
         response_status['start_time'] = start_time
 
-        runtime_s3_bucket = event['runtime']['s3_bucket']
-        runtime_s3_key = event['runtime']['s3_key']
         if event.get('runtime_url'):
             # NOTE(shivaram): Right now we only support S3 urls.
-            runtime_s3_bucket_used, runtime_s3_key_used = wrenutil.split_s3_url(
+            runtime_bucket, runtime_key = wrenutil.split_s3_url(
                 event['runtime_url'])
         else:
-            runtime_s3_bucket_used = runtime_s3_bucket
-            runtime_s3_key_used = runtime_s3_key
+            runtime_bucket = event['runtime']['s3_bucket']
+            runtime_key = event['runtime']['s3_key']
 
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
@@ -205,24 +235,23 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
 
-        data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+        data_key_size = storage_handler.head_object(data_key)['ContentLength']
         #logger.info("bucket=", s3_bucket, "key=", data_key,  "status: ", data_key_size, "bytes" )
         while data_key_size is None:
             logger.warning("WARNING COULD NOT GET FIRST KEY")
 
-            data_key_size = get_key_size(s3_client, s3_bucket, data_key)
+            data_key_size = storage_handler.head_object(data_key)['ContentLength']
         if not event['use_cached_runtime']:
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
+            shutil.rmtree(RUNTIME_LOC, True)
+            os.mkdir(RUNTIME_LOC)
 
-
-        free_disk_bytes = free_disk_space("/tmp")
+        free_disk_bytes = free_disk_space(TEMP)
         response_status['free_disk_bytes'] = free_disk_bytes
+        response_status['runtime_s3_key_used'] = runtime_key
+        response_status['runtime_s3_bucket_used'] = runtime_bucket
 
-        response_status['runtime_s3_key_used'] = runtime_s3_key_used
-        response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
-
-        runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
-                                                       runtime_s3_key_used)
+        runtime_cached = download_runtime_if_necessary(runtime_bucket,
+                                                       runtime_key)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
 
@@ -237,20 +266,20 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
 
-        CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
         CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
 
         # pass a full json blob
 
-        jobrunner_config = {'func_bucket' : s3_bucket,
+        jobrunner_config = {'func_bucket' : backend_config['bucket'],
                             'func_key' : func_key,
-                            'data_bucket' : s3_bucket,
+                            'data_bucket' : backend_config['bucket'],
                             'data_key' : data_key,
                             'data_byte_range' : data_byte_range,
                             'python_module_path' : PYTHON_MODULE_PATH,
-                            'output_bucket' : s3_bucket,
+                            'output_bucket' : backend_config['bucket'],
                             'output_key' : output_key,
-                            'stats_filename' : JOBRUNNER_STATS_FILENAME}
+                            'stats_filename' : JOBRUNNER_STATS_FILENAME,
+                            'storage_config': storage_handler.storage_config}
 
         with open(JOBRUNNER_CONFIG_FILENAME, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)
@@ -271,13 +300,21 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         local_env.update(extra_env)
 
-        local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
+        local_env['PATH'] = "{}{}{}".format(CONDA_PYTHON_PATH, PATH_DELIMETER,
+                                            local_env.get("PATH", ""))
 
         logger.debug("command str=%s", cmdstr)
+
+        # os.setsid doesn't work in windows
+        if sys.platform == 'win32':
+            preexec = None
+        else:
+            preexec = os.setsid
+
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
         process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
-                                   stdout=subprocess.PIPE, preexec_fn=os.setsid)
+                                   stdout=subprocess.PIPE, preexec_fn=preexec)
 
         logger.info("launched process")
         def consume_stdout(stdout, queue):
@@ -303,7 +340,10 @@ def generic_handler(event, context_dict, custom_handler_env=None):
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                if sys.platform.startswith('linux'):
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                else:
+                    os.kill(process.pid, signal.SIGTERM)
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
@@ -321,7 +361,6 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         response_status['stdout'] = stdout.decode("ascii")
 
-
         response_status['exec_time'] = time.time() - setup_time
         response_status['end_time'] = end_time
 
@@ -336,5 +375,4 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         response_status['exception_traceback'] = traceback.format_exc()
     finally:
         # creating new client in case the client has not been created
-        boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
-                                      Body=json.dumps(response_status))
+        storage_handler.put_data(status_key, json.dumps(response_status))

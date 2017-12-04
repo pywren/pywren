@@ -215,13 +215,15 @@ def deploy_lambda(ctx, update_if_exists=True):
     module_dir = os.path.join(SOURCE_DIR, "../")
 
     for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
-              'version.py', 'jobrunner.py', 'wren.py']:
+              'version.py', 'jobrunner.py', 'wren.py', 'storage/storage.py',
+              'storage/s3_backend.py', 'storage/storage_utils.py', 'storage/exceptions.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
         a = os.path.relpath(f, SOURCE_DIR + "/..")
 
         zipfile_obj.write(f, arcname=a)
+    a = os.path.relpath("storage/__init__.py", SOURCE_DIR + "/..")
+    zipfile_obj.writestr(a, "")
     zipfile_obj.close()
-    #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
 
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 

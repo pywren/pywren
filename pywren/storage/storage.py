@@ -25,6 +25,21 @@ class Storage(object):
         else:
             raise NotImplementedError(("Using {} as storage backend is" +
                                        "not supported yet").format(config['storage_backend']))
+    def head_object(self, key):
+        """
+        Retrieves metadata for given key.
+        The metadata dict must have ContentLength and Etag as keys
+        :return: dict
+        """
+        return self.backend_handler.head_object(key)
+
+    def get_object(self, key, data_byte_range=None):
+        """
+        Retrieves object for given key.
+        :param key: Key to fetch
+        :param data_byte_range: Specific byte range of object. Range is inclusive.
+        """
+        return self.backend_handler.get_object(key, data_byte_range)
 
     def get_storage_config(self):
         """
