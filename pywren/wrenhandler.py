@@ -227,7 +227,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         response_status['runtime_cached'] = runtime_cached
 
         cwd = os.getcwd()
-        jobrunner_path = os.path.join(cwd, "jobrunner/jobrunner.py")
+        jobrunner_path = os.path.join(cwd, "jobrunner.py")
 
         extra_env = event.get('extra_env', {})
         extra_env['PYTHONPATH'] = "{}".format(os.getcwd())
