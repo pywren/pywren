@@ -148,7 +148,7 @@ def aws_lambda_handler(event, context):
     # MKL does not currently play nicely with
     # containers in determining correct # of processors
     custom_handler_env = {'OMP_NUM_THREADS' : '1',
-                          'delete_old_runtimes': True}
+                          'delete_old_runtimes': '1'}
     return generic_handler(event, context_dict, custom_handler_env)
 
 def get_server_info():
@@ -252,8 +252,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         callset_id = event['callset_id']
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
-        runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
-                                             Key=runtime_s3_key)
+        runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket_used,
+                                             Key=runtime_s3_key_used)
         ETag = str(runtime_meta['ETag'])[1:-1]
         conda_python_path = "/tmp/condaruntime_{0}/bin".format(ETag)
         conda_python_runtime = os.path.join(conda_python_path, "python")
