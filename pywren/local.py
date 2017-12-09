@@ -18,6 +18,7 @@ def local_handler(jobs, run_dir, extra_context=None):
 
     def copy_runtime(tgt_dir):
         files = glob.glob(os.path.join(pywren.SOURCE_DIR, "./*.py"))
+        files = glob.glob(os.path.join(pywren.SOURCE_DIR, "jobrunner/*.py"))
         for f in files:
             shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
