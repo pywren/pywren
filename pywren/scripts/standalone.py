@@ -229,7 +229,7 @@ def process_message(m, local_message_i, max_run_time, run_dir):
     m.delete()
 
 def copy_runtime(tgt_dir):
-    files = glob(os.path.join(pywren.SOURCE_DIR, "./*.py"))
+    files = glob(os.path.join(pywren.SOURCE_DIR, "jobrunner/*.py"))
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
