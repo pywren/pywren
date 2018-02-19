@@ -42,6 +42,7 @@ SQS_VISIBILITY_SEC = 10
 PROCESS_SLEEP_DUR_SEC = 2
 AWS_REGION_DEBUG = 'us-west-2'
 QUEUE_SLEEP_DUR_SEC = 2
+EXP_BACKOFF_FACTOR = 5
 
 IDLE_TERMINATE_THRESHOLD = 0.95
 
@@ -324,9 +325,10 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
             * we should exponentially backoff and try again until we succeed,
             * this is critical because if this doesn't happen we end up
             * clogging all EC2 resources
+            * This function is called once per pywren executor process
         '''
         success = False
-        backoff_time = 5
+        backoff_time = EXP_BACKOFF_FACTOR
         while (not success):
             try:
                 time.sleep(backoff_time)
@@ -354,7 +356,10 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
                 wren_log.addHandler(handler)
                 wren_log.addHandler(debug_stream_handler)
                 success = True
-            except:
+            except Exception as e:
+                logger.error('Logging setup error: '+ str(e))
+
+
                 backoff_time *= 2
 
     log_setup = Thread(target=async_log_setup)

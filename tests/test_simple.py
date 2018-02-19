@@ -280,7 +280,9 @@ class WaitTest(unittest.TestCase):
         np.testing.assert_array_equal(res, x+1)
 
 
-# Comment this test out as it doesn't work with the multiple executor pull request
+# Comment this test out as it doesn't work with the multiple executors (Vaishaal)
+# If we need this later we need to do some more monkey patching but is unclear we actually need this
+
 '''
 class RuntimePaths(unittest.TestCase):
     """

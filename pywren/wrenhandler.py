@@ -268,7 +268,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                             'data_bucket' : s3_bucket,
                             'data_key' : data_key,
                             'data_byte_range' : data_byte_range,
-                            'python_module_path' : python_module_path.format(pid),
+                            'python_module_path' : python_module_path,
                             'output_bucket' : s3_bucket,
                             'output_key' : output_key,
                             'stats_filename' : jobrunner_stats_filename}

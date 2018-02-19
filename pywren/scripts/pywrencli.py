@@ -435,7 +435,7 @@ def log_url(ctx):
 @click.option('--idle_terminate_granularity', default=None, type=int,
               help='granularity of billing (sec)')
 @click.option('--parallelism', default=1, type=int,
-              help='Number of worker per machine')
+              help='Number of workers per machine')
 @click.option('--pywren_git_branch', default='master', type=str,
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
