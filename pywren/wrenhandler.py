@@ -26,9 +26,12 @@ else:
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
 
+# these templates will get filled in by runtime ETAG
 PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
 CONDA_RUNTIME_DIR = "/tmp/condaruntime_{0}"
 RUNTIME_LOC = "/tmp/runtimes"
+
+# these templates will get fillled by PID
 JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner_{0}.config.json"
 JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner_{0}.stats.txt"
 RUNTIME_DOWNLOAD_LOCK = "/tmp/runtime_download_lock"
@@ -255,7 +258,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket_used,
                                              Key=runtime_s3_key_used)
         ETag = str(runtime_meta['ETag'])[1:-1]
-        conda_python_path = "/tmp/condaruntime_{0}/bin".format(ETag)
+        conda_runtime_dir = CONDA_RUNTIME_DIR.format(ETag)
+        conda_python_path = conda_runtime_dir + "/bin"
         conda_python_runtime = os.path.join(conda_python_path, "python")
 
         # pass a full json blob
