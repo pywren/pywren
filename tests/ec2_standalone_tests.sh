@@ -25,7 +25,7 @@ pywren standalone terminate_instances
 
 
 export EXECUTOR_PARALLELISM=16
-pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granularity=600 --pywren_git_commit=$TRAVIS_COMMIT  --parallelism EXECUTOR_PARALLELISM
+pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granularity=600 --pywren_git_commit=$TRAVIS_COMMIT  --parallelism $EXECUTOR_PARALLELISM
 sleep 20
 export PYWREN_EXECUTOR=remote
 pytest -v tests/test_simple.py
