@@ -15,6 +15,7 @@ import unittest
 import numpy as np
 from flaky import flaky
 import sys
+import pywren.invokers as invokers
 
 
 
@@ -24,6 +25,8 @@ class StandaloneMany(unittest.TestCase):
         self.wrenexec = pywren.default_executor()
 
     def test_parallel(self):
+        if isinstance(pwex.invoker, invokers.LambdaInvoker):
+            return 0
         EXECUTOR_PARALLELISM = int(os.environ["EXECUTOR_PARALLELISM"])
         N = EXECUTOR_PARALLELISM
         def test_fn(i):
