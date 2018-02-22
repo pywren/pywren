@@ -25,7 +25,7 @@ class StandaloneMany(unittest.TestCase):
         self.wrenexec = pywren.default_executor()
 
     def test_parallel(self):
-        if isinstance(pwex.invoker, invokers.LambdaInvoker):
+        if isinstance(self.wrenexec.invoker, invokers.LambdaInvoker):
             return 0
         EXECUTOR_PARALLELISM = int(os.environ["EXECUTOR_PARALLELISM"])
         N = EXECUTOR_PARALLELISM
