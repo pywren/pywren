@@ -39,6 +39,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      spot_price=None,
                      availability_zone=None,
                      fast_io=False,
+                     parallelism=1,
                      pywren_git_commit=None):
 
 
@@ -75,7 +76,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
         sqs_queue_name=sqs_queue_name,
         aws_region=aws_region,
         max_idle_time=max_idle_time,
-        idle_terminate_granularity=idle_terminate_granularity)
+        idle_terminate_granularity=idle_terminate_granularity,
+        num_procs=parallelism)
     supervisord_conf_64 = b64s(supervisord_conf)
 
     cloud_agent_conf = open(sd("cloudwatch-agent.config"),
