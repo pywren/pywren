@@ -363,3 +363,4 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         # creating new client in case the client has not been created
         boto3.client("s3").put_object(Bucket=s3_bucket, Key=status_key,
                                       Body=json.dumps(response_status))
+        return response_status

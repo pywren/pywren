@@ -37,14 +37,19 @@ def default_executor(**kwargs):
     return lambda_executor(**kwargs)
 
 
-def lambda_executor(config=None, job_max_runtime=280):
+def lambda_executor(config=None, job_max_runtime=280, invoke_method='Event'):
     if config is None:
         config = wrenconfig.default()
 
     AWS_REGION = config['account']['aws_region']
     FUNCTION_NAME = config['lambda']['function_name']
-    invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
 
+    if invoke_method == 'Event':
+        invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
+    elif invoke_method == 'RequestResponse':
+        invoker = invokers.LambdaSyncInvoker(AWS_REGION, FUNCTION_NAME)
+    else:
+        raise NotImplementedError("Invoke method not supported.")
     return Executor(invoker, config, job_max_runtime)
 
 

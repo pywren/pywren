@@ -3,6 +3,7 @@ from __future__ import print_function
 
 import logging
 import time
+import json
 
 import enum
 from tblib import pickling_support
@@ -53,9 +54,14 @@ class ResponseFuture(object):
 
         self.storage_path = storage_path
 
+        self._conn = None
+
     def _set_state(self, new_state):
         ## FIXME add state machine
         self._state = new_state
+
+    def _set_conn(self, conn):
+        self._conn = conn
 
     def cancel(self):
         raise NotImplementedError("Cannot cancel dispatched jobs")
@@ -73,133 +79,149 @@ class ResponseFuture(object):
             return False
         return True
 
-    def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
-        """
-        Return the value returned by the call.
-        If the call raised an exception, this method will raise the same exception
-        If the future is cancelled before completing then CancelledError will be raised.
-
-        :param timeout: This method will wait up to timeout seconds before raising
-            a TimeoutError if function hasn't completed. If None, wait indefinitely. Default None.
-        :param check_only: Return None immediately if job is not complete. Default False.
-        :param throw_except: Reraise exception if call raised. Default true.
-        :param storage_handler: Storage handler to poll cloud storage. Default None.
-        :return: Result of the call.
-        :raises CancelledError: If the job is cancelled before completed.
-        :raises TimeoutError: If job is not complete after `timeout` seconds.
-
-        """
-        if self._state == JobState.new:
-            raise ValueError("job not yet invoked")
-
-        if self._state == JobState.success:
-            return self._return_val
-
-        if self._state == JobState.error:
-            if throw_except:
-                raise self._exception
-            else:
-                return None
-
-        if storage_handler is None:
-            storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
-            storage_handler = storage.Storage(storage_config)
-
-        storage_utils.check_storage_path(storage_handler.get_storage_config(), self.storage_path)
-
-
-        call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
-
-        self.status_query_count += 1
-
-        ## FIXME implement timeout
-        if timeout is not None:
-            raise NotImplementedError()
-
-        if check_only is True:
-            if call_status is None:
-                return None
-
-        while call_status is None:
-            time.sleep(self.GET_RESULT_SLEEP_SECS)
+    def get_call_status(self, storage_handler, conn):
+        if conn is None:
             call_status = storage_handler.get_call_status(self.callset_id, self.call_id)
-
-            self.status_query_count += 1
-        self._invoke_metadata['status_done_timestamp'] = time.time()
-        self._invoke_metadata['status_query_count'] = self.status_query_count
-
-        self.run_status = call_status # this is the remote status information
-        self.invoke_status = self._invoke_metadata # local status information
-
-        if call_status['exception'] is not None:
-            # the wrenhandler had an exception
-            exception_str = call_status['exception']
-
-            exception_args = call_status['exception_args']
-            if exception_args[0] == "WRONGVERSION":
-                if throw_except:
-                    raise Exception("Pywren version mismatch: remote " + \
-                        "expected version {}, local library is version {}".format(
-                            exception_args[2], exception_args[3]))
-                return None
-            elif exception_args[0] == "OUTATIME":
-                if throw_except:
-                    raise Exception("process ran out of time")
-                return None
-            else:
-                if throw_except:
-                    if 'exception_traceback' in call_status:
-                        logger.error(call_status['exception_traceback'])
-                    raise Exception(exception_str, *exception_args)
-                return None
-
-        call_output_time = time.time()
-        call_invoker_result = pickle.loads(storage_handler.get_call_output(
-            self.callset_id, self.call_id))
-
-        call_output_time_done = time.time()
-        self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
-
-        self._invoke_metadata['download_output_timestamp'] = call_output_time_done
-        call_success = call_invoker_result['success']
-        logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id,
-                                                                           self.call_id,
-                                                                           call_success))
-
-
-
-        self._call_invoker_result = call_invoker_result
-
-
-
-        if call_success:
-
-            self._return_val = call_invoker_result['result']
-            self._set_state(JobState.success)
-            return self._return_val
-
-        elif throw_except:
-
-            self._exception = call_invoker_result['result']
-            self._traceback = (call_invoker_result['exc_type'],
-                               call_invoker_result['exc_value'],
-                               call_invoker_result['exc_traceback'])
-
-            self._state = JobState.error
-            if call_invoker_result.get('pickle_fail', False):
-                logging.warning(
-                    "there was an error pickling. The original exception: " + \
-                        "{}\nThe pickling exception: {}".format(
-                            call_invoker_result['exc_value'],
-                            str(call_invoker_result['pickle_exception'])))
-
-                reraise(Exception, call_invoker_result['exc_value'],
-                        call_invoker_result['exc_traceback'])
-            else:
-                # reraise the exception
-                reraise(*self._traceback)
         else:
-            return None  # nothing, don't raise, no value
+            conn.setblocking(False)
+            try:
+                http_resp = self._conn.recv(1000000)
+                call_status = json.loads(http_resp.split("\r\n\r\n")[1])
+            except Exception:
+                # TODO: more accurate exception handling
+                # Python 2 and 3 might differ, see: https://bugs.python.org/issue10272
+                call_status = None
+        return call_status
+
+
+    def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
+            """
+            Return the value returned by the call.
+            If the call raised an exception, this method will raise the same exception
+            If the future is cancelled before completing then CancelledError will be raised.
+
+            :param timeout: This method will wait up to timeout seconds before raising
+                a TimeoutError if function hasn't completed. If None, wait indefinitely. Default None.
+            :param check_only: Return None immediately if job is not complete. Default False.
+            :param throw_except: Reraise exception if call raised. Default true.
+            :param storage_handler: Storage handler to poll cloud storage. Default None.
+            :return: Result of the call.
+            :raises CancelledError: If the job is cancelled before completed.
+            :raises TimeoutError: If job is not complete after `timeout` seconds.
+
+            """
+            if self._state == JobState.new:
+                raise ValueError("job not yet invoked")
+
+            if self._state == JobState.success:
+                return self._return_val
+
+            if self._state == JobState.error:
+                if throw_except:
+                    raise self._exception
+                else:
+                    return None
+
+            if storage_handler is None:
+                storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+                storage_handler = storage.Storage(storage_config)
+
+            storage_utils.check_storage_path(storage_handler.get_storage_config(), self.storage_path)
+
+            call_status = self.get_call_status(storage_handler, self._conn)
+            print("received call_status")
+            print(call_status)
+            self.status_query_count += 1
+
+            ## FIXME implement timeout
+            if timeout is not None:
+                raise NotImplementedError()
+
+            if check_only is True:
+                if call_status is None:
+                    return None
+
+            while call_status is None:
+                time.sleep(self.GET_RESULT_SLEEP_SECS)
+                print("none, sleep for " + str(self.GET_RESULT_SLEEP_SECS))
+                call_status = self.get_call_status(storage_handler, self._conn)
+                self.status_query_count += 1
+
+            self._invoke_metadata['status_done_timestamp'] = time.time()
+            self._invoke_metadata['status_query_count'] = self.status_query_count
+
+            self.run_status = call_status # this is the remote status information
+            self.invoke_status = self._invoke_metadata # local status information
+
+            if call_status['exception'] is not None:
+                # the wrenhandler had an exception
+                exception_str = call_status['exception']
+
+                exception_args = call_status['exception_args']
+                if exception_args[0] == "WRONGVERSION":
+                    if throw_except:
+                        raise Exception("Pywren version mismatch: remote " + \
+                            "expected version {}, local library is version {}".format(
+                                exception_args[2], exception_args[3]))
+                    return None
+                elif exception_args[0] == "OUTATIME":
+                    if throw_except:
+                        raise Exception("process ran out of time")
+                    return None
+                else:
+                    if throw_except:
+                        if 'exception_traceback' in call_status:
+                            logger.error(call_status['exception_traceback'])
+                        raise Exception(exception_str, *exception_args)
+                    return None
+
+            call_output_time = time.time()
+            call_invoker_result = pickle.loads(storage_handler.get_call_output(
+                self.callset_id, self.call_id))
+
+            call_output_time_done = time.time()
+            self._invoke_metadata['download_output_time'] = call_output_time_done - call_output_time
+
+            self._invoke_metadata['download_output_timestamp'] = call_output_time_done
+            call_success = call_invoker_result['success']
+            logger.info("ResponseFuture.result() {} {} call_success {}".format(self.callset_id,
+                                                                               self.call_id,
+                                                                               call_success))
+
+
+
+            self._call_invoker_result = call_invoker_result
+
+
+
+            if call_success:
+
+                self._return_val = call_invoker_result['result']
+                self._set_state(JobState.success)
+                return self._return_val
+
+            elif throw_except:
+
+                self._exception = call_invoker_result['result']
+                self._traceback = (call_invoker_result['exc_type'],
+                                   call_invoker_result['exc_value'],
+                                   call_invoker_result['exc_traceback'])
+
+                self._state = JobState.error
+                if call_invoker_result.get('pickle_fail', False):
+                    logging.warning(
+                        "there was an error pickling. The original exception: " + \
+                            "{}\nThe pickling exception: {}".format(
+                                call_invoker_result['exc_value'],
+                                str(call_invoker_result['pickle_exception'])))
+
+                    reraise(Exception, call_invoker_result['exc_value'],
+                            call_invoker_result['exc_traceback'])
+                else:
+                    # reraise the exception
+                    reraise(*self._traceback)
+            else:
+                return None  # nothing, don't raise, no value
 
     def exception(self, timeout=None):
         raise NotImplementedError()

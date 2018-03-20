@@ -29,7 +29,7 @@ setup(
     install_requires=[
         'Click', 'boto3', 'PyYAML',
         'enum34', 'flaky', 'glob2',
-        'watchtower', 'tblib' # it's nuts that we need both botos
+        'watchtower', 'tblib', 'requests' # it's nuts that we need both botos
     ],
     tests_requires=[
         'pytest', 'numpy',
