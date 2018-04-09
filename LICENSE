@@ -214,4 +214,7 @@ BSD-style licenses
 
 The following components are provided under a BSD-style license.
 
-    pywren/serialize
+    (BSD 3 Clause) pywren/serialize
+    - (BSD 2 Clause) pywren/serialize/default_preinstalls.py
+    - (BSD 2 Clause) pywren/serialize/module_dependency.py
+
