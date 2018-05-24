@@ -140,20 +140,24 @@ def create_role(ctx):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    iamclient = boto3.resource('iam')
+    iam= boto3.resource('iam')
+    iamclient = boto3.client('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    iamclient.create_role(RoleName=role_name,
-                          AssumeRolePolicyDocument=json_policy)
-    more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
+    roles = [x for x in iamclient.list_roles()["Roles"] if x["RoleName"] == role_name]
+    if (len(roles) == 0):
+        iam.create_role(RoleName=role_name,
+                              AssumeRolePolicyDocument=json_policy)
+        more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
-    AWS_ACCOUNT_ID = config['account']['aws_account_id']
-    AWS_REGION = config['account']['aws_region']
-    more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
-    more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
+        AWS_ACCOUNT_ID = config['account']['aws_account_id']
+        AWS_REGION = config['account']['aws_region']
+        more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
+        more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
 
-    iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
-        PolicyDocument=more_json_policy)
+        iam.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
+            PolicyDocument=more_json_policy)
+
 
 @click.command()
 @click.pass_context
