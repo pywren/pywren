@@ -97,7 +97,7 @@ class Executor(object):
 
         if extra_meta is not None:
             # sanity
-            for k, v in extra_meta.iteritems():
+            for k, v in extra_meta.items():
                 if k in arg_dict:
                     raise ValueError("Key {} already in dict".format(k))
                 arg_dict[k] = v
