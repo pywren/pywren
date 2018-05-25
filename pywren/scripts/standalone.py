@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 #!/usr/bin/env python
 
 from __future__ import print_function
@@ -42,6 +58,7 @@ SQS_VISIBILITY_SEC = 10
 PROCESS_SLEEP_DUR_SEC = 2
 AWS_REGION_DEBUG = 'us-west-2'
 QUEUE_SLEEP_DUR_SEC = 2
+EXP_BACKOFF_FACTOR = 5
 
 IDLE_TERMINATE_THRESHOLD = 0.95
 
@@ -229,7 +246,7 @@ def process_message(m, local_message_i, max_run_time, run_dir):
     m.delete()
 
 def copy_runtime(tgt_dir):
-    files = glob(os.path.join(pywren.SOURCE_DIR, "./*.py"))
+    files = glob(os.path.join(pywren.SOURCE_DIR, "jobrunner/*.py"))
     for f in files:
         shutil.copy(f, os.path.join(tgt_dir, os.path.basename(f)))
 
@@ -310,41 +327,61 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
     time.sleep(rand_sleep)
 
     session = boto3.session.Session(region_name=aws_region)
-
     # make boto quiet locally FIXME is there a better way of doing this?
     logging.getLogger('boto').setLevel(logging.CRITICAL)
     logging.getLogger('boto3').setLevel(logging.CRITICAL)
     logging.getLogger('botocore').setLevel(logging.CRITICAL)
 
+    def async_log_setup():
+        ''' None of this stuff should be on the critical path to launching an
+            * instance. Instances should start dequeuing from SQS queue as soon
+            * as possible and shouldn't have to wait for rest of spot cluster
+            * to come up so they have a valid ec2_metadata['Name']
+            * If there are any exceptions in this function,
+            * we should exponentially backoff and try again until we succeed,
+            * this is critical because if this doesn't happen we end up
+            * clogging all EC2 resources
+            * This function is called once per pywren executor process
+        '''
+        success = False
+        backoff_time = EXP_BACKOFF_FACTOR
+        while (not success):
+            try:
+                time.sleep(backoff_time)
+                instance = get_my_ec2_instance(aws_region)
+                ec2_metadata = get_my_ec2_meta(instance)
+                server_name = ec2_metadata['Name']
+                log_stream_prefix = ec2_metadata['instance_id']
 
-    # NOTE : This assumes EC2 but in the future we could run on
-    # millennium if we set the log stream correctly
-    instance = get_my_ec2_instance(aws_region)
-    ec2_metadata = get_my_ec2_meta(instance)
-    server_name = ec2_metadata['Name']
-    log_stream_prefix = ec2_metadata['instance_id']
+                log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
+                                 .format(server_name)
 
-    log_format_str = '{} %(asctime)s - %(name)s- %(levelname)s - %(message)s'\
-                     .format(server_name)
+                formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+                stream_name = log_stream_prefix + "-{logger_name}"
+                handler = watchtower.CloudWatchLogHandler(send_interval=20,
+                                                          log_group="pywren.standalone",
+                                                          stream_name=stream_name,
+                                                          boto3_session=session,
+                                                          max_batch_count=10)
 
-    formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
+                debug_stream_handler = logging.StreamHandler()
+                handler.setFormatter(formatter)
+                logger.addHandler(handler)
+                logger.setLevel(logging.DEBUG)
+                wren_log = pywren.wrenhandler.logger
+                wren_log.addHandler(handler)
+                wren_log.addHandler(debug_stream_handler)
+                success = True
+            except Exception as e:
+                logger.error('Logging setup error: '+ str(e))
 
 
-    handler = watchtower.CloudWatchLogHandler(send_interval=20,
-                                              log_group="pywren.standalone",
-                                              stream_name=log_stream_prefix + "-{logger_name}",
-                                              boto3_session=session,
-                                              max_batch_count=10)
+                backoff_time *= 2
 
-    debug_stream_handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
-
-    wren_log = pywren.wrenhandler.logger
-    wren_log.addHandler(handler)
-
-    wren_log.addHandler(debug_stream_handler)
+    log_setup = Thread(target=async_log_setup)
+    log_setup.start()
+    pid = os.getpid()
+    run_dir = run_dir + "_" + str(pid)
 
     #config = pywren.wrenconfig.default()
     server_runner(aws_region, sqs_queue_name,

@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 
 from fabric.api import local, env, run, put, cd, task, sudo, get, settings, warn_only, lcd
 from fabric.contrib import project
@@ -111,7 +127,7 @@ def get_message(delete=False):
 
     response = queue.receive_messages()
     if len(response) > 0 :
-        print response[0].body
+        print(response[0].body)
         if delete:
             response[0].delete()
 
@@ -135,15 +151,15 @@ def sqs_worker(number=1):
 
     pool = ThreadPool(10)
     while(True):
-        print "reading queue" 
+        print("reading queue" )
         response = queue.receive_messages(WaitTimeSeconds=10)
 
         if len(response) > 0:
-            print "Dispatching"
+            print("Dispatching")
             #pool.apply_async(
             process_message(response[0])
         else:
-            print "no message, sleeping"
+            print("no message, sleeping")
             time.sleep(1)
 
     
@@ -158,7 +174,7 @@ def get_message(delete=False):
 
     response = queue.receive_messages()
     if len(response) > 0 :
-        print response[0].body
+        print(response[0].body)
         if delete:
             response[0].delete()
 @task 
@@ -185,7 +201,7 @@ def create_instance_profile():
 
     instance_profile = iam.InstanceProfile(INSTANCE_PROFILE_NAME)
     #instance_profile.add_role(RoleName='pywren_exec_role_refactor8')
-    print instance_profile.name
+    print(instance_profile.name)
 
 @task 
 def launch_instance():
@@ -272,7 +288,7 @@ def launch_instance():
                 },
             ]
         )
-        print inst.public_dns_name
+        print(inst.public_dns_name)
 
 def tags_to_dict(d):
     return {a['Key'] : a['Value'] for a in d}
@@ -300,7 +316,7 @@ def delete_log_groups(prefix):
     lg = logclient.describe_log_groups(logGroupNamePrefix=prefix)
     for l in lg['logGroups']:
         logGroupName = l['logGroupName']
-        print 'deleting', logGroupName
+        print('deleting', logGroupName)
         logclient.delete_log_group(logGroupName = logGroupName)
         
 
@@ -315,7 +331,7 @@ def cleanup_travis_leftovers():
 
     for p in iam.instance_profiles.all():
         if 'pywren_travis_' in p.name:
-            print p.name
+            print(p.name)
             for r in p.roles:
                 p.remove_role(RoleName=r.name)
             p.delete()
@@ -348,13 +364,13 @@ def cleanup_leftover_buckets():
 
                     keys = [c['Key'] for c in response['Contents']]
                     objects = [{'Key' : k} for k in keys]
-                    print "deleting", len(keys), "keys"
+                    print("deleting", len(keys), "keys")
                     client.delete_objects(Bucket=bucket.name,
                                           Delete={'Objects' : objects})
                 else:
                     break
             #for obj in bucket.objects.all():
                 
-            print "deleting", bucket.name
+            print("deleting", bucket.name)
             bucket.delete()
             

@@ -20,42 +20,37 @@ import boto3
 import uuid
 import numpy as np
 import time
+import os
 import pywren
+import pywren.runtime
 import subprocess
 import logging
 from six.moves import cPickle as pickle
+
 import unittest
 import numpy as np
 from flaky import flaky
 import sys
-
-
-macro = pytest.mark.skipif(
-    not pytest.config.getoption("--runmacro"),
-    reason="need --runmacro option to run"
-)
+import pywren.invokers as invokers
 
 
 
-class MacroReduce(unittest.TestCase):
-    """
-    Test running with both a lambda executor and a remote
-    executor
-    """
+class StandaloneMany(unittest.TestCase):
+
     def setUp(self):
-        self.lambda_exec = pywren.lambda_executor()
-        self.remote_exec = pywren.remote_executor()
+        self.wrenexec = pywren.default_executor()
 
-    @macro
-    def test_reduce(self):
+    def test_parallel(self):
+        if isinstance(self.wrenexec.invoker, invokers.LambdaInvoker):
+            return 0
+        EXECUTOR_PARALLELISM = int(os.environ["EXECUTOR_PARALLELISM"])
+        N = EXECUTOR_PARALLELISM
+        def test_fn(i):
+            open("/tmp/potato_{0}".format(i), "w+").close()
+            time.sleep(120)
+            return [x for x in os.listdir("/tmp/") if "potato" in x]
 
-        def plus_one(x):
-            return x + 1
-        N = 10
+        futures = self.wrenexec.map(test_fn, range(EXECUTOR_PARALLELISM))
+        for f in futures:
+            assert(len(f.result()) == EXECUTOR_PARALLELISM)
 
-        x = np.arange(N)
-        futures = self.lambda_exec.map(plus_one, x)
-        
-        reduce_future = self.remote_exec.reduce(sum, futures)
-
-        np.testing.assert_array_equal(reduce_future.result(), 55)

@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -25,10 +41,10 @@ from pywren.wait import wait, ALL_COMPLETED
 logger = logging.getLogger(__name__)
 
 
+"""
+Theoretically will allow for cross-AZ invocations
+"""
 class Executor(object):
-    """
-    Theoretically will allow for cross-AZ invocations
-    """
 
     def __init__(self, invoker, config, job_max_runtime):
         self.invoker = invoker
@@ -152,13 +168,20 @@ class Executor(object):
             use_cached_runtime=True, overwrite_invoke_args=None,
             exclude_modules=None):
         """
-        # FIXME work with an actual iterable instead of just a list
+        :param func: the function to map over the data
+        :param iterdata: An iterable of input data
+        :param extra_env: Additional environment variables for lambda environment. Default None.
+        :param extra_meta: Additional metadata to pass to lambda. Default None.
+        :param invoke_pool_threads: Number of threads to use to invoke.
+        :param data_all_as_one: upload the data as a single object. Default True
+        :param use_cached_runtime: Use cached runtime whenever possible. Default true
+        :param overwrite_invoke_args: Overwrite other args. Mainly used for testing.
+        :param exclude_modules: Explicitly keep these modules from pickled dependencies.
+        :return: A list with size `len(iterdata)` of futures for each job
+        :rtype:  list of futures.
 
-        data_all_as_one : upload the data as a single object; fewer
-        tcp transactions (good) but potentially higher latency for workers (bad)
-
-        use_cached_runtime : if runtime has been cached, use that. When set
-        to False, redownloads runtime.
+        Usage
+          >>> futures = pwex.map(foo, data_list)
         """
 
         data = list(iterdata)
