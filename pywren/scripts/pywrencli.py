@@ -118,7 +118,9 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
     if aws_region in pywren.wrenconfig.RUNTIME_BUCKET_REGION:
         runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION[aws_region]
     else:
-        print("WARNING: Runtime not deployed for your region; using runtime from us-west-2. Performance may be imnpacted")
+        print("WARNING: Runtime not deployed for your region")
+        print("using runtime from us-west-2.")
+        print("Performance may be imnpacted")
         runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION['us-west-2']
     default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)

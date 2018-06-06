@@ -192,11 +192,11 @@ more_permissions_policy = {
     ]}
 
 
-RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-public-us-west-1', 
-                         'us-west-2' : 'pywren-public-us-west-2', 
-                         'us-east-1' : 'pywren-public-us-east-1', 
-                         'us-east-2' : 'pywren-public-us-east-2', 
-                         'ap-northeast-2' : 'pywren-public-ap-northeast-2', 
-                         'eu-central-1' : 'pywren-public-eu-central-1-a', 
+RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-public-us-west-1',
+                         'us-west-2' : 'pywren-public-us-west-2',
+                         'us-east-1' : 'pywren-public-us-east-1',
+                         'us-east-2' : 'pywren-public-us-east-2',
+                         'ap-northeast-2' : 'pywren-public-ap-northeast-2',
+                         'eu-central-1' : 'pywren-public-eu-central-1-a',
                          'eu-west-1' : 'pywren-public-eu-west-1'}
 
