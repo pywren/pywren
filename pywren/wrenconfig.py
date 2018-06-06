@@ -199,4 +199,3 @@ RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-public-us-west-1',
                          'ap-northeast-2' : 'pywren-public-ap-northeast-2',
                          'eu-central-1' : 'pywren-public-eu-central-1-a',
                          'eu-west-1' : 'pywren-public-eu-west-1'}
-
