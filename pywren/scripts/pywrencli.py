@@ -115,7 +115,13 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         print('Python 2.7 runtime will be used for remote.')
         pythonver = '2.7'
 
-    runtime_bucket = 'pywren-public-{}'.format(aws_region)
+    if aws_region in pywren.wrenconfig.RUNTIME_BUCKET_REGION:
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION[aws_region]
+    else:
+        print("WARNING: Runtime not deployed for your region")
+        print("using runtime from us-west-2.")
+        print("Performance may be imnpacted")
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION['us-west-2']
     default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
