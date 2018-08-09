@@ -27,6 +27,14 @@ if sys.version_info < (2, 7):
 if sys.version_info > (3,) and sys.version_info < (3, 4):
     sys.exit('Sorry, Python3 version < 3.4 is not supported')
 
+install_requires = [
+    'Click', 'boto3', 'PyYAML',
+    'flaky', 'glob2', 'watchtower',
+    'tblib'  # it's nuts that we need both botos
+]
+if sys.version_info < (3, 4):
+    install_requires.append('enum34')
+
 # http://stackoverflow.com/questions/6344076/differences-between-distribute-distutils-setuptools-and-distutils2
 
 # how to get version info into the project
@@ -42,11 +50,7 @@ setup(
     "on AWS cloud services, including AWS Lambda and AWS EC2.",
     author_email='jonas@ericjonas.com',
     packages=find_packages(),
-    install_requires=[
-        'Click', 'boto3', 'PyYAML',
-        'enum34', 'flaky', 'glob2',
-        'watchtower', 'tblib' # it's nuts that we need both botos
-    ],
+    install_requires=install_requires,
     tests_requires=[
         'pytest', 'numpy',
     ],
