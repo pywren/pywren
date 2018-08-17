@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 """
 Code to handle EC2 stand-alone instances
 """
@@ -39,6 +55,7 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
                      spot_price=None,
                      availability_zone=None,
                      fast_io=False,
+                     parallelism=1,
                      pywren_git_commit=None):
 
 
@@ -75,7 +92,8 @@ def launch_instances(number, tgt_ami, aws_region, my_aws_key, instance_type,
         sqs_queue_name=sqs_queue_name,
         aws_region=aws_region,
         max_idle_time=max_idle_time,
-        idle_terminate_granularity=idle_terminate_granularity)
+        idle_terminate_granularity=idle_terminate_granularity,
+        num_procs=parallelism)
     supervisord_conf_64 = b64s(supervisord_conf)
 
     cloud_agent_conf = open(sd("cloudwatch-agent.config"),

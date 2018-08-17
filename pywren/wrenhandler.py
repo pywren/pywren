@@ -1,4 +1,21 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 import base64
+import fcntl
 import json
 import logging
 import os
@@ -25,11 +42,15 @@ else:
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
 
-PYTHON_MODULE_PATH = "/tmp/pymodules"
-CONDA_RUNTIME_DIR = "/tmp/condaruntime"
+# these templates will get filled in by runtime ETAG
+PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
+CONDA_RUNTIME_DIR = "/tmp/condaruntime_{0}"
 RUNTIME_LOC = "/tmp/runtimes"
-JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner.config.json"
-JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner.stats.txt"
+
+# these templates will get fillled by PID
+JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner_{0}.config.json"
+JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner_{0}.stats.txt"
+RUNTIME_DOWNLOAD_LOCK = "/tmp/runtime_download_lock"
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +73,8 @@ def free_disk_space(dirname):
     s = os.statvfs(dirname)
     return s.f_bsize * s.f_bavail
 
-def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
+def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
+                                  delete_old_runtimes=False):
     """
     Download the runtime if necessary
 
@@ -60,11 +82,14 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
 
     """
 
+    lock = open(RUNTIME_DOWNLOAD_LOCK, "a")
+    fcntl.lockf(lock, fcntl.LOCK_EX)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                          Key=runtime_s3_key)
     # etags have strings (double quotes) on each end, so we strip those
     ETag = str(runtime_meta['ETag'])[1:-1]
+    conda_runtime_dir = CONDA_RUNTIME_DIR.format(ETag)
     logger.debug("The etag is ={}".format(ETag))
     runtime_etag_dir = os.path.join(RUNTIME_LOC, ETag)
     logger.debug("Runtime etag dir={}".format(runtime_etag_dir))
@@ -72,22 +97,23 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
     logger.debug("Expected target={}".format(expected_target))
     # check if dir is linked to correct runtime
     if os.path.exists(RUNTIME_LOC):
-        if os.path.exists(CONDA_RUNTIME_DIR):
-            if not os.path.islink(CONDA_RUNTIME_DIR):
+        if os.path.exists(conda_runtime_dir):
+            if not os.path.islink(conda_runtime_dir):
                 raise Exception("{} is not a symbolic link, your runtime config is broken".format(
-                    CONDA_RUNTIME_DIR))
+                    conda_runtime_dir))
 
-            existing_link = os.readlink(CONDA_RUNTIME_DIR)
+            existing_link = os.readlink(conda_runtime_dir)
             if existing_link == expected_target:
                 logger.debug("found existing {}, not re-downloading".format(ETag))
                 return True
 
     logger.debug("{} not cached, downloading".format(ETag))
     # didn't cache, so we start over
-    if os.path.islink(CONDA_RUNTIME_DIR):
-        os.unlink(CONDA_RUNTIME_DIR)
+    if os.path.islink(conda_runtime_dir):
+        os.unlink(conda_runtime_dir)
 
-    shutil.rmtree(RUNTIME_LOC, True)
+    if (delete_old_runtimes):
+        shutil.rmtree(RUNTIME_LOC, True)
 
     os.makedirs(runtime_etag_dir)
 
@@ -119,7 +145,9 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key):
         raise
 
     # final operation
-    os.symlink(expected_target, CONDA_RUNTIME_DIR)
+    os.symlink(expected_target, conda_runtime_dir)
+    fcntl.lockf(lock, fcntl.LOCK_UN)
+    lock.close()
     return False
 
 
@@ -138,7 +166,8 @@ def aws_lambda_handler(event, context):
     }
     # MKL does not currently play nicely with
     # containers in determining correct # of processors
-    custom_handler_env = {'OMP_NUM_THREADS' : '1'}
+    custom_handler_env = {'OMP_NUM_THREADS' : '1',
+                          'delete_old_runtimes': '1'}
     return generic_handler(event, context_dict, custom_handler_env)
 
 def get_server_info():
@@ -163,6 +192,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
     custom_handler_env are environment variables we should set
     based on the platform we are on.
     """
+    pid = os.getpid()
 
     response_status = {'exception': None}
     try:
@@ -220,9 +250,14 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
+        if (custom_handler_env != None):
+            delete_old_runtimes = custom_handler_env.get('delete_old_runtimes', False)
+        else:
+            delete_old_runtimes = False
+
 
         runtime_cached = download_runtime_if_necessary(s3_client, runtime_s3_bucket_used,
-                                                       runtime_s3_key_used)
+                                                       runtime_s3_key_used, delete_old_runtimes)
         logger.info("Runtime ready, cached={}".format(runtime_cached))
         response_status['runtime_cached'] = runtime_cached
 
@@ -236,31 +271,37 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         callset_id = event['callset_id']
         response_status['call_id'] = call_id
         response_status['callset_id'] = callset_id
-
-        CONDA_PYTHON_PATH = "/tmp/condaruntime/bin"
-        CONDA_PYTHON_RUNTIME = os.path.join(CONDA_PYTHON_PATH, "python")
+        runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket_used,
+                                             Key=runtime_s3_key_used)
+        ETag = str(runtime_meta['ETag'])[1:-1]
+        conda_runtime_dir = CONDA_RUNTIME_DIR.format(ETag)
+        conda_python_path = conda_runtime_dir + "/bin"
+        conda_python_runtime = os.path.join(conda_python_path, "python")
 
         # pass a full json blob
+        jobrunner_config_filename = JOBRUNNER_CONFIG_FILENAME.format(pid)
+        jobrunner_stats_filename = JOBRUNNER_STATS_FILENAME.format(pid)
+        python_module_path = PYTHON_MODULE_PATH.format(pid)
 
         jobrunner_config = {'func_bucket' : s3_bucket,
                             'func_key' : func_key,
                             'data_bucket' : s3_bucket,
                             'data_key' : data_key,
                             'data_byte_range' : data_byte_range,
-                            'python_module_path' : PYTHON_MODULE_PATH,
+                            'python_module_path' : python_module_path,
                             'output_bucket' : s3_bucket,
                             'output_key' : output_key,
-                            'stats_filename' : JOBRUNNER_STATS_FILENAME}
+                            'stats_filename' : jobrunner_stats_filename}
 
-        with open(JOBRUNNER_CONFIG_FILENAME, 'w') as jobrunner_fid:
+        with open(jobrunner_config_filename, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)
 
-        if os.path.exists(JOBRUNNER_STATS_FILENAME):
-            os.remove(JOBRUNNER_STATS_FILENAME)
+        if os.path.exists(jobrunner_stats_filename):
+            os.remove(jobrunner_stats_filename)
 
-        cmdstr = "{} {} {}".format(CONDA_PYTHON_RUNTIME,
+        cmdstr = "{} {} {}".format(conda_python_runtime,
                                    jobrunner_path,
-                                   JOBRUNNER_CONFIG_FILENAME)
+                                   jobrunner_config_filename)
 
         setup_time = time.time()
         response_status['setup_time'] = setup_time - start_time
@@ -271,7 +312,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         local_env.update(extra_env)
 
-        local_env['PATH'] = "{}:{}".format(CONDA_PYTHON_PATH, local_env.get("PATH", ""))
+        local_env['PATH'] = "{}:{}".format(conda_python_path, local_env.get("PATH", ""))
 
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954

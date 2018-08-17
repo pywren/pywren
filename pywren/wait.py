@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from __future__ import absolute_import
 
 import random
@@ -15,22 +31,32 @@ ALWAYS = 3
 def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
          WAIT_DUR_SEC=5):
     """
-    this will eventually provide an optimization for checking if a large
-    number of futures have completed without too much network traffic
-    by exploiting the callset
+    Wait for the Future instances `fs` to complete. Returns a 2-tuple of
+    lists. The first list contains the futures that completed
+    (finished or cancelled) before the wait completed. The second
+    contains uncompleted futures.
 
-    From python docs:
+    :param fs: A list of futures.
+    :param return_when: One of `ALL_COMPLETED`, `ANY_COMPLETED`, `ALWAYS`
+    :param THREADPOOL_SIZE: Number of threads to use. Default 64
+    :param WAIT_DUR_SEC: Time interval between each check.
+    :return: `(fs_dones, fs_notdones)`
+        where `fs_dones` is a list of futures that have completed
+        and `fs_notdones` is a list of futures that have not completed.
+    :rtype: 2-tuple of lists
 
-    Wait for the Future instances (possibly created by different Executor
-    instances) given by fs to complete. Returns a named 2-tuple of
-    sets. The first set, named "done", contains the futures that completed
-    (finished or were cancelled) before the wait completed. The second
-    set, named "not_done", contains uncompleted futures.
-
-
-    http://pythonhosted.org/futures/#concurrent.futures.wait
+    Usage
+      >>> futures = pwex.map(foo, data)
+      >>> dones, not_dones = wait(futures, ALL_COMPLETED)
+      >>> # not_dones should be an empty list.
+      >>> results = [f.result() for f in dones]
 
     """
+
+    # FIXME:  this will eventually provide an optimization for checking if a large
+    # number of futures have completed without too much network traffic
+    # by exploiting the callset
+
     N = len(fs)
 
 

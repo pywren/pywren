@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from __future__ import absolute_import
 from __future__ import print_function
 
@@ -75,20 +91,18 @@ class ResponseFuture(object):
 
     def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
         """
-
-
-        From the python docs:
-
-        Return the value returned by the call. If the call hasn't yet
-        completed then this method will wait up to timeout seconds. If
-        the call hasn't completed in timeout seconds then a
-        TimeoutError will be raised. timeout can be an int or float.If
-        timeout is not specified or None then there is no limit to the
-        wait time.
-
+        Return the value returned by the call.
+        If the call raised an exception, this method will raise the same exception
         If the future is cancelled before completing then CancelledError will be raised.
 
-        If the call raised then this method will raise the same exception.
+        :param timeout: This method will wait up to timeout seconds before raising
+            a TimeoutError if function hasn't completed. If None, wait indefinitely. Default None.
+        :param check_only: Return None immediately if job is not complete. Default False.
+        :param throw_except: Reraise exception if call raised. Default true.
+        :param storage_handler: Storage handler to poll cloud storage. Default None.
+        :return: Result of the call.
+        :raises CancelledError: If the job is cancelled before completed.
+        :raises TimeoutError: If job is not complete after `timeout` seconds.
 
         """
         if self._state == JobState.new:
