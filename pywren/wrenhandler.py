@@ -356,6 +356,11 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         response_status['retcode'] = process.returncode
         logger.info("command execution finished, retcode= {}".format(process.returncode))
+        if process.returncode != 0:
+            logger.warning("process returned non-zero retcode {}".format(process.returncode))
+            logger.info(response_status['stdout'])
+            raise Exception("RETCODE",
+                            "Python process returned a non-zero return code")
 
         if os.path.exists(JOBRUNNER_STATS_FILENAME):
             with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
@@ -365,15 +370,9 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                     response_status[key] = float_value
 
         end_time = time.time()
-        response_status['retcode'] = process.returncode
 
         response_status['stdout'] = stdout.decode("ascii")
 
-        if process.returncode != 0:
-            logger.warning("process returned non-zero retcode {}".format(process.returncode))
-            logger.info(response_status['stdout'])
-            raise Exception("RETCODE",
-                            "Python process returned a non-zero return code")
 
 
         response_status['exec_time'] = time.time() - setup_time
