@@ -52,7 +52,7 @@ from pywren.serialize.cloudpickle import CloudPickler
 from pywren.serialize.module_dependency import ModuleDependencyAnalyzer
 from pywren.serialize import default_preinstalls
 
-class SerializeIndependent(object):
+class SerializeIndependent:
     def __init__(self, preinstalled_modules=default_preinstalls.modules):
         # pylint: disable=dangerous-default-value
         self.preinstalled_modules = preinstalled_modules

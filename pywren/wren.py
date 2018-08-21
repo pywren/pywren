@@ -46,7 +46,7 @@ def default_executor(**kwargs):
 
     if executor_str == 'lambda':
         return lambda_executor(**kwargs)
-    elif executor_str == 'remote' or executor_str == 'standalone':
+    elif executor_str in ('remote', 'standalone'):
         return remote_executor(**kwargs)
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)

@@ -129,7 +129,7 @@ def _wait(fs, return_early_n, max_direct_query_n,
 
     ### Callset optimization via object store convenience functions:
     # check if the not-done ones have the same callset_id
-    present_callsets = set([f.callset_id for f in not_done_futures])
+    present_callsets = {f.callset_id for f in not_done_futures}
     if len(present_callsets) > 1:
         raise NotImplementedError()
 
@@ -140,7 +140,7 @@ def _wait(fs, return_early_n, max_direct_query_n,
     # the intersection of those that are done
     callids_done_in_callset = set(storage_handler.get_callset_status(callset_id))
 
-    not_done_call_ids = set([f.call_id for f in not_done_futures])
+    not_done_call_ids = {f.call_id for f in not_done_futures}
 
     done_call_ids = not_done_call_ids.intersection(callids_done_in_callset)
     not_done_call_ids = not_done_call_ids - done_call_ids

@@ -19,7 +19,7 @@ import botocore
 from .exceptions import StorageNoSuchKeyError
 
 
-class S3Backend(object):
+class S3Backend:
     """
     A wrap-up around S3 boto3 APIs.
     """

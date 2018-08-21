@@ -24,7 +24,7 @@ from .s3_backend import S3Backend
 from .storage_utils import create_status_key, create_output_key, status_key_suffix
 
 
-class Storage(object):
+class Storage:
     """
     A Storage object is used by executors and other components to access underlying storage backend
     without exposing the the implementation details.

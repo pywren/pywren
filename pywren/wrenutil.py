@@ -34,7 +34,7 @@ def create_call_id():
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-class WrappedStreamingBody(object):
+class WrappedStreamingBody:
     """
     Wrap boto3's StreamingBody object to provide enough Python fileobj functionality
     so that tar/gz can happen in memory

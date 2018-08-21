@@ -43,7 +43,7 @@ class JobState(enum.Enum):
     success = 4
     error = 5
 
-class ResponseFuture(object):
+class ResponseFuture:
 
     """
     Object representing the result of a PyWren invocation. Returns the status of the
