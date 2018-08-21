@@ -29,7 +29,7 @@ import logging
 import pkgutil
 
 
-class ModuleDependencyAnalyzer:
+class ModuleDependencyAnalyzer(object):
     _IMP_TYPE_NAMES = {
         imp.PY_FROZEN: 'frozen',
         imp.PY_SOURCE: 'source',

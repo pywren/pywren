@@ -26,7 +26,7 @@ from pywren import local
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class SQSInvoker:
+class SQSInvoker(object):
     def __init__(self, region_name, sqs_queue_name):
 
         self.region_name = region_name

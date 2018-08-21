@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 """
 Theoretically will allow for cross-AZ invocations
 """
-class Executor:
+class Executor(object):
 
     def __init__(self, invoker, config, job_max_runtime):
         self.invoker = invoker

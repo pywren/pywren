@@ -26,7 +26,7 @@ from pywren import local
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-class LambdaInvoker:
+class LambdaInvoker(object):
     def __init__(self, region_name, lambda_function_name):
 
         self.session = botocore.session.get_session()
@@ -55,7 +55,7 @@ class LambdaInvoker:
                 'region_name' : self.region_name}
 
 
-class DummyInvoker:
+class DummyInvoker(object):
     """
     A mock invoker that simply appends payloads to a list. You must then
     call run()
