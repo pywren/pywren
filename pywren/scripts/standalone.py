@@ -30,6 +30,8 @@ import random
 
 from threading import Thread
 
+import boto3
+import click
 from glob2 import glob
 
 try:
@@ -39,8 +41,6 @@ except ImportError:
     # Fall back to Python 2's urllib2
     from urllib2 import urlopen
 
-import boto3
-import click
 import watchtower
 
 import pywren
