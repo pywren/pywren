@@ -36,7 +36,7 @@ from pywren.serialize import serialize, create_mod_data
 from pywren.storage import storage_utils
 from pywren.storage.storage_utils import create_func_key
 from pywren.wait import wait, ALL_COMPLETED
-
+from pywren.invokers import LambdaSyncInvoker
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ class Executor(object):
             arg_dict.update(overwrite_invoke_args)
 
         # do the invocation
-        self.invoker.invoke(arg_dict)
+        conn = self.invoker.invoke(arg_dict)
 
         host_job_meta['lambda_invoke_timestamp'] = lambda_invoke_time_start
         host_job_meta['lambda_invoke_time'] = time.time() - lambda_invoke_time_start
@@ -146,6 +146,9 @@ class Executor(object):
         fut = ResponseFuture(call_id, callset_id, host_job_meta, storage_path)
 
         fut._set_state(JobState.invoked)
+
+        if isinstance(self.invoker, LambdaSyncInvoker):
+            fut._set_conn(conn)
 
         return fut
 
