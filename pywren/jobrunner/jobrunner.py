@@ -133,6 +133,7 @@ try:
 
     data_download_time_t1 = time.time()
     data_obj_stream = get_object_with_backoff(s3_client, bucket=data_bucket,
+                                              key=data_key,
                                               **extra_get_args)
     # FIXME make this streaming
     loaded_data = pickle.loads(data_obj_stream['Body'].read())
