@@ -71,6 +71,8 @@ class SimpleAsync(unittest.TestCase):
 
         with pytest.raises(Exception) as execinfo:
             res = fut.result() 
+
+        print("EXEC INFO ", str(execinfo.value))
         assert 'Throw me out!' in str(execinfo.value)
 
 
@@ -252,7 +254,6 @@ class ConfigErrors(unittest.TestCase):
                 config = pywren.wrenconfig.default()
                 config['runtime']['s3_key'] = pywren.wrenconfig.default_runtime[wrong_version]
                 
-                    
                 with pytest.raises(Exception) as excinfo:
                     pywren.lambda_executor(config)
                 assert 'python version' in str(excinfo.value)
