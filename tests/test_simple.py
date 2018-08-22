@@ -72,7 +72,6 @@ class SimpleAsync(unittest.TestCase):
         with pytest.raises(Exception) as execinfo:
             res = fut.result() 
 
-        print("EXEC INFO ", str(execinfo.value))
         assert 'Throw me out!' in str(execinfo.value)
 
 
