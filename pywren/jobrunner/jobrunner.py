@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 from __future__ import print_function
 import os
 import base64
@@ -6,12 +22,15 @@ import json
 import sys
 import time
 import boto3
+from botocore.vendored.requests.packages.urllib3.exceptions import ReadTimeoutError
 
 
 from six.moves import cPickle as pickle
 from tblib import pickling_support
 
 pickling_support.install()
+BACKOFF = 1
+MAX_TRIES = 5
 
 
 def b64str_to_bytes(str_data):
@@ -52,9 +71,23 @@ def write_stat(stat, val):
     stats_fid.write("{} {:f}\n".format(stat, val))
     stats_fid.flush()
 
+def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff=BACKOFF, **extra_get_args):
+    num_tries = 0
+    while (num_tries < max_tries):
+        try:
+            func_obj_stream = s3_client.get_object(Bucket=bucket, Key=key, **extra_get_args)
+            break
+        except ReadTimeoutError:
+            time.sleep(backoff)
+            backoff *= 2
+            num_tries += 1
+    return func_obj_stream
+
 try:
     func_download_time_t1 = time.time()
-    func_obj_stream = s3_client.get_object(Bucket=func_bucket, Key=func_key)
+
+    func_obj_stream = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key)
+
     loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
     func_download_time_t2 = time.time()
     write_stat('func_download_time',
@@ -99,8 +132,9 @@ try:
         extra_get_args['Range'] = range_str
 
     data_download_time_t1 = time.time()
-    data_obj_stream = s3_client.get_object(Bucket=data_bucket,
-                                           Key=data_key, **extra_get_args)
+    data_obj_stream = get_object_with_backoff(s3_client, bucket=data_bucket,
+                                              key=data_key,
+                                              **extra_get_args)
     # FIXME make this streaming
     loaded_data = pickle.loads(data_obj_stream['Body'].read())
     data_download_time_t2 = time.time()

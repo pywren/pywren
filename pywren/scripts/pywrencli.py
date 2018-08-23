@@ -1,3 +1,19 @@
+#
+# Copyright 2018 PyWren Team
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 #!/usr/bin/env python
 from __future__ import print_function
 
@@ -99,7 +115,13 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         print('Python 2.7 runtime will be used for remote.')
         pythonver = '2.7'
 
-    runtime_bucket = 'pywren-public-{}'.format(aws_region)
+    if aws_region in pywren.wrenconfig.RUNTIME_BUCKET_REGION:
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION[aws_region]
+    else:
+        print("WARNING: Runtime not deployed for your region")
+        print("using runtime from us-west-2.")
+        print("Performance may be imnpacted")
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION['us-west-2']
     default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
@@ -140,20 +162,26 @@ def create_role(ctx):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    iamclient = boto3.resource('iam')
+    iam = boto3.resource('iam')
+    iamclient = boto3.client('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    iamclient.create_role(RoleName=role_name,
-                          AssumeRolePolicyDocument=json_policy)
-    more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
+    roles = [x for x in iamclient.list_roles()["Roles"] if x["RoleName"] == role_name]
+    if (len(roles) == 0):
+        iam.create_role(RoleName=role_name,
+                        AssumeRolePolicyDocument=json_policy)
+        more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
-    AWS_ACCOUNT_ID = config['account']['aws_account_id']
-    AWS_REGION = config['account']['aws_region']
-    more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
-    more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
+        AWS_ACCOUNT_ID = config['account']['aws_account_id']
+        AWS_REGION = config['account']['aws_region']
+        more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
+        more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
 
-    iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
-        PolicyDocument=more_json_policy)
+        iam.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
+            PolicyDocument=more_json_policy)
+    else:
+        print("Using existing IAM role...")
+
 
 @click.command()
 @click.pass_context
@@ -215,10 +243,9 @@ def deploy_lambda(ctx, update_if_exists=True):
     module_dir = os.path.join(SOURCE_DIR, "../")
 
     for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
-              'version.py', 'jobrunner.py', 'wren.py']:
+              'version.py', 'jobrunner/jobrunner.py', 'wren.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
-        a = os.path.relpath(f, SOURCE_DIR + "/..")
-
+        a = os.path.basename(f) # , SOURCE_DIR + "/..")
         zipfile_obj.write(f, arcname=a)
     zipfile_obj.close()
     #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
@@ -336,12 +363,11 @@ def create_queue(ctx):
     """
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
-    config = pywren.wrenconfig.default()
     AWS_REGION = config['account']['aws_region']
     SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
 
     sqs = boto3.resource('sqs', region_name=AWS_REGION)
-
+    print("creating queue {}".format(SQS_QUEUE_NAME))
     sqs.create_queue(QueueName=SQS_QUEUE_NAME,
                      Attributes={'VisibilityTimeout' : "20"})
 
@@ -436,13 +462,15 @@ def log_url(ctx):
               help='instance queue idle time before checking self-termination')
 @click.option('--idle_terminate_granularity', default=None, type=int,
               help='granularity of billing (sec)')
+@click.option('--parallelism', default=1, type=int,
+              help='Number of workers per machine')
 @click.option('--pywren_git_branch', default='master', type=str,
               help='which branch to use on the stand-alone')
 @click.option('--pywren_git_commit', default=None,
-              help='which git to use on the stand-alone (superceeds pywren_git_branch')
+              help='which git to use on the stand-alone (supercedes pywren_git_branch)')
 @click.option('--spot_price', default=None, type=float,
               help='use spot instances, at this reserve price')
-def standalone_launch_instances(ctx, number, max_idle_time,
+def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                 idle_terminate_granularity,
                                 pywren_git_branch, pywren_git_commit,
                                 spot_price):
@@ -475,6 +503,7 @@ def standalone_launch_instances(ctx, number, max_idle_time,
                                                pywren_git_commit=pywren_git_commit,
                                                availability_zone=availability_zone,
                                                fast_io=use_fast_io,
+                                               parallelism=parallelism,
                                                spot_price=spot_price)
 
     print("launched:")

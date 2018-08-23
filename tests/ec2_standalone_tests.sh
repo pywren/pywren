@@ -20,6 +20,17 @@ pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granula
 sleep 20
 export PYWREN_EXECUTOR=remote
 pytest -v tests/test_simple.py
-RESULT=$?
+RESULT0=$?
 pywren standalone terminate_instances
-exit $RESULT
+
+
+export EXECUTOR_PARALLELISM=16
+pywren standalone launch_instances 1 --max_idle_time=10 --idle_terminate_granularity=600 --pywren_git_commit=$TRAVIS_COMMIT  --parallelism $EXECUTOR_PARALLELISM
+sleep 20
+export PYWREN_EXECUTOR=remote
+pytest -v tests/test_simple.py
+RESULT1=$?
+pytest -v tests/test_standalone_many.py
+RESULT2=$?
+pywren standalone terminate_instances
+exit $(($RESULT0 + $RESULT1 + RESULT2))
