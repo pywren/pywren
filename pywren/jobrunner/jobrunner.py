@@ -86,7 +86,7 @@ def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff
 try:
     func_download_time_t1 = time.time()
 
-    func_obj_stream = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key, **extra_get_args)
+    func_obj_stream = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key)
 
     loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
     func_download_time_t2 = time.time()
