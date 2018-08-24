@@ -23,7 +23,7 @@ import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
 from pywren.executor import Executor
-from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED # pylint: disable=unused-import
+from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED, ALWAYS # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 
