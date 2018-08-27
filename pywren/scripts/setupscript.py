@@ -128,14 +128,11 @@ def interactive_setup(ctx, dryrun, suffix):
 
 
     click.echo("This is the PyWren interactive setup script")
-    try:
-        #first we will try and make sure AWS is set up
+    #first we will try and make sure AWS is set up
 
-        account_id = ctx.invoke(pywrencli.get_aws_account_id, False)
-        click.echo("Your AWS configuration appears to be set up, and your account ID is {}".format(
-            account_id))
-    except Exception as e: # pylint: disable=unused-variable
-        raise
+    account_id = ctx.invoke(pywrencli.get_aws_account_id, False)
+    click.echo("Your AWS configuration appears to be set up, and your account ID is {}".format(
+        account_id))
 
     click.echo("This interactive script will set up your initial PyWren configuration.")
     click.echo("If this is the first time you are using PyWren then accepting the defaults " + \

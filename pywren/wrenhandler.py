@@ -250,7 +250,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
-        if (custom_handler_env != None):
+        if (custom_handler_env is not None):
             delete_old_runtimes = custom_handler_env.get('delete_old_runtimes', False)
         else:
             delete_old_runtimes = False
@@ -317,9 +317,10 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
+
+        #pylint: disable=subprocess-popen-preexec-fn
         process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
                                    stdout=subprocess.PIPE, preexec_fn=os.setsid)
-
         logger.info("launched process")
         def consume_stdout(stdout, queue):
             with stdout:
