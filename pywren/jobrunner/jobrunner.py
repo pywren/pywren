@@ -30,7 +30,7 @@ from tblib import pickling_support
 
 pickling_support.install()
 BACKOFF = 1
-MAX_TRIES = 5
+MAX_TRIES = 100
 
 
 def b64str_to_bytes(str_data):
@@ -77,10 +77,13 @@ def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff
         try:
             func_obj_stream = s3_client.get_object(Bucket=bucket, Key=key, **extra_get_args)
             break
-        except ReadTimeoutError:
+        except:
             time.sleep(backoff)
             backoff *= 2
             num_tries += 1
+            func_obj_stream = None
+    if (func_obj_stream is None):
+        raise Exception("JobRunner S3 Download Failed")
     return func_obj_stream
 
 try:
