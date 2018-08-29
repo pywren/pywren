@@ -67,7 +67,7 @@ class S3Backend(object):
         """
         try:
             self.s3client.copy_object(Bucket=self.s3_bucket, Key=new_key,
-                                      CopySource=f"{self.s3_bucket}/{key}")
+                                      CopySource="{s3_bucket}/{key}".format(s3_bucket=self.s3_bucket, key=key))
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "NoSuchKey":
                 raise StorageNoSuchKeyError(key)
