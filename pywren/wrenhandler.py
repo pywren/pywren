@@ -359,7 +359,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         logger.info("command execution finished, retcode= {}".format(process.returncode))
         if process.returncode != 0:
             logger.warning("process returned non-zero retcode {}".format(process.returncode))
-            logger.info(response_status['stdout'])
+            logger.info(stdout.decode('ascii'))
             raise Exception("RETCODE",
                             "Python process returned a non-zero return code")
 
