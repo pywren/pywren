@@ -67,6 +67,17 @@ class Storage(object):
         """
         return self.backend_handler.put_object(key, func)
 
+    def shard_func(self, key, num_shards):
+        """
+        Shard serialized function into many keys
+        :param key: function key
+        :param num_shards: number of shards to shard function
+        :return: None
+        """
+        for i in range(1, num_shards):
+            self.backend_handler.copy_object(key, key + "_{i}".format(i=i))
+
+
     def get_callset_status(self, callset_id):
         """
         Get the status of a callset.

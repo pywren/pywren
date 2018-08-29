@@ -207,6 +207,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         # download the input
         status_key = event['status_key']
         func_key = event['func_key']
+        num_func_shards = event['num_func_shards']
         data_key = event['data_key']
         data_byte_range = event['data_byte_range']
         output_key = event['output_key']
@@ -231,6 +232,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         job_max_runtime = event.get("job_max_runtime", 290) # default for lambda
 
         response_status['func_key'] = func_key
+        response_status['num_func_shards'] = num_func_shards
         response_status['data_key'] = data_key
         response_status['output_key'] = output_key
         response_status['status_key'] = status_key
@@ -291,7 +293,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                             'python_module_path' : python_module_path,
                             'output_bucket' : s3_bucket,
                             'output_key' : output_key,
-                            'stats_filename' : jobrunner_stats_filename}
+                            'stats_filename' : jobrunner_stats_filename,
+                            'num_func_shards': num_func_shards}
 
         with open(jobrunner_config_filename, 'w') as jobrunner_fid:
             json.dump(jobrunner_config, jobrunner_fid)

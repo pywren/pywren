@@ -57,6 +57,23 @@ class S3Backend(object):
             else:
                 raise e
 
+    def copy_object(self, key, new_key):
+        """
+        Copy object from S3 from key to new_key.
+        Throws StorageNoSuchKeyError if the given key does not exist.
+        :param key: key of the object
+        :return: Data of the object
+        :rtype: str/bytes
+        """
+        try:
+            self.s3client.copy_object(Bucket=self.s3_bucket, Key=new_key,
+                                      CopySource=f"{self.s3_bucket}/{key}")
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "NoSuchKey":
+                raise StorageNoSuchKeyError(key)
+            else:
+                raise e
+
     def key_exists(self, key):
         """
         Check if a key exists in S3.

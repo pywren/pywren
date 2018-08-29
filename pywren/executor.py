@@ -46,9 +46,10 @@ Theoretically will allow for cross-AZ invocations
 """
 class Executor(object):
 
-    def __init__(self, invoker, config, job_max_runtime):
+    def __init__(self, invoker, config, job_max_runtime, num_func_shards):
         self.invoker = invoker
         self.job_max_runtime = job_max_runtime
+        self.num_func_shards = num_func_shards
 
         self.config = config
         self.storage_config = wrenconfig.extract_storage_config(self.config)
@@ -78,7 +79,7 @@ class Executor(object):
                          status_key,
                          callset_id, call_id, extra_env,
                          extra_meta, data_byte_range, use_cached_runtime,
-                         host_job_meta, job_max_runtime,
+                         host_job_meta, job_max_runtime, num_func_shards,
                          overwrite_invoke_args=None):
 
         # Pick a runtime url if we have shards.
@@ -98,6 +99,7 @@ class Executor(object):
             'data_key' : data_key,
             'output_key' : output_key,
             'status_key' : status_key,
+            'num_func_shards': num_func_shards,
             'callset_id': callset_id,
             'job_max_runtime' : job_max_runtime,
             'data_byte_range' : data_byte_range,
@@ -227,7 +229,7 @@ class Executor(object):
                 for mod_path in list(mod_paths):
                     if module in mod_path and mod_path in mod_paths:
                         mod_paths.remove(mod_path)
-
+        print(mod_paths)
         module_data = create_mod_data(mod_paths)
         ### Create func and upload
         func_module_str = pickle.dumps({'func' : func_str,
@@ -236,7 +238,9 @@ class Executor(object):
 
         func_upload_time = time.time()
         func_key = create_func_key(self.storage.prefix, callset_id)
+
         self.storage.put_func(func_key, func_module_str)
+        self.storage.shard_func(func_key, self.num_func_shards)
         host_job_meta['func_upload_time'] = time.time() - func_upload_time
         host_job_meta['func_upload_timestamp'] = time.time()
         def invoke(data_str, callset_id, call_id, func_key,
@@ -266,6 +270,7 @@ class Executor(object):
                                          extra_meta, data_byte_range,
                                          use_cached_runtime, host_job_meta.copy(),
                                          self.job_max_runtime,
+                                         self.num_func_shards,
                                          overwrite_invoke_args=overwrite_invoke_args)
 
         N = len(data)

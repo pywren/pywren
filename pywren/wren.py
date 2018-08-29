@@ -53,7 +53,7 @@ def default_executor(**kwargs):
     return lambda_executor(**kwargs)
 
 
-def lambda_executor(config=None, job_max_runtime=280):
+def lambda_executor(config=None, job_max_runtime=280, num_func_shards=10):
     if config is None:
         config = wrenconfig.default()
 
@@ -61,18 +61,20 @@ def lambda_executor(config=None, job_max_runtime=280):
     FUNCTION_NAME = config['lambda']['function_name']
     invoker = invokers.LambdaInvoker(AWS_REGION, FUNCTION_NAME)
 
-    return Executor(invoker, config, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime,
+                    num_func_shards=num_func_shards)
 
 
-def dummy_executor(config=None, job_max_runtime=300):
+def dummy_executor(config=None, job_max_runtime=300, num_func_shards=10):
     if config is None:
         config = wrenconfig.default()
 
     invoker = invokers.DummyInvoker()
-    return Executor(invoker, config, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime,
+                    num_func_shards=num_func_shards)
 
 
-def remote_executor(config=None, job_max_runtime=3600):
+def remote_executor(config=None, job_max_runtime=3600, num_func_shards=10):
     if config is None:
         config = wrenconfig.default()
 
@@ -80,7 +82,8 @@ def remote_executor(config=None, job_max_runtime=3600):
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     invoker = queues.SQSInvoker(AWS_REGION, SQS_QUEUE)
 
-    return Executor(invoker, config, job_max_runtime)
+    return Executor(invoker, config, job_max_runtime,
+                    num_func_shards=num_func_shards)
 
 standalone_executor = remote_executor
 

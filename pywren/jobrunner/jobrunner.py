@@ -22,6 +22,7 @@ import json
 import sys
 import time
 import boto3
+import random
 from botocore.vendored.requests.packages.urllib3.exceptions import ReadTimeoutError
 
 
@@ -52,8 +53,14 @@ jobrunner_config = json.load(open(jobrunner_config_filename, 'r'))
 # download the func data into memory
 s3_client = boto3.client("s3")
 
+num_func_shards = jobrunner_config["num_func_shards"]
 func_bucket = jobrunner_config['func_bucket']
 func_key = jobrunner_config['func_key']
+
+# randomly pick a key from num_func_shards
+shard = random.randint(0, num_func_shards)
+if (shard > 0):
+    func_key = func_key +  "_{shard}".format(shard=shard)
 
 data_bucket = jobrunner_config['data_bucket']
 data_key = jobrunner_config['data_key']
