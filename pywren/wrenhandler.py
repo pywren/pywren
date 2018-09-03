@@ -334,13 +334,18 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         t.start()
 
         stdout = b""
-        while t.isAlive():
+        while t.isAlive() or process.returncode is None:
+            logger.info("Running {} {}".format(time.time(), process.returncode))
             try:
                 line = q.get_nowait()
                 stdout += line
                 logger.info(line)
             except Empty:
                 time.sleep(PROCESS_STDOUT_SLEEP_SECS)
+            process.poll() # this updates retcode but does not block
+            if not t.isAlive() and process.returncode is None:
+                time.sleep(PROCESS_STDOUT_SLEEP_SECS)
+
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
@@ -350,7 +355,13 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                                 "Process executed for too long and was killed")
 
 
-        logger.info("command execution finished")
+        response_status['retcode'] = process.returncode
+        logger.info("command execution finished, retcode= {}".format(process.returncode))
+        if process.returncode != 0:
+            logger.warning("process returned non-zero retcode {}".format(process.returncode))
+            logger.info(stdout.decode('ascii'))
+            raise Exception("RETCODE",
+                            "Python process returned a non-zero return code")
 
         if os.path.exists(JOBRUNNER_STATS_FILENAME):
             with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
@@ -362,6 +373,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         end_time = time.time()
 
         response_status['stdout'] = stdout.decode("ascii")
+
 
 
         response_status['exec_time'] = time.time() - setup_time

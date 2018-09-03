@@ -104,6 +104,20 @@ class SimpleAsync(unittest.TestCase):
         assert exc_type_wren == exc_type_true
         assert type(exc_value_wren) == type(exc_value_true)
 
+    def test_exit(self):
+        """
+        what if the process just dies
+        """
+        def just_die(x):
+            sys.exit(-1)
+        
+        wrenexec = pywren.default_executor()
+
+        fut = wrenexec.call_async(just_die, 1)
+
+        with pytest.raises(Exception) as execinfo:
+            res = fut.result() 
+        assert 'non-zero return code' in str(execinfo.value)
 
 class SimpleMap(unittest.TestCase):
 
