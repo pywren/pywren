@@ -15,7 +15,6 @@
 #
 
 import base64
-import fcntl
 import json
 import logging
 import os
@@ -41,6 +40,11 @@ else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
+
+if os.name == 'nt':
+    import msvcrt # pylint: disable=import-error
+else:
+    import fcntl # pylint: disable=import-error
 
 # these templates will get filled in by runtime ETAG
 PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
@@ -73,6 +77,19 @@ def free_disk_space(dirname):
     s = os.statvfs(dirname)
     return s.f_bsize * s.f_bavail
 
+def file_lock(fd):
+    if os.name == 'nt':
+        msvcrt.locking(fd.fileno(), msvcrt.LK_RLCK, os.fstat(fd.fileno()).st_size)
+    else:
+        fcntl.lockf(fd, fcntl.LOCK_EX)
+
+def file_unlock(fd):
+    if os.name == 'nt':
+        msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, os.fstat(fd.fileno()).st_size)
+    else:
+        fcntl.lockf(fd, fcntl.LOCK_UN)
+
+
 def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
                                   delete_old_runtimes=False):
     """
@@ -83,7 +100,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
     """
 
     lock = open(RUNTIME_DOWNLOAD_LOCK, "a")
-    fcntl.lockf(lock, fcntl.LOCK_EX)
+    file_lock(lock)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                          Key=runtime_s3_key)
@@ -146,7 +163,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
 
     # final operation
     os.symlink(expected_target, conda_runtime_dir)
-    fcntl.lockf(lock, fcntl.LOCK_UN)
+    file_unlock(lock)
     lock.close()
     return False
 
