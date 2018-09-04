@@ -15,7 +15,7 @@
 #
 
 import os
-import pwd
+import getpass
 import random
 import re
 import time
@@ -28,7 +28,7 @@ from pywren.scripts import pywrencli
 
 
 def get_username():
-    return pwd.getpwuid(os.getuid())[0]
+    return getpass.getuser()
 
 def click_validate_prompt(message, default, validate_func,
                           fail_msg="", max_attempts=5):
