@@ -51,7 +51,15 @@ def create_mod_data(mod_paths):
     # load mod paths
     for m in mod_paths:
         if os.path.isdir(m):
-            files = glob2.glob(os.path.join(m, "**/*.py"))
+            if m.split("/")[-1] == 'pywren' or m.split("\\")[-1] == 'pywren':
+                files = glob2.glob(os.path.join(m, "serialize/**/*.py"))
+                files.append(os.path.join(m, "version.py"))
+                init_path = os.path.join(m, "__init__.py")
+                pkg_root = os.path.abspath(os.path.dirname(m))
+                dest_filename = os.path.abspath(init_path)[len(pkg_root)+1:].replace(os.sep, "/")
+                module_data[dest_filename] = bytes_to_b64str("".encode())
+            else:
+                files = glob2.glob(os.path.join(m, "**/*.py"))
             pkg_root = os.path.abspath(os.path.dirname(m))
         else:
             pkg_root = os.path.abspath(os.path.dirname(m))
@@ -60,7 +68,7 @@ def create_mod_data(mod_paths):
             f = os.path.abspath(f)
             mod_str = open(f, 'rb').read()
 
-            dest_filename = f[len(pkg_root)+1:]
+            dest_filename = f[len(pkg_root)+1:].replace(os.sep, "/")
             module_data[dest_filename] = bytes_to_b64str(mod_str)
 
     return module_data
