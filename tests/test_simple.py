@@ -309,6 +309,40 @@ class WaitTest(unittest.TestCase):
         res = np.array([f.result() for f in futures])
         np.testing.assert_array_equal(res, x+1)
 
+    def test_multiple_callset_id(self):
+        def wait_x_sec_and_plus_one(x):
+            time.sleep(x)
+            return x + 1
+
+        N = 10
+        x = np.arange(N)
+
+        pywx = pywren.default_executor()
+
+        futures1 = pywx.map(wait_x_sec_and_plus_one, x)
+        futures2 = pywx.map(wait_x_sec_and_plus_one, x)
+
+        fs_dones, fs_notdones = pywren.wait(futures1 + futures2,
+                                        return_when=pywren.wren.ALL_COMPLETED)
+        res = np.array([f.result() for f in fs_dones])
+        np.testing.assert_array_equal(res, np.concatenate((x,x))+1)
+
+    def test_multiple_callset_id_diff_executors(self):
+        def wait_x_sec_and_plus_one(x):
+            time.sleep(x)
+            return x + 1
+
+        N = 10
+        x = np.arange(N)
+
+        futures1 = pywren.default_executor().map(wait_x_sec_and_plus_one, x)
+        futures2 = pywren.default_executor().map(wait_x_sec_and_plus_one, x)
+
+        fs_dones, fs_notdones = pywren.wait(futures1 + futures2,
+                return_when=pywren.wren.ALL_COMPLETED)
+        res = np.array([f.result() for f in fs_dones])
+        np.testing.assert_array_equal(res, np.concatenate((x,x))+1)
+
 
 # Comment this test out as it doesn't work with the multiple executors (Vaishaal)
 # If we need this later we need to do some more monkey patching but is unclear we actually need this
