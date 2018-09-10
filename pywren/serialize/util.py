@@ -60,7 +60,7 @@ def create_mod_data(mod_paths):
             f = os.path.abspath(f)
             mod_str = open(f, 'rb').read()
 
-            dest_filename = f[len(pkg_root)+1:]
+            dest_filename = f[len(pkg_root)+1:].replace(os.sep, "/")
             module_data[dest_filename] = bytes_to_b64str(mod_str)
 
     return module_data

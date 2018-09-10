@@ -17,7 +17,7 @@
 from __future__ import absolute_import
 
 import json
-import os
+import posixpath
 
 from  .exceptions import StorageNoSuchKeyError, StorageOutputNotFoundError
 from .s3_backend import S3Backend
@@ -75,7 +75,7 @@ class Storage(object):
         """
         # TODO: a better API for this is to return status for all calls in the callset. We'll fix
         #  this in scheduler refactoring.
-        callset_prefix = os.path.join(self.prefix, callset_id)
+        callset_prefix = posixpath.join(self.prefix, callset_id)
         keys = self.backend_handler.list_keys_with_prefix(callset_prefix)
         suffix = status_key_suffix
         status_keys = [k for k in keys if suffix in k]
