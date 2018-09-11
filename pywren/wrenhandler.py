@@ -371,6 +371,13 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
+        while True:
+            try:
+                line = q.get_nowait()
+                stdout += line
+                logger.info(line)
+            except Empty:
+                break
 
         response_status['retcode'] = process.returncode
         logger.info("command execution finished, retcode= {}".format(process.returncode))
