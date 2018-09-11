@@ -29,8 +29,8 @@ from six.moves import cPickle as pickle
 from tblib import pickling_support
 
 pickling_support.install()
-BACKOFF = 1
-MAX_TRIES = 5
+S3_GET_BACKOFF = 1
+S3_GET_MAX_TRIES = 5
 
 
 def b64str_to_bytes(str_data):
@@ -71,7 +71,8 @@ def write_stat(stat, val):
     stats_fid.write("{} {:f}\n".format(stat, val))
     stats_fid.flush()
 
-def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff=BACKOFF, **extra_get_args):
+def get_object_with_backoff(s3_client, bucket, key, max_tries=S3_GET_MAX_TRIES, 
+                            backoff=S3_GET_BACKOFF, **extra_get_args):
     num_tries = 0
     while (num_tries < max_tries):
         try:
@@ -81,12 +82,16 @@ def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff
             time.sleep(backoff)
             backoff *= 2
             num_tries += 1
-    return func_obj_stream
+    if num_tries == max_tries:
+        raise Exception("get_object_with_backoff exceeded max_tries {}".format(num_tries))
+
+    return func_obj_stream, num_tries
 
 try:
     func_download_time_t1 = time.time()
 
-    func_obj_stream = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key)
+    func_obj_stream, func_tries = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key)
+    write_stat("func_download_tries", func_tries)
 
     loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
     func_download_time_t2 = time.time()
@@ -132,9 +137,11 @@ try:
         extra_get_args['Range'] = range_str
 
     data_download_time_t1 = time.time()
-    data_obj_stream = get_object_with_backoff(s3_client, bucket=data_bucket,
-                                              key=data_key,
-                                              **extra_get_args)
+    data_obj_stream, data_tries = get_object_with_backoff(s3_client, bucket=data_bucket,
+                                                          key=data_key,
+                                                          **extra_get_args)
+    write_stat('data_download_tries', data_tries)
+
     # FIXME make this streaming
     loaded_data = pickle.loads(data_obj_stream['Body'].read())
     data_download_time_t2 = time.time()
@@ -188,3 +195,4 @@ finally:
     output_upload_timestamp_t2 = time.time()
     write_stat("output_upload_time",
                output_upload_timestamp_t2 - output_upload_timestamp_t1)
+    stats_fid.close()

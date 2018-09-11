@@ -387,8 +387,9 @@ def generic_handler(event, context_dict, custom_handler_env=None):
             raise Exception("RETCODE",
                             "Python process returned a non-zero return code")
 
-        if os.path.exists(JOBRUNNER_STATS_FILENAME):
-            with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
+
+        if os.path.exists(jobrunner_stats_filename):
+            with open(jobrunner_stats_filename, 'r') as fid:
                 for l in fid.readlines():
                     key, value = l.strip().split(" ")
                     float_value = float(value)
