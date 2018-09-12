@@ -73,8 +73,8 @@ def write_stat(stat, val):
 
 def get_object_with_backoff(s3_client, bucket, key, max_tries=S3_GET_MAX_TRIES, 
                             backoff=S3_GET_BACKOFF, **extra_get_args):
-    num_tries = 0
-    while (num_tries < max_tries):
+    num_tries = 1
+    while (num_tries <= max_tries):
         try:
             func_obj_stream = s3_client.get_object(Bucket=bucket, Key=key, **extra_get_args)
             break
@@ -82,7 +82,7 @@ def get_object_with_backoff(s3_client, bucket, key, max_tries=S3_GET_MAX_TRIES,
             time.sleep(backoff)
             backoff *= 2
             num_tries += 1
-    if num_tries == max_tries:
+    if num_tries > max_tries:
         raise Exception("get_object_with_backoff exceeded max_tries {}".format(num_tries))
 
     return func_obj_stream, num_tries
@@ -93,10 +93,13 @@ try:
     func_obj_stream, func_tries = get_object_with_backoff(s3_client, bucket=func_bucket, key=func_key)
     write_stat("func_download_tries", func_tries)
 
-    loaded_func_all = pickle.loads(func_obj_stream['Body'].read())
+    load_func_bytes = func_obj_stream['Body'].read()
     func_download_time_t2 = time.time()
     write_stat('func_download_time',
                func_download_time_t2-func_download_time_t1)
+    write_stat('func_bytes', len(load_func_bytes))
+
+    loaded_func_all = pickle.loads(load_func_bytes)
 
     # save modules, before we unpickle actual function
     PYTHON_MODULE_PATH = jobrunner_config['python_module_path']
