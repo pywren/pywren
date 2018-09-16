@@ -31,7 +31,6 @@ def local_handler(jobs, run_dir, extra_context=None):
 
     Just for debugging
     """
-    # FIXME throw an error if invoked on non-linux machines
 
     def copy_runtime(tgt_dir):
         files = glob.glob(os.path.join(pywren.SOURCE_DIR, "./*.py"))
@@ -43,7 +42,6 @@ def local_handler(jobs, run_dir, extra_context=None):
 
     for job_i, job in enumerate(jobs):
         local_task_run_dir = os.path.join(run_dir, str(job_i))
-
         shutil.rmtree(local_task_run_dir, True) # delete old modules
         os.makedirs(local_task_run_dir)
         copy_runtime(local_task_run_dir)

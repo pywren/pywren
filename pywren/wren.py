@@ -50,6 +50,8 @@ def default_executor(**kwargs):
         return remote_executor(**kwargs)
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)
+    elif executor_str == 'local':
+        return local_executor(**kwargs)
     return lambda_executor(**kwargs)
 
 
@@ -82,13 +84,15 @@ def remote_executor(config=None, job_max_runtime=3600):
 
     return Executor(invoker, config, job_max_runtime)
 
-def local_executor(invoker_object=None, 
+def local_executor(invoker_object=None,
                    config=None, job_max_runtime=300):
     if config is None:
         config = wrenconfig.default()
     if invoker_object is None:
-        run_dir = config.get("local_run_dir", "/tmp/task")
-        invoker = invokers.LocalInvoker(run_dir=run_dir)
+        if "local_run_dir" in config:
+            invoker = invokers.LocalInvoker(run_dir=config["local_run_dir"])
+        else:
+            invoker = invokers.LocalInvoker()
     else:
         invoker = invoker_object
     return Executor(invoker, config, job_max_runtime)
