@@ -89,15 +89,15 @@ def get_pickled_object_with_backoff(s3_client, bucket, key, max_tries=S3_GET_MAX
             func_obj_stream = s3_client.get_object(Bucket=bucket, Key=key, **extra_get_args)
             streaming_body = func_obj_stream['Body']
             # THIS IS A BAD IDEA: directly accessing the raw stream is NOT SUPPORTED
-            # but I could find no other way to stream this in. 
+            # but I could find no other way to stream this in.
             buffered_io = io.BufferedReader(streaming_body._raw_stream)
-            obj = pickle.load(buffered_io) 
+            obj = pickle.load(buffered_io)
             break
-        except ReadTimeoutError:
+        except (ReadTimeoutError, pickle.UnpicklingError):
             time.sleep(backoff)
             backoff *= 2
             num_tries += 1
-            num_timeouts += 1 
+            num_timeouts += 1
     if num_tries > max_tries:
         raise Exception("get_object_with_backoff exceeded max_tries {}".format(num_tries))
     time_end = time.time()
