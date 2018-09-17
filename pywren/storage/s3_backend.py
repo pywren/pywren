@@ -40,22 +40,27 @@ class S3Backend(object):
         """
         self.s3client.put_object(Bucket=self.s3_bucket, Key=key, Body=data)
 
-    def get_object(self, key):
+    def get_object(self, key, num_tries=5):
         """
         Get object from S3 with a key. Throws StorageNoSuchKeyError if the given key does not exist.
         :param key: key of the object
         :return: Data of the object
         :rtype: str/bytes
         """
-        try:
-            r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
-            data = r['Body'].read()
-            return data
-        except botocore.exceptions.ClientError as e:
-            if e.response['Error']['Code'] == "NoSuchKey":
-                raise StorageNoSuchKeyError(key)
-            else:
-                raise e
+        tries = 0
+        while (tries < num_tries):
+            try:
+                r = self.s3client.get_object(Bucket=self.s3_bucket, Key=key)
+                data = r['Body'].read()
+                return data
+            except botocore.exceptions.ClientError as e:
+                if e.response['Error']['Code'] == "NoSuchKey":
+                    raise StorageNoSuchKeyError(key)
+                elif (tries > num_tries)
+                    raise e
+                else:
+                    tries += 1
+
 
     def key_exists(self, key):
         """
