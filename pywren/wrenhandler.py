@@ -15,7 +15,6 @@
 #
 
 import base64
-import fcntl
 import json
 import logging
 import os
@@ -41,6 +40,11 @@ else:
     from Queue import Queue, Empty # pylint: disable=import-error
     import wrenutil # pylint: disable=relative-import
     import version  # pylint: disable=relative-import
+
+if os.name == 'nt':
+    import msvcrt # pylint: disable=import-error
+else:
+    import fcntl # pylint: disable=import-error
 
 # these templates will get filled in by runtime ETAG
 PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
@@ -73,6 +77,19 @@ def free_disk_space(dirname):
     s = os.statvfs(dirname)
     return s.f_bsize * s.f_bavail
 
+def file_lock(fd):
+    if os.name == 'nt':
+        msvcrt.locking(fd.fileno(), msvcrt.LK_RLCK, os.fstat(fd.fileno()).st_size)
+    else:
+        fcntl.lockf(fd, fcntl.LOCK_EX)
+
+def file_unlock(fd):
+    if os.name == 'nt':
+        msvcrt.locking(fd.fileno(), msvcrt.LK_UNLCK, os.fstat(fd.fileno()).st_size)
+    else:
+        fcntl.lockf(fd, fcntl.LOCK_UN)
+
+
 def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
                                   delete_old_runtimes=False):
     """
@@ -83,7 +100,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
     """
 
     lock = open(RUNTIME_DOWNLOAD_LOCK, "a")
-    fcntl.lockf(lock, fcntl.LOCK_EX)
+    file_lock(lock)
     # get runtime etag
     runtime_meta = s3_client.head_object(Bucket=runtime_s3_bucket,
                                          Key=runtime_s3_key)
@@ -146,7 +163,7 @@ def download_runtime_if_necessary(s3_client, runtime_s3_bucket, runtime_s3_key,
 
     # final operation
     os.symlink(expected_target, conda_runtime_dir)
-    fcntl.lockf(lock, fcntl.LOCK_UN)
+    file_unlock(lock)
     lock.close()
     return False
 
@@ -250,7 +267,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
         response_status['runtime_s3_bucket_used'] = runtime_s3_bucket_used
-        if (custom_handler_env != None):
+        if (custom_handler_env is not None):
             delete_old_runtimes = custom_handler_env.get('delete_old_runtimes', False)
         else:
             delete_old_runtimes = False
@@ -317,9 +334,10 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
+
+        #pylint: disable=subprocess-popen-preexec-fn
         process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
                                    stdout=subprocess.PIPE, preexec_fn=os.setsid)
-
         logger.info("launched process")
         def consume_stdout(stdout, queue):
             with stdout:
@@ -333,13 +351,18 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         t.start()
 
         stdout = b""
-        while t.isAlive():
+        while t.isAlive() or process.returncode is None:
+            logger.info("Running {} {}".format(time.time(), process.returncode))
             try:
                 line = q.get_nowait()
                 stdout += line
                 logger.info(line)
             except Empty:
                 time.sleep(PROCESS_STDOUT_SLEEP_SECS)
+            process.poll() # this updates retcode but does not block
+            if not t.isAlive() and process.returncode is None:
+                time.sleep(PROCESS_STDOUT_SLEEP_SECS)
+
             total_runtime = time.time() - start_time
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
@@ -348,11 +371,25 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
+        while True:
+            try:
+                line = q.get_nowait()
+                stdout += line
+                logger.info(line)
+            except Empty:
+                break
 
-        logger.info("command execution finished")
+        response_status['retcode'] = process.returncode
+        logger.info("command execution finished, retcode= {}".format(process.returncode))
+        if process.returncode != 0:
+            logger.warning("process returned non-zero retcode {}".format(process.returncode))
+            logger.info(stdout.decode('ascii'))
+            raise Exception("RETCODE",
+                            "Python process returned a non-zero return code")
 
-        if os.path.exists(JOBRUNNER_STATS_FILENAME):
-            with open(JOBRUNNER_STATS_FILENAME, 'r') as fid:
+
+        if os.path.exists(jobrunner_stats_filename):
+            with open(jobrunner_stats_filename, 'r') as fid:
                 for l in fid.readlines():
                     key, value = l.strip().split(" ")
                     float_value = float(value)
@@ -361,6 +398,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         end_time = time.time()
 
         response_status['stdout'] = stdout.decode("ascii")
+
 
 
         response_status['exec_time'] = time.time() - setup_time

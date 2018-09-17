@@ -114,7 +114,7 @@ class PickleSafety(unittest.TestCase):
             res = fut.result()
         assert "Command 'fakecommand' returned" in str(execinfo.value)
 
-   '''
+    '''
     def test_unpickleable_return_dump(self):
         def f(x):
             cp = CantPickle(x, dump_fail = True)
@@ -139,7 +139,6 @@ class PickleSafety(unittest.TestCase):
         with pytest.raises(Exception) as execinfo:
             res = fut.result()
         assert 'cannot pickle load this object' in str(execinfo.value)
-    '''
 
 
     def test_unpickleable_raise_except_dump(self):
@@ -153,6 +152,7 @@ class PickleSafety(unittest.TestCase):
         with pytest.raises(CantPickleException) as execinfo:
             res = fut.result()
         #assert 'cannot pickle dump this object' in str(execinfo.value)
+    '''
 
 
     def test_unpickleable_raise_except_load(self):

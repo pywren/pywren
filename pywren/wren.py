@@ -23,7 +23,7 @@ import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
 from pywren.executor import Executor
-from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED # pylint: disable=unused-import
+from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED, ALWAYS # pylint: disable=unused-import
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ def default_executor(**kwargs):
 
     if executor_str == 'lambda':
         return lambda_executor(**kwargs)
-    elif executor_str == 'remote' or executor_str == 'standalone':
+    elif executor_str in ('remote', 'standalone'):
         return remote_executor(**kwargs)
     elif executor_str == 'dummy':
         return dummy_executor(**kwargs)

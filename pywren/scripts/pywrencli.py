@@ -115,7 +115,13 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
         print('Python 2.7 runtime will be used for remote.')
         pythonver = '2.7'
 
-    runtime_bucket = 'pywren-public-{}'.format(aws_region)
+    if aws_region in pywren.wrenconfig.RUNTIME_BUCKET_REGION:
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION[aws_region]
+    else:
+        print("WARNING: Runtime not deployed for your region")
+        print("using runtime from us-west-2.")
+        print("Performance may be imnpacted")
+        runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION['us-west-2']
     default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
@@ -156,20 +162,26 @@ def create_role(ctx):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
-    iamclient = boto3.resource('iam')
+    iam = boto3.resource('iam')
+    iamclient = boto3.client('iam')
     json_policy = json.dumps(pywren.wrenconfig.basic_role_policy)
     role_name = config['account']['aws_lambda_role']
-    iamclient.create_role(RoleName=role_name,
-                          AssumeRolePolicyDocument=json_policy)
-    more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
+    roles = [x for x in iamclient.list_roles()["Roles"] if x["RoleName"] == role_name]
+    if (len(roles) == 0):
+        iam.create_role(RoleName=role_name,
+                        AssumeRolePolicyDocument=json_policy)
+        more_json_policy = json.dumps(pywren.wrenconfig.more_permissions_policy)
 
-    AWS_ACCOUNT_ID = config['account']['aws_account_id']
-    AWS_REGION = config['account']['aws_region']
-    more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
-    more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
+        AWS_ACCOUNT_ID = config['account']['aws_account_id']
+        AWS_REGION = config['account']['aws_region']
+        more_json_policy = more_json_policy.replace("AWS_ACCOUNT_ID", str(AWS_ACCOUNT_ID))
+        more_json_policy = more_json_policy.replace("AWS_REGION", AWS_REGION)
 
-    iamclient.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
-        PolicyDocument=more_json_policy)
+        iam.RolePolicy(role_name, '{}-more-permissions'.format(role_name)).put(
+            PolicyDocument=more_json_policy)
+    else:
+        print("Using existing IAM role...")
+
 
 @click.command()
 @click.pass_context
