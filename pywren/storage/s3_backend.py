@@ -56,7 +56,7 @@ class S3Backend(object):
             except botocore.exceptions.ClientError as e:
                 if e.response['Error']['Code'] == "NoSuchKey":
                     raise StorageNoSuchKeyError(key)
-                elif (tries > num_tries)
+                elif (tries > num_tries):
                     raise e
                 else:
                     tries += 1
