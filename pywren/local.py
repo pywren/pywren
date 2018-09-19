@@ -23,8 +23,7 @@ import shutil
 import pywren
 from . import wrenhandler
 
-
-def local_handler(jobs, run_dir, extra_context=None):
+def local_handler(payload, run_dir, extra_context=None):
     """
     Run a list of (deserialized) jobs locally inside of
     run_dir
@@ -40,19 +39,31 @@ def local_handler(jobs, run_dir, extra_context=None):
 
     original_dir = os.getcwd()
 
-    for job_i, job in enumerate(jobs):
-        local_task_run_dir = os.path.join(run_dir, str(job_i))
-        shutil.rmtree(local_task_run_dir, True) # delete old modules
+    local_task_run_dir = os.path.join(run_dir, str(os.getpid()))
+    if not os.path.exists(local_task_run_dir):
         os.makedirs(local_task_run_dir)
         copy_runtime(local_task_run_dir)
 
 
-        context = {'jobnum' : job_i}
-        if extra_context is not None:
-            context.update(extra_context)
+    context = {'jobnum' : os.getpid()}
+    if extra_context is not None:
+        context.update(extra_context)
 
-        os.chdir(local_task_run_dir)
-        # FIXME debug
-        wrenhandler.generic_handler(job, context)
+    os.chdir(local_task_run_dir)
+    # FIXME debug
+    wrenhandler.generic_handler(payload, context)
 
-        os.chdir(original_dir)
+    os.chdir(original_dir)
+
+def clean(local_dir):
+    dirs = glob.glob(os.path.join(local_dir, 'pymodules*'))
+    dirs.append(os.path.join(local_dir, 'task'))
+    dirs.append(os.path.join(local_dir, 'runtimes'))
+    for d in dirs:
+        shutil.rmtree(d, ignore_errors=True)
+    files = [os.path.join(local_dir, 'runtime_download_lock')]
+    files += glob.glob(os.path.join(local_dir, 'jobrunner*'))
+    files += glob.glob(os.path.join(local_dir, 'condaruntime*'))
+    for f in files:
+        if os.path.exists(f) or os.path.islink(f):
+            os.unlink(f)

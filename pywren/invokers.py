@@ -24,13 +24,17 @@ import shutil
 import tempfile
 import atexit
 import glob2
+import multiprocessing
+import atexit
 import botocore
 import botocore.session
-from six.moves import queue
 from pywren import local
 
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+LOCAL_DIR = tempfile.gettempdir()
+LOCAL_RUN_DIR = os.path.join(LOCAL_DIR, "task")
 
 
 class LambdaInvoker(object):
@@ -61,21 +65,6 @@ class LambdaInvoker(object):
         return {'lambda_function_name' : self.lambda_function_name,
                 'region_name' : self.region_name}
 
-TEMP_DIR = tempfile.gettempdir()
-LOCAL_RUN_DIR = os.path.join(TEMP_DIR, "task")
-def local_clean():
-    dirs = glob2.glob(os.path.join(TEMP_DIR, 'pymodules*'))
-    dirs.append(LOCAL_RUN_DIR)
-    dirs.append(os.path.join(TEMP_DIR, 'runtimes'))
-    files = [os.path.join(TEMP_DIR, 'runtime_download_lock')]
-    files += glob2.glob(os.path.join(TEMP_DIR, 'jobrunner*'))
-    files += glob2.glob(os.path.join(TEMP_DIR, 'condaruntime_*'))
-    for d in dirs:
-        shutil.rmtree(d, True)
-    for f in files:
-        if os.path.exists(f):
-            os.remove(f)
-
 
 class DummyInvoker(object):
     """
@@ -87,7 +76,7 @@ class DummyInvoker(object):
         self.payloads = []
         self.TIME_LIMIT = False
         self.thread = None
-        atexit.register(local_clean)
+        atexit.register(local.clean, LOCAL_DIR)
 
     def invoke(self, payload):
         self.payloads.append(payload)
@@ -138,24 +127,22 @@ class LocalInvoker(object):
 
     def __init__(self, run_dir=LOCAL_RUN_DIR):
 
-        self.running = True
-
-        self.queue = queue.Queue()
-        self.thread = threading.Thread(target=self._thread_runner)
-        self.thread.daemon = True
+        self.queue = multiprocessing.Queue()
+        shutil.rmtree(run_dir, True)
         self.run_dir = run_dir
-        self.thread.start()
-        atexit.register(local_clean)
+        for _ in range(multiprocessing.cpu_count()):
+            p = multiprocessing.Process(target=self._process_runner)
+            p.daemon = True
+            p.start()
+
+        atexit.register(local.clean, LOCAL_DIR)
 
 
-    def _thread_runner(self):
+    def _process_runner(self):
         while True:
-            res = self.queue.get(True)
-            jobs = [res]
-
-            local.local_handler(jobs, self.run_dir,
+            res = self.queue.get(block=True)
+            local.local_handler(res, self.run_dir,
                                 {'invoker' : 'LocalInvoker'})
-            self.queue.task_done()
 
     def invoke(self, payload):
         self.queue.put(payload)
