@@ -21,6 +21,7 @@ import base64
 import logging
 import os
 import time
+import datetime
 import boto3
 import pywren
 
@@ -336,3 +337,9 @@ def terminate_instances(instance_list):
 def prettyprint_instances(inst_list):
     for instance_name, instance_obj in inst_list:
         print(instance_name, instance_obj.public_dns_name)
+
+def prettyprint_instance_uptimes(inst_list):
+    for instance_name, instance_obj in inst_list:
+        launch_time = instance_obj.launch_time
+        delta = str(datetime.datetime.now(launch_time.tzinfo) - launch_time).split('.')[0]
+        print(instance_name, delta)
