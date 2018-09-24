@@ -98,7 +98,7 @@ class DummyInvoker(object):
             jobn = MAXJOBS
         jobs = self.payloads[:jobn]
 
-        local.local_handler(jobs, run_dir,
+        local.dummy_handler(jobs, run_dir,
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
