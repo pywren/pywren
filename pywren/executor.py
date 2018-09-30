@@ -20,6 +20,8 @@ from __future__ import print_function
 import logging
 import random
 import time
+import signal
+import sys
 from multiprocessing.pool import ThreadPool
 from six.moves import cPickle as pickle
 
@@ -364,6 +366,7 @@ class StandaloneExecutor(Executor):
         AWS_REGION = config['account']['aws_region']
         sc = config['standalone']
         SQS_QUEUE = sc['sqs_queue_name']
+        signal.signal(signal.SIGINT, self.cancel_jobs)
 
         self.inst_list = []
         if min_instances is not None:
@@ -371,22 +374,25 @@ class StandaloneExecutor(Executor):
                                                                       sc['instance_name']))
             if number > 0:
                 self.inst_list = ec2standalone.launch_instances(
-                                               number,
-                                               sc['target_ami'],
-                                               AWS_REGION,
-                                               sc['ec2_ssh_key'],
-                                               sc['ec2_instance_type'],
-                                               sc['instance_name'],
-                                               sc['instance_profile_name'],
-                                               SQS_QUEUE,
-                                               spot_price=spot_price)
+                    number, sc['target_ami'], AWS_REGION, sc['ec2_ssh_key'],
+                    sc['ec2_instance_type'], sc['instance_name'],
+                    sc['instance_profile_name'], SQS_QUEUE,
+                    spot_price=spot_price)
 
     def __enter__(self):
         return self
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exception_type, exception_value, traceback):
         self.terminate_instances()
 
     def terminate_instances(self):
         ec2standalone.terminate_instances(self.inst_list)
 
+    def cancel_jobs(self, signum, frame): # pylint: disable=unused-argument
+        AWS_REGION = self.config['account']['aws_region']
+        SQS_QUEUE_NAME = self.config['standalone']['sqs_queue_name']
+        sqs = boto3.resource('sqs', region_name=AWS_REGION)
+        queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+        queue.purge()
+        # TODO: add job cancellation with S3 key
+        sys.exit(0)

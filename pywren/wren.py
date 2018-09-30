@@ -18,14 +18,12 @@ from __future__ import absolute_import
 
 import logging
 import os
-from contextlib import contextmanager
 
 import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
 from pywren.executor import Executor, StandaloneExecutor
 from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED, ALWAYS # pylint: disable=unused-import
-from pywren import ec2standalone
 
 logger = logging.getLogger(__name__)
 
