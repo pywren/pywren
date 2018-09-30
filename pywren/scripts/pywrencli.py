@@ -498,7 +498,7 @@ def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                                sc['instance_name'],
                                                sc['instance_profile_name'],
                                                sc['sqs_queue_name'],
-                                               sc['max_idle_time'],
+                                               max_idle_time=sc['max_idle_time'],
                                                idle_terminate_granularity=\
                                                sc['idle_terminate_granularity'],
                                                pywren_git_branch=pywren_git_branch,

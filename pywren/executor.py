@@ -36,6 +36,7 @@ from pywren.serialize import serialize, create_mod_data
 from pywren.storage import storage_utils
 from pywren.storage.storage_utils import create_func_key
 from pywren.wait import wait, ALL_COMPLETED
+from pywren import ec2standalone
 
 
 logger = logging.getLogger(__name__)
@@ -356,3 +357,36 @@ class Executor(object):
                 this_events_logs.append((timestamp, message))
 
         return this_events_logs
+
+class StandaloneExecutor(Executor):
+    def __init__(self, invoker, config, job_max_runtime, min_instances, spot_price):
+        Executor.__init__(self, invoker, config, job_max_runtime)
+        AWS_REGION = config['account']['aws_region']
+        sc = config['standalone']
+        SQS_QUEUE = sc['sqs_queue_name']
+
+        self.inst_list = []
+        if min_instances is not None:
+            number = min_instances - len(ec2standalone.list_instances(AWS_REGION,
+                                                                      sc['instance_name']))
+            if number > 0:
+                self.inst_list = ec2standalone.launch_instances(
+                                               number,
+                                               sc['target_ami'],
+                                               AWS_REGION,
+                                               sc['ec2_ssh_key'],
+                                               sc['ec2_instance_type'],
+                                               sc['instance_name'],
+                                               sc['instance_profile_name'],
+                                               SQS_QUEUE,
+                                               spot_price=spot_price)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.terminate_instances()
+
+    def terminate_instances(self):
+        ec2standalone.terminate_instances(self.inst_list)
+

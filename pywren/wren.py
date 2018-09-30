@@ -18,12 +18,14 @@ from __future__ import absolute_import
 
 import logging
 import os
+from contextlib import contextmanager
 
 import pywren.invokers as invokers
 import pywren.queues as queues
 import pywren.wrenconfig as wrenconfig
-from pywren.executor import Executor
+from pywren.executor import Executor, StandaloneExecutor
 from pywren.wait import wait, ALL_COMPLETED, ANY_COMPLETED, ALWAYS # pylint: disable=unused-import
+from pywren import ec2standalone
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +74,7 @@ def dummy_executor(config=None, job_max_runtime=300):
     return Executor(invoker, config, job_max_runtime)
 
 
-def remote_executor(config=None, job_max_runtime=3600):
+def remote_executor(config=None, job_max_runtime=3600, min_instances=None, spot_price=None):
     if config is None:
         config = wrenconfig.default()
 
@@ -80,7 +82,8 @@ def remote_executor(config=None, job_max_runtime=3600):
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     invoker = queues.SQSInvoker(AWS_REGION, SQS_QUEUE)
 
-    return Executor(invoker, config, job_max_runtime)
+    return StandaloneExecutor(invoker, config, job_max_runtime, min_instances, spot_price)
+
 
 standalone_executor = remote_executor
 
