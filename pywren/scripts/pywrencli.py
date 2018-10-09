@@ -561,9 +561,9 @@ def standalone_queue_size(ctx):
 
     sqs = boto3.resource('sqs', region_name=AWS_REGION)
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
-    click.echo("Jobs in flight: {}".format(
+    click.echo("Approximate number of jobs in flight: {}".format(
         queue.attributes['ApproximateNumberOfMessagesNotVisible']))
-    click.echo("Jobs in queue: {}".format(
+    click.echo("Approximate number of jobs in queue: {}".format(
         queue.attributes['ApproximateNumberOfMessages']))
 
 @click.command("delete_bucket")
