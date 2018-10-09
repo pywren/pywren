@@ -49,7 +49,7 @@ def standalone():
 # FIXME use pywren main module SOURCE_DIR
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-@click.command()
+@click.command("get_aws_account_id")
 def get_aws_account_id(verbose=True):
     """
     Check to make sure boto is working and get the AWS ACCONT ID
@@ -61,7 +61,7 @@ def get_aws_account_id(verbose=True):
     return account_id
 
 
-@click.command()
+@click.command("create_config")
 @click.pass_context
 @click.option('--aws_region', default=pywren.wrenconfig.AWS_REGION_DEFAULT,
               help='aws region to run in')
@@ -138,7 +138,7 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
     click.echo("lambda role is {}".format(lambda_role))
 
 
-@click.command()
+@click.command("test_config")
 @click.pass_context
 def test_config(ctx): # pylint: disable=unused-argument
     """
@@ -153,7 +153,7 @@ def test_config(ctx): # pylint: disable=unused-argument
     # make sure the bucket exists
     # config = pywren.wrenconfig.default()
 
-@click.command()
+@click.command("create_role")
 @click.pass_context
 def create_role(ctx):
     """
@@ -183,7 +183,7 @@ def create_role(ctx):
         print("Using existing IAM role...")
 
 
-@click.command()
+@click.command("create_bucket")
 @click.pass_context
 def create_bucket(ctx):
     """
@@ -199,7 +199,7 @@ def create_bucket(ctx):
         kwargs = {}
     s3.create_bucket(Bucket=config['s3']['bucket'], **kwargs)
 
-@click.command()
+@click.command("create_instance_profile")
 @click.pass_context
 def create_instance_profile(ctx):
     config_filename = ctx.obj['config_filename']
@@ -218,7 +218,7 @@ def create_instance_profile(ctx):
 def list_all_funcs(lambclient):
     return lambclient.get_paginator('list_functions').paginate().build_full_result()
 
-@click.command()
+@click.command("deploy_lambda")
 @click.pass_context
 def deploy_lambda(ctx, update_if_exists=True):
     """
@@ -302,7 +302,7 @@ def deploy_lambda(ctx, update_if_exists=True):
         raise ValueError("could not register funciton after 10 tries")
 
 
-@click.command()
+@click.command("delete_lambda")
 @click.pass_context
 def delete_lambda(ctx):
     config_filename = ctx.obj['config_filename']
@@ -320,7 +320,7 @@ def delete_lambda(ctx):
     lambclient.delete_function(FunctionName=FUNCTION_NAME)
 
 
-@click.command()
+@click.command("delete_role")
 @click.pass_context
 def delete_role(ctx):
     """
@@ -336,6 +336,8 @@ def delete_role(ctx):
                                  PolicyName='{}-more-permissions'.format(role_name))
     iamclient.delete_role(RoleName=role_name)
     print("deleted role{}".format(role_name))
+
+
 @click.command("delete_instance_profile")
 @click.pass_context
 @click.argument('name', default="", type=str)
@@ -355,7 +357,7 @@ def delete_instance_profile(ctx, name):
     profile.delete()
 
 
-@click.command()
+@click.command("create_queue")
 @click.pass_context
 def create_queue(ctx):
     """
@@ -372,7 +374,7 @@ def create_queue(ctx):
                      Attributes={'VisibilityTimeout' : "20"})
 
 
-@click.command()
+@click.command("delete_queue")
 @click.pass_context
 def delete_queue(ctx):
     """
@@ -388,7 +390,7 @@ def delete_queue(ctx):
     queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
     queue.delete()
 
-@click.command()
+@click.command("test_function")
 @click.pass_context
 def test_function(ctx):
     """
@@ -406,7 +408,7 @@ def test_function(ctx):
 
     click.echo("function returned: {}".format(res))
 
-@click.command()
+@click.command("print_latest_logs")
 @click.pass_context
 def print_latest_logs(ctx):
     """
@@ -438,7 +440,7 @@ def print_latest_logs(ctx):
         print("{} : {}".format(event['timestamp'], event['message'].strip()))
 
 
-@click.command()
+@click.command("log_url")
 @click.pass_context
 def log_url(ctx):
     """
@@ -542,7 +544,7 @@ def standalone_terminate_instances(ctx):
     ec2standalone.terminate_instances(inst_list)
 
 
-@click.command()
+@click.command("delete_bucket")
 @click.pass_context
 def delete_bucket(ctx):
     """
@@ -571,7 +573,7 @@ def delete_bucket(ctx):
     print("deleting", bucket.name)
     bucket.delete()
 
-@click.command()
+@click.command("cleanup_all")
 @click.option('--force', is_flag=True, default=False,
               help='dont error')
 @click.pass_context
