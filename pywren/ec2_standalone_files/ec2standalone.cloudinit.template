@@ -30,8 +30,11 @@ runcmd:
   # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/head:refs/remotes/origin/pr/*"]
   # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/merge:refs/remotes/origin/pr/*"]
   # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren checkout {git_checkout_string}"]
-  # FIXME: this is a hack!
-  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pywren/pywren.git -b docker /home/ec2-user/pywren"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pywren/pywren.git -b docker /home/ec2-user/pywren"] # FIXME: this is a hack!
+  - cp /home/ec2-user/pywren/pywren/wrenhandler_docker.py /home/ec2-user/pywren/pywren/wrenhandler.py # FIXME: this is even more of a hack!
+  - sudo service docker start
+  - sudo usermod -a -G docker ec2-user
+  - docker build /home/ec2-user/pywren/pywren/ec2_standalone_files
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
   - [ ls, /etc/init.d/]
   - mkdir /var/run/supervisor
@@ -40,11 +43,6 @@ runcmd:
   - chkconfig --add supervisor
   - chkconfig supervisor on
   - service supervisor start
-  - sudo service docker start
-  - sudo usermod -a -G docker ec2-user
-  - docker build /home/ec2-user/pywren/pywren/ec2_standalone_files
-  # FIXME: this is also a hack!
-  - cp /home/ec2-user/pywren/pywren/wrenhandler_docker.py /home/ec2-user/pywren/pywren/wrenhandler.py
 
 write_files:
 - encoding: b64
