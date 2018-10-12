@@ -16,6 +16,8 @@ runcmd:
   - chmod +x ./awslogs-agent-setup.py
   - ./awslogs-agent-setup.py -n -r {aws_region} -c /etc/cloud-agent.conf
   - sudo /etc/init.d/ntpd restart
+  - sudo yum update -y
+  - sudo yum install -y docker
   - pip install supervisor
   - [ sudo, -Hu, ec2-user, sh, -c, "wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O /tmp/miniconda.sh"]
   - [ sudo, -Hu, ec2-user, sh, -c, "chmod +x /tmp/miniconda.sh"]
@@ -23,10 +25,13 @@ runcmd:
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/conda install -q -y numpy boto3 boto"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install supervisor"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install git+https://github.com/ericmjonas/watchtower.git"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/head:refs/remotes/origin/pr/*"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/merge:refs/remotes/origin/pr/*"]
-  - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren checkout {git_checkout_string}"]
+  - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install docker"]
+  # - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/ericmjonas/pywren.git /home/ec2-user/pywren"]
+  # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/head:refs/remotes/origin/pr/*"]
+  # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren fetch origin refs/pull/*/merge:refs/remotes/origin/pr/*"]
+  # - [ sudo, -Hu, ec2-user, sh, -c, "git -C /home/ec2-user/pywren checkout {git_checkout_string}"]
+  # FIXME: this is a hack!
+  - [ sudo, -Hu, ec2-user, sh, -c, "git clone https://github.com/pywren/pywren.git -b docker /home/ec2-user/pywren"]
   - [ sudo, -Hu, ec2-user, sh, -c, "/home/ec2-user/anaconda/bin/pip install -e /home/ec2-user/pywren"]
   - [ ls, /etc/init.d/]
   - mkdir /var/run/supervisor
@@ -35,6 +40,11 @@ runcmd:
   - chkconfig --add supervisor
   - chkconfig supervisor on
   - service supervisor start
+  - sudo service docker start
+  - sudo usermod -a -G docker ec2-user
+  - docker build /home/ec2-user/pywren/pywren/ec2_standalone_files
+  # FIXME: this is also a hack!
+  - cp /home/ec2-user/pywren/pywren/wrenhandler_docker.py /home/ec2-user/pywren/pywren/wrenhandler.py
 
 write_files:
 - encoding: b64
