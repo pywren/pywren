@@ -158,14 +158,14 @@ except Exception as e:
     # being unpickleable. As a result, we actually wrap this in a try/catch block
     # and more-carefully handle the exceptions if any part of this save / test-reload
     # fails
+    stats_fid.write(str({'result' : e,
+        'exc_type' : exc_type,
+        'exc_value' : exc_value,
+        'exc_traceback' : exc_traceback,
+        'sys.path' : sys.path,
+        'success' : False}))
 
     try:
-        print({'result' : e,
-            'exc_type' : exc_type,
-            'exc_value' : exc_value,
-            'exc_traceback' : exc_traceback,
-            'sys.path' : sys.path,
-            'success' : False})
         pickled_output = pickle.dumps({'result' : e,
                                        'exc_type' : exc_type,
                                        'exc_value' : exc_value,
