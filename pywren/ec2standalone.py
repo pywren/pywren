@@ -216,18 +216,14 @@ def _create_instances(num_instances,
                 LaunchSpecification['BlockDeviceMappings'] = block_device_mappings
 
             spot_requests = client.request_spot_instances(
-                SpotPrice=str(spot_price),
                 InstanceCount=num_instances,
                 LaunchSpecification=LaunchSpecification)['SpotInstanceRequests']
 
             request_ids = [r['SpotInstanceRequestId'] for r in spot_requests]
             pending_request_ids = request_ids
+            time.sleep(5)
 
             while pending_request_ids:
-                print("{grant} of {req} instances granted. Waiting...".format(
-                    grant=num_instances - len(pending_request_ids),
-                    req=num_instances))
-                time.sleep(30)
                 spot_requests = client.describe_spot_instance_requests(
                     SpotInstanceRequestIds=request_ids)['SpotInstanceRequests']
 
@@ -243,6 +239,12 @@ def _create_instances(num_instances,
                 pending_request_ids = [
                     r['SpotInstanceRequestId'] for r in spot_requests
                     if r['State'] == 'open']
+
+                if pending_request_ids:
+                    print("{grant} of {req} instances granted. Waiting...".format(
+                        grant=num_instances - len(pending_request_ids),
+                        req=num_instances))
+                    time.sleep(30)
 
             print("All {c} instances granted.".format(c=num_instances))
 

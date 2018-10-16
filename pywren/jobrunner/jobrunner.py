@@ -160,6 +160,12 @@ except Exception as e:
     # fails
 
     try:
+        print({'result' : e,
+            'exc_type' : exc_type,
+            'exc_value' : exc_value,
+            'exc_traceback' : exc_traceback,
+            'sys.path' : sys.path,
+            'success' : False})
         pickled_output = pickle.dumps({'result' : e,
                                        'exc_type' : exc_type,
                                        'exc_value' : exc_value,
