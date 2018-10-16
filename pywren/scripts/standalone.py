@@ -223,6 +223,7 @@ def process_message(m, local_message_i, max_run_time, run_dir):
                          "setting to {:3.1f} sec".format(message_id,
                                                          time_since_visibility_update,
                                                          SQS_VISIBILITY_SEC))
+            logger.debug("SQS_VISIBILITY_SEC: {}".format(SQS_VISIBILITY_SEC))
             last_visibility_update_time = time.time()
             _ = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
 
@@ -330,7 +331,6 @@ class RetryHandler(logging.Handler):
         self.ignore_errors = ignore_errors
 
     def emit(self, record):
-        debug_pid.write("emitting\n")
         try:
             return self.handler.emit(record)
         except Exception as e:
@@ -403,11 +403,11 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
                 formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
                 stream_name = log_stream_prefix + "-{logger_name}"
-                handler = RetryHandler(watchtower.CloudWatchLogHandler(send_interval=20,
+                handler = RetryHandler(watchtower.CloudWatchLogHandler(
                                                           log_group="pywren.standalone",
                                                           stream_name=stream_name,
                                                           boto3_session=session,
-                                                          max_batch_count=10), max_retries=10)
+                                                          use_queues=False))
 
                 debug_stream_handler = logging.StreamHandler()
                 handler.setFormatter(formatter)
