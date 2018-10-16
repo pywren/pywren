@@ -223,7 +223,6 @@ def process_message(m, local_message_i, max_run_time, run_dir):
                          "setting to {:3.1f} sec".format(message_id,
                                                          time_since_visibility_update,
                                                          SQS_VISIBILITY_SEC))
-            logger.debug("SQS_VISIBILITY_SEC: {}".format(SQS_VISIBILITY_SEC))
             last_visibility_update_time = time.time()
             _ = m.change_visibility(VisibilityTimeout=SQS_VISIBILITY_SEC)
 
@@ -303,50 +302,50 @@ def job_handler(event, job_i, run_dir,
     logger.debug("jobhandler_thread callset_id={} call_id={} returning".format(callset_id, call_id))
 
 
-class RetryHandler(logging.Handler):
-    """A logging handler that wraps another handler and retries its emit
-    method if it fails. Useful for handlers that connect to an external
-    service over the network, such as CloudWatch.
-    The wait between retries uses an exponential backoff algorithm with full
-    jitter, as described in
-    https://www.awsarchitectureblog.com/2015/03/backoff.html.
-    :param handler the handler to wrap with retries.
-    :param max_retries the maximum number of retries before giving up. The
-                       default is 5 retries.
-    :param backoff_base the sleep time before the first retry. This time
-                        doubles after each retry. The default is 0.1s.
-    :param backoff_cap the max sleep time before a retry. The default is 1s.
-    :param ignore_errors if set to False, when all retries are exhausted, the
-                         exception raised by the original log call is
-                         re-raised. If set to True, the error is silently
-                         ignored. The default is True.
-    """
-    def __init__(self, handler, max_retries=5, backoff_base=0.1,
-                 backoff_cap=1, ignore_errors=True):
-        super(RetryHandler, self).__init__()
-        self.handler = handler
-        self.max_retries = max_retries
-        self.backoff_base = backoff_base
-        self.backoff_cap = backoff_cap
-        self.ignore_errors = ignore_errors
+# class RetryHandler(logging.Handler):
+#     """A logging handler that wraps another handler and retries its emit
+#     method if it fails. Useful for handlers that connect to an external
+#     service over the network, such as CloudWatch.
+#     The wait between retries uses an exponential backoff algorithm with full
+#     jitter, as described in
+#     https://www.awsarchitectureblog.com/2015/03/backoff.html.
+#     :param handler the handler to wrap with retries.
+#     :param max_retries the maximum number of retries before giving up. The
+#                        default is 5 retries.
+#     :param backoff_base the sleep time before the first retry. This time
+#                         doubles after each retry. The default is 0.1s.
+#     :param backoff_cap the max sleep time before a retry. The default is 1s.
+#     :param ignore_errors if set to False, when all retries are exhausted, the
+#                          exception raised by the original log call is
+#                          re-raised. If set to True, the error is silently
+#                          ignored. The default is True.
+#     """
+#     def __init__(self, handler, max_retries=5, backoff_base=0.1,
+#                  backoff_cap=1, ignore_errors=True):
+#         super(RetryHandler, self).__init__()
+#         self.handler = handler
+#         self.max_retries = max_retries
+#         self.backoff_base = backoff_base
+#         self.backoff_cap = backoff_cap
+#         self.ignore_errors = ignore_errors
 
-    def emit(self, record):
-        try:
-            return self.handler.emit(record)
-        except Exception as e:
-            exc = e
+#     def emit(self, record):
+#         try:
+#             return self.handler.emit(record)
+#         except Exception as e:
+#             exc = e
 
-        sleep = self.backoff_base
-        for i in range(self.max_retries):
-            time.sleep(sleep * random.random())
-            try:
-                return self.handler.emit(record)
-            except:
-                pass
-            sleep = min(self.backoff_cap, sleep * 2)
+#         sleep = self.backoff_base
+#         for i in range(self.max_retries):
+#             time.sleep(sleep * random.random())
+#             try:
+#                 return self.handler.emit(record)
+#             except:
+#                 pass
+#             sleep = min(self.backoff_cap, sleep * 2)
 
-        if not self.ignore_errors:
-            raise exc
+#         if not self.ignore_errors:
+#             raise exc
 
 
 @click.command()
@@ -403,18 +402,18 @@ def server(aws_region, max_run_time, run_dir, sqs_queue_name, max_idle_time,
 
                 formatter = logging.Formatter(log_format_str, "%Y-%m-%d %H:%M:%S")
                 stream_name = log_stream_prefix + "-{logger_name}"
-                handler = RetryHandler(watchtower.CloudWatchLogHandler(
-                                                          log_group="pywren.standalone",
-                                                          stream_name=stream_name,
-                                                          boto3_session=session,
-                                                          use_queues=False))
+                # handler = RetryHandler(watchtower.CloudWatchLogHandler(
+                #                                           log_group="pywren.standalone",
+                #                                           stream_name=stream_name,
+                #                                           boto3_session=session,
+                #                                           use_queues=False))
 
                 debug_stream_handler = logging.StreamHandler()
-                handler.setFormatter(formatter)
-                logger.addHandler(handler)
+                # handler.setFormatter(formatter)
+                logger.addHandler(debug_stream_handler)
                 logger.setLevel(logging.DEBUG)
                 wren_log = pywren.wrenhandler.logger
-                wren_log.addHandler(handler)
+                # wren_log.addHandler(handler)
                 wren_log.addHandler(debug_stream_handler)
                 success = True
             except Exception as e:
