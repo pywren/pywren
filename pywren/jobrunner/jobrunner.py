@@ -118,9 +118,9 @@ try:
         with open(full_filename, 'wb') as fid:
             fid.write(b64str_to_bytes(m_data))
 
-    # logger.info("Finished wrting {} module files".format(len(d['module_data'])))
-    # logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
-    # logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
+    logger.info("Finished wrting {} module files".format(len(d['module_data'])))
+    logger.debug(subprocess.check_output("find {}".format(PYTHON_MODULE_PATH), shell=True))
+    logger.debug(subprocess.check_output("find {}".format(os.getcwd()), shell=True))
 
 
     # now unpickle function; it will expect modules to be there
