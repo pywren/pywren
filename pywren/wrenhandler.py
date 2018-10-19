@@ -233,7 +233,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         # Check for cancel
         if key_exists(s3_client, s3_bucket, cancel_key):
-            raise Exception("Function cancelled")
+            logger.info("invocation cancelled")
+            raise Exception("CANCELLED", "Function cancelled")
         time_of_last_cancel_check = time.time()
 
         data_byte_range = event['data_byte_range']

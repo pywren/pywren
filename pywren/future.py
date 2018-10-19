@@ -74,15 +74,15 @@ class ResponseFuture:
         self._state = new_state
 
     def cancel(self, storage_handler=None):
-        # FIRST This is annoying; how will it have the custom access
-        # to the storage handler information
+        # TODO Figure out a better way for this function to have
+        # access to a custom storage handler
 
         if storage_handler is None:
             storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
             storage_handler = storage.Storage(storage_config)
 
         storage_handler.put_cancelled(self.callset_id,
-                                      self.call_id, "foo")
+                                      self.call_id, "CANCEL")
 
     def cancelled(self):
         raise NotImplementedError("Cannot cancel dispatched jobs")
