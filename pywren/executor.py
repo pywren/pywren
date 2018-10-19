@@ -361,7 +361,7 @@ class Executor(object):
         return this_events_logs
 
 class StandaloneExecutor(Executor):
-    def __init__(self, invoker, config, job_max_runtime, min_instances, spot_price):
+    def __init__(self, invoker, config, job_max_runtime, min_instances, spot_price, instance_type):
         Executor.__init__(self, invoker, config, job_max_runtime)
         AWS_REGION = config['account']['aws_region']
         sc = config['standalone']
@@ -375,9 +375,11 @@ class StandaloneExecutor(Executor):
             if number > 0:
                 self.inst_list = ec2standalone.launch_instances(
                     number, sc['target_ami'], AWS_REGION, sc['ec2_ssh_key'],
-                    sc['ec2_instance_type'], sc['instance_name'],
+                    instance_type, sc['instance_name'],
                     sc['instance_profile_name'], SQS_QUEUE,
                     spot_price=spot_price)
+                print("launched:")
+                ec2standalone.prettyprint_instances(self.inst_list)
 
     def __enter__(self):
         return self
@@ -386,7 +388,14 @@ class StandaloneExecutor(Executor):
         self.terminate_instances()
 
     def terminate_instances(self):
-        ec2standalone.terminate_instances(self.inst_list)
+        AWS_REGION = self.config['account']['aws_region']
+        sc = self.config['standalone']
+        running_inst_list = ec2standalone.list_instances(AWS_REGION, sc['instance_name'])
+        running_ids = [inst[1].id for inst in running_inst_list]
+        terminate_list = [inst for inst in self.inst_list if inst[1].id in running_ids]
+        print("terminate")
+        ec2standalone.prettyprint_instances(terminate_list)
+        ec2standalone.terminate_instances(terminate_list)
 
     def cancel_jobs(self, signum, frame): # pylint: disable=unused-argument
         AWS_REGION = self.config['account']['aws_region']

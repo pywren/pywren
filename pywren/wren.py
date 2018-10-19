@@ -72,7 +72,8 @@ def dummy_executor(config=None, job_max_runtime=300):
     return Executor(invoker, config, job_max_runtime)
 
 
-def remote_executor(config=None, job_max_runtime=3600, min_instances=None, spot_price=None):
+def remote_executor(config=None, job_max_runtime=3600, min_instances=None, spot_price=None,
+                    instance_type=None):
     if config is None:
         config = wrenconfig.default()
 
@@ -80,8 +81,11 @@ def remote_executor(config=None, job_max_runtime=3600, min_instances=None, spot_
     SQS_QUEUE = config['standalone']['sqs_queue_name']
     invoker = queues.SQSInvoker(AWS_REGION, SQS_QUEUE)
 
-    return StandaloneExecutor(invoker, config, job_max_runtime, min_instances, spot_price)
+    if instance_type is None:
+        instance_type = config['standalone']['ec2_instance_type']
 
+    return StandaloneExecutor(invoker, config, job_max_runtime, min_instances, spot_price,
+                              instance_type)
 
 standalone_executor = remote_executor
 

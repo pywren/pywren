@@ -472,10 +472,12 @@ def log_url(ctx):
               help='which git to use on the stand-alone (supercedes pywren_git_branch)')
 @click.option('--spot_price', default=None, type=float,
               help='use spot instances, at this reserve price')
+@click.option('--instance_type', default=None, type=str,
+              help='launch this instance type')
 def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                 idle_terminate_granularity,
                                 pywren_git_branch, pywren_git_commit,
-                                spot_price):
+                                spot_price, instance_type):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
@@ -486,6 +488,8 @@ def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
         sc['max_idle_time'] = max_idle_time
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
+    if instance_type is not None:
+        sc['instance_type'] = instance_type
 
     use_fast_io = sc.get("fast_io", False)
 
