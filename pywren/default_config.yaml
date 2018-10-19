@@ -24,8 +24,8 @@ standalone:
     ec2_instance_type: m4.4xlarge
     sqs_queue_name: pywren-queue
     visibility: 10
-    ec2_ssh_key : ec2-us-west-2
-    target_ami : ami-b04e92d0
+    ec2_ssh_key : PYWREN_DEFAULT_KEY
+    target_ami : TARGET_AMI
     instance_name: pywren-standalone
     instance_profile_name: pywren-standalone
     max_idle_time: 60

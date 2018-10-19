@@ -204,7 +204,6 @@ def _create_instances(num_instances,
 
             LaunchSpecification = {
                 'ImageId': ami,
-                'KeyName': key_name,
                 'InstanceType': instance_type,
                 'SecurityGroupIds': security_group_ids,
                 'EbsOptimized': ebs_optimized,
@@ -214,6 +213,8 @@ def _create_instances(num_instances,
                 LaunchSpecification['Placement'] = {"AvailabilityZone":availability_zone}
             if block_device_mappings is not None:
                 LaunchSpecification['BlockDeviceMappings'] = block_device_mappings
+            if key_name is not None:
+                LaunchSpecification['KeyName'] = key_name
 
             spot_requests = client.request_spot_instances(
                 SpotPrice=str(spot_price),
@@ -264,7 +265,6 @@ def _create_instances(num_instances,
                 "MinCount" : num_instances,
                 "MaxCount" : num_instances,
                 "ImageId" : ami,
-                "KeyName" : key_name,
                 "InstanceType" : instance_type,
                 "SecurityGroupIds" : security_group_ids,
                 "EbsOptimized" : ebs_optimized,
@@ -274,6 +274,8 @@ def _create_instances(num_instances,
                 "UserData" :  user_data}
             if block_device_mappings is not None:
                 LaunchSpecification['BlockDeviceMappings'] = block_device_mappings
+            if key_name is not None:
+                LaunchSpecification['KeyName'] = key_name
 
             cluster_instances = ec2.create_instances(**LaunchSpecification)
 

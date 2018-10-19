@@ -117,16 +117,21 @@ def create_config(ctx, force, aws_region, lambda_role, function_name, bucket_nam
 
     if aws_region in pywren.wrenconfig.RUNTIME_BUCKET_REGION:
         runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION[aws_region]
+        target_ami = pywren.wrenconfig.TARGET_AMI_REGION[aws_region]
     else:
         print("WARNING: Runtime not deployed for your region")
         print("using runtime from us-west-2.")
-        print("Performance may be imnpacted")
+        print("Performance may be impacted")
         runtime_bucket = pywren.wrenconfig.RUNTIME_BUCKET_REGION['us-west-2']
+        target_ami = pywren.wrenconfig.TARGET_AMI_REGION['us-west-2']
+
     default_yaml = default_yaml.replace("RUNTIME_BUCKET",
                                         runtime_bucket)
     k = pywren.wrenconfig.default_runtime[pythonver]
 
     default_yaml = default_yaml.replace("RUNTIME_KEY", k)
+
+    default_yaml = default_yaml.replace("TARGET_AMI", target_ami)
 
     # print out message about the stuff you need to do
     if os.path.exists(filename) and not force:
@@ -209,10 +214,57 @@ def create_instance_profile(ctx):
     instance_profile_name = config['standalone']['instance_profile_name']
 
     iam = boto3.resource('iam')
-    iam.create_instance_profile(InstanceProfileName=instance_profile_name)
+    iamclient = boto3.client('iam')
+    response = iamclient.list_instance_profiles()
+    instance_profiles = [profile for profile in response['InstanceProfiles']
+                         if profile['InstanceProfileName'] == instance_profile_name]
+
+    if len(instance_profiles) == 0:
+        iam.create_instance_profile(InstanceProfileName=instance_profile_name)
+    else:
+        print("Using existing Instance Profile...")
 
     instance_profile = iam.InstanceProfile(instance_profile_name)
-    instance_profile.add_role(RoleName=role_name)
+    if len(instance_profile.roles_attribute) == 0:
+        instance_profile.add_role(RoleName=role_name)
+
+@click.command("create_ec2_ssh_key")
+@click.pass_context
+def create_ec2_ssh_key(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
+    click.echo("EC2 instances require an SSH key pair to be specified in order" + \
+               " to connect to them.")
+    if not click.confirm("Do you want to be able to connect to launched standalone instances?",
+                         default=False):
+        return
+    key_name = click.prompt("Name of ssh key:",
+                            default="ec2-{}".format(config['account']['aws_region']))
+
+    ec2client = boto3.client('ec2')
+    key_pairs = ec2client.describe_key_pairs()
+    key_pairs = [key_pair for key_pair in key_pairs['KeyPairs'] if key_pair['KeyName'] == key_name]
+    create_key = len(key_pairs) == 0
+    if create_key and not click.confirm(
+            "{} does not exist, would you like to create a new key pair?".format(key_name)):
+        return
+    if create_key:
+        ec2 = boto3.resource('ec2')
+        key_pair = ec2.create_key_pair(KeyName=key_name)
+        key_location = click.prompt("Where should I put the private key?",
+                                    default=os.path.expanduser("~/.ssh/"))
+        if not os.path.exists(key_location):
+            os.makedirs(key_location)
+        key_path = os.path.join(key_location, "{}.pem".format(key_name))
+        with open(key_path, "w+") as key_file:
+            key_file.write(key_pair.key_material)
+        click.echo("Wrote private key to {}".format(key_path))
+
+    config_yaml = open(config_filename).read()
+    config_yaml = config_yaml.replace('PYWREN_DEFAULT_KEY', key_name)
+    with open(config_filename, "w") as f:
+        f.write(config_yaml)
 
 
 def list_all_funcs(lambclient):
