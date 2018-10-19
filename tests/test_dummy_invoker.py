@@ -80,3 +80,18 @@ class SimpleAsync(unittest.TestCase):
         res = fut.result() 
 
 
+    def test_cancel(self):
+
+        def sleep(x):
+            time.sleep(x)
+            return 0
+
+        fut = self.wrenexec.call_async(sleep, 30)
+
+        self.wrenexec.invoker.run_jobs_threaded()
+        time.sleep(4)
+        fut.cancel()
+        with pytest.raises(Exception) as execinfo:
+            _ = fut.result()
+
+        assert "cancelled" in str(execinfo.value)

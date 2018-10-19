@@ -75,7 +75,7 @@ class Executor(object):
                                                                       data_key))
 
     def invoke_with_keys(self, func_key, data_key, output_key,
-                         status_key,
+                         status_key, cancel_key,
                          callset_id, call_id, extra_env,
                          extra_meta, data_byte_range, use_cached_runtime,
                          host_job_meta, job_max_runtime,
@@ -98,6 +98,7 @@ class Executor(object):
             'data_key' : data_key,
             'output_key' : output_key,
             'status_key' : status_key,
+            'cancel_key' : cancel_key,
             'callset_id': callset_id,
             'job_max_runtime' : job_max_runtime,
             'data_byte_range' : data_byte_range,
@@ -242,8 +243,9 @@ class Executor(object):
         def invoke(data_str, callset_id, call_id, func_key,
                    host_job_meta,
                    agg_data_key=None, data_byte_range=None):
-            data_key, output_key, status_key \
-                = storage_utils.create_keys(self.storage.prefix, callset_id, call_id)
+            keys = storage_utils.create_keys(self.storage.prefix,
+                                             callset_id, call_id)
+            data_key, output_key, status_key, cancel_key = keys
 
             host_job_meta['job_invoke_timestamp'] = time.time()
 
@@ -262,6 +264,7 @@ class Executor(object):
             return self.invoke_with_keys(func_key, data_key,
                                          output_key,
                                          status_key,
+                                         cancel_key,
                                          callset_id, call_id, extra_env,
                                          extra_meta, data_byte_range,
                                          use_cached_runtime, host_job_meta.copy(),

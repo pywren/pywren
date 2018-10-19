@@ -73,8 +73,16 @@ class ResponseFuture:
         ## FIXME add state machine
         self._state = new_state
 
-    def cancel(self):
-        raise NotImplementedError("Cannot cancel dispatched jobs")
+    def cancel(self, storage_handler=None):
+        # FIRST This is annoying; how will it have the custom access
+        # to the storage handler information
+
+        if storage_handler is None:
+            storage_config = wrenconfig.extract_storage_config(wrenconfig.default())
+            storage_handler = storage.Storage(storage_config)
+
+        storage_handler.put_cancelled(self.callset_id,
+                                      self.call_id, "foo")
 
     def cancelled(self):
         raise NotImplementedError("Cannot cancel dispatched jobs")
@@ -93,7 +101,8 @@ class ResponseFuture:
     def errored(self):
         return self._state == JobState.error
 
-    def result(self, timeout=None, check_only=False, throw_except=True, storage_handler=None):
+    def result(self, timeout=None, check_only=False,
+               throw_except=True, storage_handler=None):
         """
 
         check_only = True implies we only check if the job is completed.
@@ -187,6 +196,9 @@ class ResponseFuture:
                 if throw_except:
                     raise Exception("process ran out of time")
                 return None
+            elif exception_args[0] == "CANCELLED":
+                if throw_except:
+                    raise Exception("job was cancelled")
             elif exception_args[0] == "RETCODE":
                 if throw_except:
                     raise Exception("python process failed, returned a non-zero return code"
