@@ -566,6 +566,19 @@ def standalone_queue_size(ctx):
     click.echo("Approximate number of jobs in queue: {}".format(
         queue.attributes['ApproximateNumberOfMessages']))
 
+@standalone.command("purge_queue")
+@click.pass_context
+def standalone_purge_queue(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    click.echo("purge queue")
+    queue.purge()
+
 @click.command("delete_bucket")
 @click.pass_context
 def delete_bucket(ctx):
