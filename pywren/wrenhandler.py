@@ -59,6 +59,7 @@ RUNTIME_DOWNLOAD_LOCK = "/tmp/runtime_download_lock"
 logger = logging.getLogger(__name__)
 
 PROCESS_STDOUT_SLEEP_SECS = 2
+CANCEL_CHECK_EVERY_SECS = 5.0
 
 def get_key_size(s3client, bucket, key):
     try:
@@ -69,6 +70,9 @@ def get_key_size(s3client, bucket, key):
             return None
         else:
             raise e
+
+def key_exists(s3client, bucket, key):
+    return get_key_size(s3client, bucket, key) is not None
 
 def free_disk_space(dirname):
     """
@@ -225,6 +229,14 @@ def generic_handler(event, context_dict, custom_handler_env=None):
         status_key = event['status_key']
         func_key = event['func_key']
         data_key = event['data_key']
+        cancel_key = event['cancel_key']
+
+        # Check for cancel
+        if key_exists(s3_client, s3_bucket, cancel_key):
+            logger.info("invocation cancelled")
+            raise Exception("CANCELLED", "Function cancelled")
+        time_of_last_cancel_check = time.time()
+
         data_byte_range = event['data_byte_range']
         output_key = event['output_key']
 
@@ -364,6 +376,17 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 time.sleep(PROCESS_STDOUT_SLEEP_SECS)
 
             total_runtime = time.time() - start_time
+            time_since_cancel_check = time.time() - time_of_last_cancel_check
+            if time_since_cancel_check > CANCEL_CHECK_EVERY_SECS:
+
+                if key_exists(s3_client, s3_bucket, cancel_key):
+                    logger.info("invocation cancelled")
+                    # kill the process
+                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                    raise Exception("CANCELLED",
+                                    "Function cancelled")
+                time_of_last_cancel_check = time.time()
+
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups

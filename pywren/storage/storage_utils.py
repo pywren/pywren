@@ -23,6 +23,7 @@ agg_data_key_suffix = "aggdata.pickle"
 data_key_suffix = "data.pickle"
 output_key_suffix = "output.pickle"
 status_key_suffix = "status.json"
+cancel_key_suffix = "cancel"
 
 def create_func_key(prefix, callset_id):
     """
@@ -78,6 +79,16 @@ def create_status_key(prefix, callset_id, call_id):
     """
     return posixpath.join(prefix, callset_id, call_id, status_key_suffix)
 
+def create_cancel_key(prefix, callset_id, call_id):
+    """
+    Create cancel key
+    :param prefix: prefix
+    :param callset_id: callset's ID
+    :param call_id: call's ID
+    :return: status key
+    """
+    return posixpath.join(prefix, callset_id, call_id, cancel_key_suffix)
+
 
 def create_keys(prefix, callset_id, call_id):
     """
@@ -85,12 +96,13 @@ def create_keys(prefix, callset_id, call_id):
     :param prefix: prefix
     :param callset_id: callset's ID
     :param call_id: call's ID
-    :return: data_key, output_key, status_key
+    :return: data_key, output_key, status_key, cancel_key
     """
     data_key = create_data_key(prefix, callset_id, call_id)
     output_key = create_output_key(prefix, callset_id, call_id)
     status_key = create_status_key(prefix, callset_id, call_id)
-    return data_key, output_key, status_key
+    cancel_key = create_cancel_key(prefix, callset_id, call_id)
+    return data_key, output_key, status_key, cancel_key
 
 
 def get_storage_path(config):

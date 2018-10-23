@@ -18,10 +18,12 @@ from __future__ import absolute_import
 
 import json
 import os
+import threading
 
 import botocore
 import botocore.session
 from pywren import local
+
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -64,9 +66,11 @@ class DummyInvoker(object):
 
     """
 
+    DEFAULT_RUN_DIR = "/tmp/task"
     def __init__(self):
         self.payloads = []
         self.TIME_LIMIT = False
+        self.thread = None
 
     def invoke(self, payload):
         self.payloads.append(payload)
@@ -75,7 +79,7 @@ class DummyInvoker(object):
         return {}
 
 
-    def run_jobs(self, MAXJOBS=-1, run_dir="/tmp/task"):
+    def run_jobs(self, MAXJOBS=-1, run_dir=DEFAULT_RUN_DIR):
         """
         run MAXJOBS in the queue
         MAXJOBS = -1  to run all
@@ -92,3 +96,13 @@ class DummyInvoker(object):
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
+
+    def run_jobs_threaded(self, MAXJOBS=-1, run_dir=DEFAULT_RUN_DIR):
+        """
+        Just like run_jobs but in a separate thread
+        (so it's non-blocking)
+        """
+
+        self.thread = threading.Thread(target=self.run_jobs,
+                                       args=(MAXJOBS, run_dir))
+        self.thread.start()

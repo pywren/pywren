@@ -104,6 +104,21 @@ class SimpleAsync(unittest.TestCase):
         assert exc_type_wren == exc_type_true
         assert type(exc_value_wren) == type(exc_value_true)
 
+    def test_cancel(self):
+
+        def sleep(x):
+            time.sleep(x)
+            return 0
+
+        fut = self.wrenexec.call_async(sleep, 30)
+        time.sleep(2)
+        fut.cancel()
+
+        with pytest.raises(Exception) as execinfo:
+            _ = fut.result()
+
+        assert "cancelled" in str(execinfo.value)
+
     def test_exit(self):
         """
         what if the process just dies
