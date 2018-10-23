@@ -368,6 +368,13 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                                        shell=True, env=local_env, bufsize=1,
                                        stdout=subprocess.PIPE, preexec_fn=os.setsid)
         logger.info("launched process")
+
+        def kill_process(process):
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(process.pid)]) # pylint: disable=no-member
+            else:
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
         def consume_stdout(stdout, queue):
             with stdout:
                 for line in iter(stdout.readline, b''):
@@ -399,7 +406,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 if key_exists(s3_client, s3_bucket, cancel_key):
                     logger.info("invocation cancelled")
                     # kill the process
-                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                    kill_process(process)
                     raise Exception("CANCELLED",
                                     "Function cancelled")
                 time_of_last_cancel_check = time.time()
@@ -407,10 +414,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                if os.name == 'nt':
-                    process.send_signal(signal.CTRL_BREAK_EVENT) # pylint: disable=no-member
-                else:
-                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                kill_process(process)
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
