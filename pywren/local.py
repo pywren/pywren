@@ -64,16 +64,3 @@ def local_handler(job, run_dir, extra_context=None):
     Runs a job locally inside of run_dir, used by local invoker
     """
     run_generic_handler(job, str(os.getpid()), os.getcwd(), run_dir, extra_context)
-
-def clean(local_dir):
-    dirs = glob.glob(os.path.join(local_dir, 'pymodules*'))
-    dirs.append(os.path.join(local_dir, 'task'))
-    dirs.append(os.path.join(local_dir, 'runtimes'))
-    for d in dirs:
-        shutil.rmtree(d, ignore_errors=True)
-    files = [os.path.join(local_dir, 'runtime_download_lock')]
-    files += glob.glob(os.path.join(local_dir, 'jobrunner*'))
-    files += glob.glob(os.path.join(local_dir, 'condaruntime*'))
-    for f in files:
-        if os.path.exists(f) or os.path.islink(f):
-            os.unlink(f)

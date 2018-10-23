@@ -22,10 +22,7 @@ import threading
 import sys
 import shutil
 import tempfile
-import atexit
-import glob2
 import multiprocessing
-import atexit
 import botocore
 import botocore.session
 from pywren import local
@@ -76,7 +73,6 @@ class DummyInvoker(object):
         self.payloads = []
         self.TIME_LIMIT = False
         self.thread = None
-        atexit.register(local.clean, LOCAL_DIR)
 
     def invoke(self, payload):
         self.payloads.append(payload)
@@ -134,8 +130,6 @@ class LocalInvoker(object):
             p = multiprocessing.Process(target=self._process_runner)
             p.daemon = True
             p.start()
-
-        atexit.register(local.clean, LOCAL_DIR)
 
 
     def _process_runner(self):
