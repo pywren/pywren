@@ -526,8 +526,16 @@ def standalone_list_instances(ctx):
 
 @standalone.command("instance_uptime")
 @click.pass_context
-def standalone_instance_uptime(ctx): # pylint: disable=unused-argument
-    pass
+def standalone_instance_uptime(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+
+    aws_region = config['account']['aws_region']
+    sc = config['standalone']
+
+    inst_list = ec2standalone.list_instances(aws_region, sc['instance_name'])
+    ec2standalone.prettyprint_instance_uptimes(inst_list)
+
 
 @standalone.command("terminate_instances")
 @click.pass_context
@@ -543,6 +551,33 @@ def standalone_terminate_instances(ctx):
     ec2standalone.prettyprint_instances(inst_list)
     ec2standalone.terminate_instances(inst_list)
 
+@standalone.command("queue_size")
+@click.pass_context
+def standalone_queue_size(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    click.echo("Approximate number of jobs in flight: {}".format(
+        queue.attributes['ApproximateNumberOfMessagesNotVisible']))
+    click.echo("Approximate number of jobs in queue: {}".format(
+        queue.attributes['ApproximateNumberOfMessages']))
+
+@standalone.command("purge_queue")
+@click.pass_context
+def standalone_purge_queue(ctx):
+    config_filename = ctx.obj['config_filename']
+    config = pywren.wrenconfig.load(config_filename)
+    AWS_REGION = config['account']['aws_region']
+    SQS_QUEUE_NAME = config['standalone']['sqs_queue_name']
+
+    sqs = boto3.resource('sqs', region_name=AWS_REGION)
+    queue = sqs.get_queue_by_name(QueueName=SQS_QUEUE_NAME)
+    click.echo("purge queue")
+    queue.purge()
 
 @click.command("delete_bucket")
 @click.pass_context
