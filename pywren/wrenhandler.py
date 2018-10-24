@@ -27,6 +27,8 @@ import time
 import traceback
 from threading import Thread
 import io
+import tempfile
+import platform
 
 import boto3
 import botocore
@@ -43,18 +45,21 @@ else:
 
 if os.name == 'nt':
     import msvcrt # pylint: disable=import-error
+    import ctypes # pylint: disable=import-error
 else:
     import fcntl # pylint: disable=import-error
 
+TEMP = tempfile.gettempdir()
+
 # these templates will get filled in by runtime ETAG
-PYTHON_MODULE_PATH = "/tmp/pymodules_{0}"
-CONDA_RUNTIME_DIR = "/tmp/condaruntime_{0}"
-RUNTIME_LOC = "/tmp/runtimes"
+PYTHON_MODULE_PATH = os.path.join(TEMP, "pymodules_{0}")
+CONDA_RUNTIME_DIR = os.path.join(TEMP, "condaruntime_{0}")
+RUNTIME_LOC = os.path.join(TEMP, "runtimes")
 
 # these templates will get fillled by PID
-JOBRUNNER_CONFIG_FILENAME = "/tmp/jobrunner_{0}.config.json"
-JOBRUNNER_STATS_FILENAME = "/tmp/jobrunner_{0}.stats.txt"
-RUNTIME_DOWNLOAD_LOCK = "/tmp/runtime_download_lock"
+JOBRUNNER_CONFIG_FILENAME = os.path.join(TEMP, "jobrunner_{0}.config.json")
+JOBRUNNER_STATS_FILENAME = os.path.join(TEMP, "jobrunner_{0}.stats.txt")
+RUNTIME_DOWNLOAD_LOCK = os.path.join(TEMP, "runtime_download_lock")
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +83,14 @@ def free_disk_space(dirname):
     """
     Returns the number of free bytes on the mount point containing DIRNAME
     """
-    s = os.statvfs(dirname)
-    return s.f_bsize * s.f_bavail
+    if os.name == 'nt':
+        free_bytes = ctypes.c_ulonglong(0)
+        ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(dirname),
+                                                   ctypes.pointer(free_bytes), None, None)
+        return free_bytes.value
+    else:
+        s = os.statvfs(dirname)
+        return s.f_bsize * s.f_bavail
 
 def file_lock(fd):
     if os.name == 'nt':
@@ -193,13 +204,12 @@ def aws_lambda_handler(event, context):
 
 def get_server_info():
 
-    server_info = {'uname' : subprocess.check_output("uname -a", shell=True).decode("ascii")}
+    server_info = {'uname' : str(platform.uname())}
     if os.path.exists("/proc"):
         server_info.update({'/proc/cpuinfo': open("/proc/cpuinfo", 'r').read(),
                             '/proc/meminfo': open("/proc/meminfo", 'r').read(),
                             '/proc/self/cgroup': open("/proc/meminfo", 'r').read(),
                             '/proc/cgroups': open("/proc/cgroups", 'r').read()})
-
 
     return server_info
 
@@ -271,10 +281,11 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
             data_key_size = get_key_size(s3_client, s3_bucket, data_key)
         if not event['use_cached_runtime']:
-            subprocess.check_output("rm -Rf {}/*".format(RUNTIME_LOC), shell=True)
+            shutil.rmtree(RUNTIME_LOC, True)
+            os.mkdir(RUNTIME_LOC)
 
 
-        free_disk_bytes = free_disk_space("/tmp")
+        free_disk_bytes = free_disk_space(TEMP)
         response_status['free_disk_bytes'] = free_disk_bytes
 
         response_status['runtime_s3_key_used'] = runtime_s3_key_used
@@ -304,7 +315,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                                              Key=runtime_s3_key_used)
         ETag = str(runtime_meta['ETag'])[1:-1]
         conda_runtime_dir = CONDA_RUNTIME_DIR.format(ETag)
-        conda_python_path = conda_runtime_dir + "/bin"
+        conda_python_path = os.path.join(conda_runtime_dir, "bin")
         conda_python_runtime = os.path.join(conda_python_path, "python")
 
         # pass a full json blob
@@ -341,16 +352,29 @@ def generic_handler(event, context_dict, custom_handler_env=None):
 
         local_env.update(extra_env)
 
-        local_env['PATH'] = "{}:{}".format(conda_python_path, local_env.get("PATH", ""))
+        local_env['PATH'] = "{}{}{}".format(conda_python_path, os.pathsep,
+                                            local_env.get("PATH", ""))
 
         logger.debug("command str=%s", cmdstr)
         # This is copied from http://stackoverflow.com/a/17698359/4577954
         # reasons for setting process group: http://stackoverflow.com/a/4791612
 
-        #pylint: disable=subprocess-popen-preexec-fn
-        process = subprocess.Popen(cmdstr, shell=True, env=local_env, bufsize=1,
-                                   stdout=subprocess.PIPE, preexec_fn=os.setsid)
+        if os.name == 'nt':
+            process = subprocess.Popen(cmdstr, shell=True, env=local_env,
+                                       bufsize=1, stdout=subprocess.PIPE,
+                                       creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        else:
+            process = subprocess.Popen(cmdstr, # pylint: disable=subprocess-popen-preexec-fn
+                                       shell=True, env=local_env, bufsize=1,
+                                       stdout=subprocess.PIPE, preexec_fn=os.setsid)
         logger.info("launched process")
+
+        def kill_process(process):
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(process.pid)]) # pylint: disable=no-member
+            else:
+                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+
         def consume_stdout(stdout, queue):
             with stdout:
                 for line in iter(stdout.readline, b''):
@@ -382,7 +406,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
                 if key_exists(s3_client, s3_bucket, cancel_key):
                     logger.info("invocation cancelled")
                     # kill the process
-                    os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                    kill_process(process)
                     raise Exception("CANCELLED",
                                     "Function cancelled")
                 time_of_last_cancel_check = time.time()
@@ -390,7 +414,7 @@ def generic_handler(event, context_dict, custom_handler_env=None):
             if total_runtime > job_max_runtime:
                 logger.warning("Process exceeded maximum runtime of {} sec".format(job_max_runtime))
                 # Send the signal to all the process groups
-                os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+                kill_process(process)
                 raise Exception("OUTATIME",
                                 "Process executed for too long and was killed")
 
