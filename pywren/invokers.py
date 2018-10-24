@@ -19,13 +19,19 @@ from __future__ import absolute_import
 import json
 import os
 import threading
-
+import sys
+import shutil
+import tempfile
+import multiprocessing
 import botocore
 import botocore.session
 from pywren import local
 
 
 SOURCE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+LOCAL_DIR = tempfile.gettempdir()
+LOCAL_RUN_DIR = os.path.join(LOCAL_DIR, "task")
 
 
 class LambdaInvoker(object):
@@ -61,12 +67,8 @@ class DummyInvoker(object):
     """
     A mock invoker that simply appends payloads to a list. You must then
     call run()
-
-    does not delete left-behind jobs
-
     """
 
-    DEFAULT_RUN_DIR = "/tmp/task"
     def __init__(self):
         self.payloads = []
         self.TIME_LIMIT = False
@@ -79,7 +81,7 @@ class DummyInvoker(object):
         return {}
 
 
-    def run_jobs(self, MAXJOBS=-1, run_dir=DEFAULT_RUN_DIR):
+    def run_jobs(self, MAXJOBS=-1, run_dir=LOCAL_RUN_DIR):
         """
         run MAXJOBS in the queue
         MAXJOBS = -1  to run all
@@ -92,12 +94,12 @@ class DummyInvoker(object):
             jobn = MAXJOBS
         jobs = self.payloads[:jobn]
 
-        local.local_handler(jobs, run_dir,
+        local.dummy_handler(jobs, run_dir,
                             {'invoker' : 'DummyInvoker'})
 
         self.payloads = self.payloads[jobn:]
 
-    def run_jobs_threaded(self, MAXJOBS=-1, run_dir=DEFAULT_RUN_DIR):
+    def run_jobs_threaded(self, MAXJOBS=-1, run_dir=LOCAL_RUN_DIR):
         """
         Just like run_jobs but in a separate thread
         (so it's non-blocking)
@@ -106,3 +108,38 @@ class DummyInvoker(object):
         self.thread = threading.Thread(target=self.run_jobs,
                                        args=(MAXJOBS, run_dir))
         self.thread.start()
+
+class LocalInvoker(object):
+    """
+    An invoker which spawns a thread that then waits
+    for jobs on a queue. This is a more self-contained invoker in that
+    it doesn't require the run_jobs() of the dummy invoker.
+    """
+
+    # When Windows runtimes are made available, local invoker should be ready
+    # to run on Windows as well
+    if not sys.platform.startswith('linux'):
+        raise RuntimeError("LocalInvoker can only be run under linux")
+
+    def __init__(self, run_dir=LOCAL_RUN_DIR):
+
+        self.queue = multiprocessing.Queue()
+        shutil.rmtree(run_dir, True)
+        self.run_dir = run_dir
+        for _ in range(multiprocessing.cpu_count()):
+            p = multiprocessing.Process(target=self._process_runner)
+            p.daemon = True
+            p.start()
+
+
+    def _process_runner(self):
+        while True:
+            res = self.queue.get(block=True)
+            local.local_handler(res, self.run_dir,
+                                {'invoker' : 'LocalInvoker'})
+
+    def invoke(self, payload):
+        self.queue.put(payload)
+
+    def config(self): # pylint: disable=no-self-use
+        return {}

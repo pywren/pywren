@@ -78,7 +78,7 @@ def sqs_run_local(region_name, sqs_queue_name, job_num=1,
                 job = json.loads(m.body)
 
                 m.delete()
-                local.local_handler([job], run_dir,
+                local.dummy_handler([job], run_dir,
                                     {'invoker' : 'SQSInvoker',
                                      'job_i' : job_i})
                 print("done with invocation")
