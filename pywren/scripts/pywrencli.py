@@ -221,12 +221,10 @@ def create_instance_profile(ctx):
 
     if len(instance_profiles) == 0:
         iam.create_instance_profile(InstanceProfileName=instance_profile_name)
+        iam.InstanceProfile(instance_profile_name).add_role(RoleName=role_name)
     else:
-        print("Using existing Instance Profile...")
+        print("Using existing instance profile...")
 
-    instance_profile = iam.InstanceProfile(instance_profile_name)
-    if len(instance_profile.roles_attribute) == 0:
-        instance_profile.add_role(RoleName=role_name)
 
 @click.command("create_ec2_ssh_key")
 @click.pass_context
@@ -524,10 +522,12 @@ def log_url(ctx):
               help='which git to use on the stand-alone (supercedes pywren_git_branch)')
 @click.option('--spot_price', default=None, type=float,
               help='use spot instances, at this reserve price')
+@click.option('--instance_type', default=None, type=str,
+              help='launch this instance type')
 def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                 idle_terminate_granularity,
                                 pywren_git_branch, pywren_git_commit,
-                                spot_price):
+                                spot_price, instance_type):
     config_filename = ctx.obj['config_filename']
     config = pywren.wrenconfig.load(config_filename)
 
@@ -538,6 +538,8 @@ def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
         sc['max_idle_time'] = max_idle_time
     if idle_terminate_granularity is not None:
         sc['idle_terminate_granularity'] = idle_terminate_granularity
+    if instance_type is not None:
+        sc['instance_type'] = instance_type
 
     use_fast_io = sc.get("fast_io", False)
 
@@ -550,7 +552,7 @@ def standalone_launch_instances(ctx, number, max_idle_time, parallelism,
                                                sc['instance_name'],
                                                sc['instance_profile_name'],
                                                sc['sqs_queue_name'],
-                                               sc['max_idle_time'],
+                                               max_idle_time=sc['max_idle_time'],
                                                idle_terminate_granularity=\
                                                sc['idle_terminate_granularity'],
                                                pywren_git_branch=pywren_git_branch,

@@ -21,7 +21,7 @@ scheduler:
     map_item_limit: 10000
 
 standalone:
-    ec2_instance_type: m4.4xlarge
+    ec2_instance_type: m4.large
     sqs_queue_name: pywren-queue
     visibility: 10
     ec2_ssh_key : PYWREN_DEFAULT_KEY

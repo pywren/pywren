@@ -196,9 +196,13 @@ def _create_instances(num_instances,
     ec2 = boto3.resource(service_name='ec2', region_name=region)
     spot_requests = []
     try:
-        if spot_price:
-            print("Requesting {c} spot instances at a max price of ${p}...".format(
-                c=num_instances, p=spot_price))
+        if spot_price is not None:
+            if spot_price > 0:
+                print("Requesting {c} spot instances at a max price of ${p}...".format(
+                    c=num_instances, p=spot_price))
+            else:
+                print("Requesting {c} spot instances at the on-demand price...".format(
+                    c=num_instances))
             client = ec2.meta.client
 
 
@@ -216,19 +220,23 @@ def _create_instances(num_instances,
             if key_name is not None:
                 LaunchSpecification['KeyName'] = key_name
 
-            spot_requests = client.request_spot_instances(
-                SpotPrice=str(spot_price),
-                InstanceCount=num_instances,
-                LaunchSpecification=LaunchSpecification)['SpotInstanceRequests']
+            if spot_price > 0:
+                spot_requests = client.request_spot_instances(
+                    SpotPrice=str(spot_price),
+                    InstanceCount=num_instances,
+                    LaunchSpecification=LaunchSpecification)['SpotInstanceRequests']
+            else:
+                spot_requests = client.request_spot_instances(
+                    InstanceCount=num_instances,
+                    LaunchSpecification=LaunchSpecification)['SpotInstanceRequests']
+
 
             request_ids = [r['SpotInstanceRequestId'] for r in spot_requests]
             pending_request_ids = request_ids
 
+            time.sleep(5)
+
             while pending_request_ids:
-                print("{grant} of {req} instances granted. Waiting...".format(
-                    grant=num_instances - len(pending_request_ids),
-                    req=num_instances))
-                time.sleep(30)
                 spot_requests = client.describe_spot_instance_requests(
                     SpotInstanceRequestIds=request_ids)['SpotInstanceRequests']
 
@@ -244,6 +252,12 @@ def _create_instances(num_instances,
                 pending_request_ids = [
                     r['SpotInstanceRequestId'] for r in spot_requests
                     if r['State'] == 'open']
+
+                if pending_request_ids:
+                    print("{grant} of {req} instances granted. Waiting...".format(
+                        grant=num_instances - len(pending_request_ids),
+                        req=num_instances))
+                    time.sleep(30)
 
             print("All {c} instances granted.".format(c=num_instances))
 
