@@ -215,6 +215,7 @@ def interactive_setup(ctx, dryrun, suffix):
     if use_standalone:
         click.echo("Setting up standalone mode.")
         ctx.invoke(pywrencli.create_queue)
+        ctx.invoke(pywrencli.create_ec2_ssh_key)
         ctx.invoke(pywrencli.create_instance_profile)
     click.echo("Pausing for 10 sec for changes to propagate.")
     time.sleep(10)

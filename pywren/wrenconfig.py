@@ -39,6 +39,8 @@ AWS_SQS_QUEUE_DEFAULT = 'pywren-jobs-1'
 
 MAX_AGG_DATA_SIZE = 4e6
 
+DEFAULT_KEY_NAME = "PYWREN_DEFAULT_KEY"
+
 default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
                    '3.4' : "pywren.runtimes/default_3.4.meta.json",
                    '3.5' : "pywren.runtimes/default_3.5.meta.json",
@@ -54,6 +56,8 @@ def load(config_filename):
                 config_filename, res['s3']['bucket']))
     if 'storage_backend' not in res:
         res = patch_storage_config(res)
+    if res['standalone']['ec2_ssh_key'] == DEFAULT_KEY_NAME:
+        res['standalone']['ec2_ssh_key'] = None
 
     return res
 
@@ -199,3 +203,11 @@ RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-public-us-west-1',
                          'ap-northeast-2' : 'pywren-public-ap-northeast-2',
                          'eu-central-1' : 'pywren-public-eu-central-1-a',
                          'eu-west-1' : 'pywren-public-eu-west-1'}
+
+TARGET_AMI_REGION = {'us-west-1' : 'ami-0bdb828fd58c52235',
+                     'us-west-2' : 'ami-a0cfeed8',
+                     'us-east-1' : 'ami-0ff8a91507f77f867',
+                     'us-east-2' : 'ami-0303c7b2e7066b60d',
+                     'ap-northeast-2' : 'ami-01f7db8de071cd2fc',
+                     'eu-central-1' : 'ami-0233214e13e500f77',
+                     'eu-west-1' : 'ami-047bb4163c506cd98'}
