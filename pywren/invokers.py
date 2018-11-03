@@ -116,12 +116,11 @@ class LocalInvoker(object):
     it doesn't require the run_jobs() of the dummy invoker.
     """
 
-    # When Windows runtimes are made available, local invoker should be ready
-    # to run on Windows as well
-    if not sys.platform.startswith('linux'):
-        raise RuntimeError("LocalInvoker can only be run under linux")
-
     def __init__(self, run_dir=LOCAL_RUN_DIR):
+        # When Windows/OSX runtimes are made available, local invoker should be
+        # ready to run on them as well
+        if not sys.platform.startswith('linux'):
+            raise RuntimeError("LocalInvoker can only be run under linux")
 
         self.queue = multiprocessing.Queue()
         shutil.rmtree(run_dir, True)
