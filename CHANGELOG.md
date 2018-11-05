@@ -1,7 +1,7 @@
 # Change Log
 
 
-## [v0.4rc0](https://github.com/pywren/pywren/tree/v0.4rc0) (2018-11-05)
+## [v0.4](https://github.com/pywren/pywren/tree/v0.4rc0) (2018-11-05)
 [Full Changelog](https://github.com/pywren/pywren/compare/v0.3.0...v0.4rc0)
 
 **Implemented enhancements:**
