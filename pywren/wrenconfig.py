@@ -196,13 +196,13 @@ more_permissions_policy = {
     ]}
 
 
-RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-runtimes-public-us-west-1',
-                         'us-west-2' : 'pywren-runtimes-public-us-west-2',
-                         'us-east-1' : 'pywren-runtimes-public-us-east-1',
-                         'us-east-2' : 'pywren-runtimes-public-us-east-2',
-                         'ap-northeast-2' : 'pywren-runtimes-public-ap-northeast-2',
-                         'eu-central-1' : 'pywren-runtimes-public-eu-central-1',
-                         'eu-west-1' : 'pywren-runtimes-public-eu-west-1'}
+RUNTIME_BUCKET_REGION = {'us-west-1' : 'pywren-public-us-west-1',
+                         'us-west-2' : 'pywren-public-us-west-2',
+                         'us-east-1' : 'pywren-public-us-east-1',
+                         'us-east-2' : 'pywren-public-us-east-2',
+                         'ap-northeast-2' : 'pywren-public-ap-northeast-2',
+                         'eu-central-1' : 'pywren-public-eu-central-1-a',
+                         'eu-west-1' : 'pywren-public-eu-west-1'}
 
 TARGET_AMI_REGION = {'us-west-1' : 'ami-0bdb828fd58c52235',
                      'us-west-2' : 'ami-a0cfeed8',
