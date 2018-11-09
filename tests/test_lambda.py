@@ -85,7 +85,7 @@ def test_too_big_runtime():
 
 
     too_big_config = pywren.wrenconfig.default()
-    too_big_config['runtime']['s3_bucket'] = 'pywren-public-us-west-2'
+    too_big_config['runtime']['s3_bucket'] = 'pywren-runtimes-public-us-west-2'
     ver_str = "{}.{}".format(sys.version_info[0], sys.version_info[1])
     too_big_config['runtime']['s3_key'] = "pywren.runtimes/too_big_do_not_use_{}.tar.gz".format(ver_str)
 
