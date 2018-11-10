@@ -1,7 +1,6 @@
 # Change Log
 
-
-## [v0.4](https://github.com/pywren/pywren/tree/v0.4rc0) (2018-11-05)
+## [v0.4rc0](https://github.com/pywren/pywren/tree/v0.4rc0) (2018-11-09)
 [Full Changelog](https://github.com/pywren/pywren/compare/v0.3.0...v0.4rc0)
 
 **Implemented enhancements:**
@@ -20,7 +19,6 @@
 
 **Closed issues:**
 
-- Python 3.7 runtime [\#267](https://github.com/pywren/pywren/issues/267)
 - LocalInvoker only on Linux breaks all CLI  on OSX/\(maybe windows\) [\#291](https://github.com/pywren/pywren/issues/291)
 - click 7.0 release changed command line options [\#288](https://github.com/pywren/pywren/issues/288)
 - standalone setup improvements [\#284](https://github.com/pywren/pywren/issues/284)
