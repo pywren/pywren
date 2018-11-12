@@ -44,7 +44,8 @@ DEFAULT_KEY_NAME = "PYWREN_DEFAULT_KEY"
 default_runtime = {'2.7' : "pywren.runtimes/default_2.7.meta.json",
                    '3.4' : "pywren.runtimes/default_3.4.meta.json",
                    '3.5' : "pywren.runtimes/default_3.5.meta.json",
-                   '3.6' : "pywren.runtimes/default_3.6.meta.json"}
+                   '3.6' : "pywren.runtimes/default_3.6.meta.json",
+                   '3.7' : "pywren.runtimes/default_3.7.meta.json"}
 
 def load(config_filename):
     import yaml

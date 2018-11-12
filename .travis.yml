@@ -1,15 +1,15 @@
 language: python
 sudo: required
 # https://docs.travis-ci.com/user/ci-environment/ to get a modern gcc etc
-dist: trusty
+dist: xenial
 
 
 # notes from http://conda.pydata.org/docs/travis.html
 python:
-  # We don't actually use the Travis Python, but this keeps it organized.
   - "2.7"
   - "3.5"
   - "3.6"
+  - "3.7"
 install:
   # We do this conditionally because it saves us some downloading if the
   # version is the same. 
