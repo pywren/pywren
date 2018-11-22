@@ -64,6 +64,7 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     # want to expose to end users:
     MAX_DIRECT_QUERY_N = 16
     RETURN_EARLY_N = 16
+    RANDOM_QUERY = False
 
     if return_when == ALL_COMPLETED:
         result_count = 0
@@ -71,7 +72,8 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
 
             fs_dones, fs_notdones = _wait(fs, RETURN_EARLY_N,
                                           MAX_DIRECT_QUERY_N,
-                                          THREADPOOL_SIZE)
+                                          random_query=RANDOM_QUERY,
+                                          THREADPOOL_SIZE=THREADPOOL_SIZE)
             result_count = len(fs_dones)
 
             if result_count == N:
@@ -83,7 +85,8 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
         while True:
             fs_dones, fs_notdones = _wait(fs, RETURN_EARLY_N,
                                           MAX_DIRECT_QUERY_N,
-                                          THREADPOOL_SIZE)
+                                          random_query=RANDOM_QUERY,
+                                          THREADPOOL_SIZE=THREADPOOL_SIZE)
 
             if len(fs_dones) != 0:
                 return fs_dones, fs_notdones
@@ -93,7 +96,8 @@ def wait(fs, return_when=ALL_COMPLETED, THREADPOOL_SIZE=64,
     elif return_when == ALWAYS:
         return _wait(fs, RETURN_EARLY_N,
                      MAX_DIRECT_QUERY_N,
-                     THREADPOOL_SIZE)
+                     random_query=RANDOM_QUERY,
+                     THREADPOOL_SIZE=THREADPOOL_SIZE)
     else:
         raise ValueError()
 
