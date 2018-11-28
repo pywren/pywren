@@ -71,17 +71,17 @@ def write_stat(stat, val):
     stats_fid.write("{} {:f}\n".format(stat, val))
     stats_fid.flush()
 
-def get_object_with_backoff(s3_client, bucket, key, max_tries=MAX_TRIES, backoff=BACKOFF, **extra_get_args):
+def get_object_with_backoff(client, bucket, key, tries=MAX_TRIES, backoff=BACKOFF, **extra_args):
     num_tries = 0
-    while (num_tries < max_tries):
+    while (num_tries < tries):
         try:
-            func_obj_stream = s3_client.get_object(Bucket=bucket, Key=key, **extra_get_args)
+            f_stream = client.get_object(Bucket=bucket, Key=key, **extra_args)
             break
         except ReadTimeoutError:
             time.sleep(backoff)
             backoff *= 2
             num_tries += 1
-    return func_obj_stream
+    return f_stream
 
 try:
     func_download_time_t1 = time.time()
@@ -186,5 +186,4 @@ finally:
                          Bucket=output_bucket,
                          Key=output_key)
     output_upload_timestamp_t2 = time.time()
-    write_stat("output_upload_time",
-               output_upload_timestamp_t2 - output_upload_timestamp_t1)
+    write_stat("output_upload_time", output_upload_timestamp_t2 - output_upload_timestamp_t1) # pylint: disable=line-too-long
