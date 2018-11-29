@@ -502,8 +502,8 @@ def log_url(ctx):
     function_name = config['lambda']['function_name']
     aws_region = config['account']['aws_region']
     url = "https://" + \
-        "{}.console.aws.amazon.com/cloudwatch/home?region={}#logStream:group=/aws/lambda/{}".format(
-            aws_region, aws_region, function_name)
+        "{0}.console.aws.amazon.com/cloudwatch/home?region={0}#logStream:group=/aws/lambda/{1}".\
+        format(aws_region, function_name)
     print(url)
 
 
