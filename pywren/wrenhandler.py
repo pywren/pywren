@@ -18,6 +18,7 @@ import base64
 import json
 import logging
 import os
+import uuid
 import shutil
 import signal
 import subprocess
@@ -62,6 +63,7 @@ JOBRUNNER_STATS_FILENAME = os.path.join(TEMP, "jobrunner_{0}.stats.txt")
 RUNTIME_DOWNLOAD_LOCK = os.path.join(TEMP, "runtime_download_lock")
 
 logger = logging.getLogger(__name__)
+container_id = str(uuid.uuid4())
 
 PROCESS_STDOUT_SLEEP_SECS = 2
 CANCEL_CHECK_EVERY_SECS = 5.0
@@ -226,6 +228,8 @@ def generic_handler(event, context_dict, custom_handler_env=None):
     pid = os.getpid()
 
     response_status = {'exception': None}
+    response_status['container_id'] = container_id
+
     try:
         if event['storage_config']['storage_backend'] != 's3':
             raise NotImplementedError(("Using {} as storage backend is not supported " +
