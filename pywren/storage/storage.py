@@ -23,6 +23,7 @@ from  .exceptions import StorageNoSuchKeyError, StorageOutputNotFoundError
 from .s3_backend import S3Backend
 from .storage_utils import create_status_key, create_output_key
 from .storage_utils import status_key_suffix, create_cancel_key
+import pickle
 
 
 class Storage(object):
@@ -67,6 +68,16 @@ class Storage(object):
         :return: None
         """
         return self.backend_handler.put_object(key, func)
+
+    def put_module_dependencies(self, key, module_data):
+        """
+        Put serialized function into storage.
+        :param key: function key
+        :param module_data: serialized module dependencies
+        :return: None
+        """
+        module_data_str = pickle.dumps(module_data)
+        return self.backend_handler.put_object(key, module_data_str)
 
     def put_cancelled(self, callset_id, call_id, cancelled_data):
         """
@@ -120,6 +131,18 @@ class Storage(object):
             return self.backend_handler.get_object(output_key)
         except StorageNoSuchKeyError:
             raise StorageOutputNotFoundError(callset_id, call_id)
+
+    def get_module_dependencies(self, mod_key):
+        """
+        Get status of a call.
+        :param mod_key: key of the module data
+        :return: A dictionary containing module dependencies, or None if no data
+        """
+        try:
+            module_data_str = self.backend_handler.get_object(mod_key)
+            return pickle.loads(module_data_str)
+        except StorageNoSuchKeyError:
+            return None
 
 
 def get_runtime_info(runtime_config):

@@ -34,7 +34,7 @@ import pywren.wrenutil as wrenutil
 from pywren.future import ResponseFuture, JobState
 from pywren.serialize import serialize, create_mod_data
 from pywren.storage import storage_utils
-from pywren.storage.storage_utils import create_func_key
+from pywren.storage.storage_utils import create_func_key, create_mod_key
 from pywren.wait import wait, ALL_COMPLETED
 
 
@@ -61,6 +61,7 @@ class Executor(object):
             self.serializer = serialize.SerializeIndependent(self.runtime_meta_info['preinstalls'])
         else:
             self.serializer = serialize.SerializeIndependent()
+        self.module_data_cache = {}
 
         self.map_item_limit = None
         if 'scheduler' in self.config:
@@ -164,10 +165,47 @@ class Executor(object):
             pos += l
         return b"".join(data_strs), ranges
 
+    def parse_module_dependencies(self, func, hint,
+                                  from_shared_storage=False,
+                                  sync_to_shared_storage=False):
+        """
+        :param func: the function to prase
+        :param hint: user defined key
+        :param from_shared_storage: whether fetch this module dependencies data from shared storage
+        :param sync_to_shared_storage: whether sync this module dependencies data from shared storage
+        :rtype: a module_dependencies_key that can be use in map function
+
+        Usage
+          >>> mod_key = pwex.parse_module_dependencies(foo)
+        """
+        assert hint is not None
+        assert not (from_shared_storage and sync_to_shared_storage)
+
+        user_key = hint
+        if from_shared_storage:
+            storage_key = create_mod_key(self.storage.prefix, user_key)
+            self.module_data_cache[user_key] = self.storage.get_module_dependencies(storage_key)
+            logger.debug('synced from shared storage, user_key: {}, storage_key: {}'.format(user_key, storage_key))
+            return
+
+        if user_key not in self.module_data_cache:
+            logger.debug('user_key: {} misses, parsing...'.format(user_key))
+            _, mod_paths = self.serializer([func])
+            module_data = create_mod_data(mod_paths)
+            self.module_data_cache[user_key] = module_data
+        else:
+            logger.debug('user_key: {} hits'.format(user_key))
+
+        if sync_to_shared_storage:
+            storage_key = create_mod_key(self.storage.prefix, user_key)
+            self.storage.put_module_dependencies(storage_key, module_data)
+            logger.debug('synced to shared storage, user_key: {}, storage_key: {}'.format(user_key, storage_key))
+
     def map(self, func, iterdata, extra_env=None, extra_meta=None,
             invoke_pool_threads=64, data_all_as_one=True,
             use_cached_runtime=True, overwrite_invoke_args=None,
-            exclude_modules=None):
+            exclude_modules=None,
+            module_dependencies_key=None):
         """
         :param func: the function to map over the data
         :param iterdata: An iterable of input data
@@ -201,7 +239,13 @@ class Executor(object):
         callset_id = wrenutil.create_callset_id()
 
         ### pickle func and all data (to capture module dependencies
-        func_and_data_ser, mod_paths = self.serializer([func] + data)
+        ### this serializer function to get `mod_paths` can be time consuming (~4 seconds in some cases)
+        ### so we leave user decide whether to do this operation
+        if module_dependencies_key is None or self.module_data_cache.get(module_dependencies_key) is None:
+            func_and_data_ser, mod_paths = self.serializer([func] + data)
+        else:
+            func_and_data_ser, _ = self.serializer([func] + data, _ignore_module_dependencies=True)
+            mod_path = {}
 
         func_str = func_and_data_ser[0]
         data_strs = func_and_data_ser[1:]
@@ -229,7 +273,15 @@ class Executor(object):
                     if module in mod_path and mod_path in mod_paths:
                         mod_paths.remove(mod_path)
 
-        module_data = create_mod_data(mod_paths)
+        ### this function `create_mod_data` read from loacl disk, could also be time consuming,
+        ### e.g. ~0.3 seconds, so we cache the results by `module_dependencies_key`
+        if module_dependencies_key is None or self.module_data_cache.get(module_dependencies_key) is None:
+            module_data = create_mod_data(mod_paths)
+            if module_dependencies_key is not None:
+                self.module_data_cache[module_dependencies_key] = module_data
+        else:
+            module_data = self.module_data_cache.get(module_dependencies_key)
+
         ### Create func and upload
         func_module_str = pickle.dumps({'func' : func_str,
                                         'module_data' : module_data}, -1)

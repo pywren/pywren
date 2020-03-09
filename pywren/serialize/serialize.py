@@ -88,6 +88,7 @@ class SerializeIndependent(object):
         else:
             ignore_modulemgr = False
 
+        mod_paths = {}
         if not ignore_modulemgr:
             # Add modules
             for cp in cps:

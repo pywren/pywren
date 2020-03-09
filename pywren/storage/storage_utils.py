@@ -35,6 +35,14 @@ def create_func_key(prefix, callset_id):
     func_key = posixpath.join(prefix, callset_id, func_key_suffix)
     return func_key
 
+def create_mod_key(prefix, mod_key):
+    """
+    Create function key
+    :param prefix: prefix
+    :param mod_key: module key from user
+    :return: module key
+    """
+    return posixpath.join(prefix, 'mod_dep', mod_key)
 
 def create_agg_data_key(prefix, callset_id):
     """
