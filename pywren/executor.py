@@ -176,7 +176,7 @@ class Executor(object):
         :rtype: a module_dependencies_key that can be use in map function
 
         Usage
-          >>> mod_key = pwex.parse_module_dependencies(foo)
+          >>> pwex.parse_module_dependencies(foo, hint)
         """
         assert hint is not None
         assert not (from_shared_storage and sync_to_shared_storage)
