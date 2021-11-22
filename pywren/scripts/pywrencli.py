@@ -328,7 +328,7 @@ def deploy_lambda(ctx, update_if_exists=True):
 
                 lambclient.create_function(FunctionName=FUNCTION_NAME,
                                            Handler=pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME,
-                                           Runtime="python2.7",
+                                           Runtime="python3.9",
                                            MemorySize=MEMORY,
                                            Timeout=TIMEOUT,
                                            Role=ROLE,
@@ -337,6 +337,8 @@ def deploy_lambda(ctx, update_if_exists=True):
                 break
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "InvalidParameterValueException":
+
+                print(e)
 
                 retries += 1
 
