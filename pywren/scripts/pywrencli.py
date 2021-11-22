@@ -295,8 +295,14 @@ def deploy_lambda(ctx, update_if_exists=True):
     for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
               'version.py', 'jobrunner/jobrunner.py', 'wren.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
-        a = os.path.basename(f) # , SOURCE_DIR + "/..")
+
+        # need to put everything into an extra folder an add an empty __init__.py file to make things work
+        a = 'app/' + os.path.basename(f) # , SOURCE_DIR + "/..")
         zipfile_obj.write(f, arcname=a)
+
+    # add empty file.
+    zipfile_obj.writestr("app/__init__.py", "");
+
     zipfile_obj.close()
     #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
 
@@ -328,7 +334,7 @@ def deploy_lambda(ctx, update_if_exists=True):
 
                 lambclient.create_function(FunctionName=FUNCTION_NAME,
                                            Handler=pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME,
-                                           Runtime="python3.9",
+                                           Runtime="python3.7",
                                            MemorySize=MEMORY,
                                            Timeout=TIMEOUT,
                                            Role=ROLE,
@@ -456,7 +462,7 @@ def test_function(ctx):
         return "Hello world"
 
     fut = wrenexec.call_async(hello_world, None)
-    res = fut.result(storage_handler=wrenexec.storage)
+    res = fut.result(storage_handler=wrenexec.storage, timeout=10)
 
     click.echo("function returned: {}".format(res))
 

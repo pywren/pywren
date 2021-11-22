@@ -219,7 +219,9 @@ def interactive_setup(ctx, dryrun, suffix):
         ctx.invoke(pywrencli.create_instance_profile)
     click.echo("Pausing for 10 sec for changes to propagate.")
     time.sleep(10)
+    click.echo("Invoking test_function to see whether it works now...")
     ctx.invoke(pywrencli.test_function)
+    click.echo("All ok.")
 
 if __name__ == '__main__':
     interactive_setup() # pylint: disable=no-value-for-parameter
