@@ -297,11 +297,13 @@ def deploy_lambda(ctx, update_if_exists=True):
         f = os.path.abspath(os.path.join(module_dir, f))
 
         # need to put everything into an extra folder an add an empty __init__.py file to make things work
-        a = 'app/' + os.path.basename(f) # , SOURCE_DIR + "/..")
+        a = os.path.join('app', os.path.basename(f)) # , SOURCE_DIR + "/..")
+        print('addding to {}'.format(a))
         zipfile_obj.write(f, arcname=a)
 
     # add empty file.
-    zipfile_obj.writestr("app/__init__.py", "");
+    zipfile_obj.writestr("app/__init__.py", "")
+    print('addding to {}'.format("app/__init__.py"))
 
     zipfile_obj.close()
     #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
