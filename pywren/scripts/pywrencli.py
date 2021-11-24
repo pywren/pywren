@@ -28,6 +28,7 @@ import boto3
 import botocore
 import botocore.exceptions
 import click
+import logging
 import pywren
 import pywren.runtime
 from pywren import ec2standalone

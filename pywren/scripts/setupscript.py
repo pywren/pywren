@@ -23,6 +23,7 @@ import time
 import boto3
 import botocore
 import click
+import logging
 import pywren.wrenconfig
 from pywren.scripts import pywrencli
 
