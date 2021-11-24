@@ -219,7 +219,7 @@ def interactive_setup(ctx, dryrun, suffix):
         ctx.invoke(pywrencli.create_instance_profile)
     click.echo("Pausing for 10 sec for changes to propagate.")
     time.sleep(10)
-    click.echo("Invoking test_function to see whether it works now...")
+    click.echo("Invoking test_function.")
     ctx.invoke(pywrencli.test_function)
     click.echo("All ok.")
 

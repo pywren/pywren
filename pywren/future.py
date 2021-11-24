@@ -163,7 +163,6 @@ class ResponseFuture:
         ## FIXME implement timeout
         if timeout is not None:
             logging.warning('timeout not yet implemented, has no effect yet.')
-            #raise NotImplementedError()
 
         if check_only:
             if call_status is None:

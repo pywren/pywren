@@ -297,16 +297,16 @@ def deploy_lambda(ctx, update_if_exists=True):
         f = os.path.abspath(os.path.join(module_dir, f))
 
         # need to put everything into an extra folder an add an empty __init__.py file to make things work
-        a = os.path.join('app', os.path.basename(f)) # , SOURCE_DIR + "/..")
-        print('addding to {}'.format(a))
+        # for this add folder app/ and store all runner files within it.
+        a = os.path.join('app', os.path.basename(f))
+        logging.debug('addding to {}'.format(a))
         zipfile_obj.write(f, arcname=a)
 
-    # add empty file.
+    # add __init__.py to make app/ a python module
     zipfile_obj.writestr("app/__init__.py", "")
-    print('addding to {}'.format("app/__init__.py"))
+    logging.debug('addding to {}'.format("app/__init__.py"))
 
     zipfile_obj.close()
-    #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
 
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 
@@ -345,8 +345,6 @@ def deploy_lambda(ctx, update_if_exists=True):
                 break
         except botocore.exceptions.ClientError as e:
             if e.response['Error']['Code'] == "InvalidParameterValueException":
-
-                print(e)
 
                 retries += 1
 
