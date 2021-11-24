@@ -19,7 +19,9 @@ import copy
 
 
 GENERIC_HANDLER_NAME = "wrenhandler.generic_handler"
-AWS_LAMBDA_HANDLER_NAME = "wrenhandler.aws_lambda_handler"
+# to fix the issue https://gist.github.com/gene1wood/06a64ba80cf3fe886053f0ca6d375bc0 causewd by upgrading
+# runtime to Python3.x use new directory structure, i.e. place all runner files in app/ folder.
+AWS_LAMBDA_HANDLER_NAME = "app.wrenhandler.aws_lambda_handler"
 
 PACKAGE_FILE = "deploy.zip"
 

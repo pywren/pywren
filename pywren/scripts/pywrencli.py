@@ -28,6 +28,7 @@ import boto3
 import botocore
 import botocore.exceptions
 import click
+import logging
 import pywren
 import pywren.runtime
 from pywren import ec2standalone
@@ -295,10 +296,18 @@ def deploy_lambda(ctx, update_if_exists=True):
     for f in ['wrenutil.py', 'wrenconfig.py', 'wrenhandler.py',
               'version.py', 'jobrunner/jobrunner.py', 'wren.py']:
         f = os.path.abspath(os.path.join(module_dir, f))
-        a = os.path.basename(f) # , SOURCE_DIR + "/..")
+
+        # need to put everything into an extra folder an add an empty __init__.py file to make things work
+        # for this add folder app/ and store all runner files within it.
+        a = os.path.join('app', os.path.basename(f))
+        logging.debug('addding to {}'.format(a))
         zipfile_obj.write(f, arcname=a)
+
+    # add __init__.py to make app/ a python module
+    zipfile_obj.writestr("app/__init__.py", "")
+    logging.debug('addding to {}'.format("app/__init__.py"))
+
     zipfile_obj.close()
-    #open("/tmp/deploy.zip", 'w').write(file_like_object.getvalue())
 
     lambclient = boto3.client('lambda', region_name=AWS_REGION)
 
@@ -328,7 +337,7 @@ def deploy_lambda(ctx, update_if_exists=True):
 
                 lambclient.create_function(FunctionName=FUNCTION_NAME,
                                            Handler=pywren.wrenconfig.AWS_LAMBDA_HANDLER_NAME,
-                                           Runtime="python2.7",
+                                           Runtime="python3.7",
                                            MemorySize=MEMORY,
                                            Timeout=TIMEOUT,
                                            Role=ROLE,
@@ -454,7 +463,7 @@ def test_function(ctx):
         return "Hello world"
 
     fut = wrenexec.call_async(hello_world, None)
-    res = fut.result(storage_handler=wrenexec.storage)
+    res = fut.result(storage_handler=wrenexec.storage, timeout=10)
 
     click.echo("function returned: {}".format(res))
 
