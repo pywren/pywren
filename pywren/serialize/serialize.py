@@ -48,7 +48,7 @@ else:
     PY3 = True
 
 # pylint: disable=wrong-import-position
-from pywren.serialize.cloudpickle import CloudPickler
+from cloudpickle import CloudPickler
 from pywren.serialize.module_dependency import ModuleDependencyAnalyzer
 from pywren.serialize import default_preinstalls
 
